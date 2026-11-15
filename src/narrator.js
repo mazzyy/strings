@@ -57,6 +57,7 @@ export class Narrator {
   update(dt) {
     this.t += dt;
     if (this.busy || this.speaking) return;
+    if (this.holdFor?.()) return; // a guest has something to say first
     if (this.queue.length) {
       this.pending.length = 0; // the coach line covers this moment
       this.say(this.queue.shift());

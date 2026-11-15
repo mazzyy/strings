@@ -293,16 +293,17 @@ const confetti = new Confetti(stageRoot);
 const marloHead = () => marlo.get("head");
 const pipHead = () => pip.get("head");
 const marloLines = [];
-function marloSay(key, name = null) {
+// priority lines (a riddle, a story moment) never expire, and the narrator waits for them
+function marloSay(key, name = null, priority = false) {
   const text = GUESTS[guestId].says[key] || key;
-  if (marloLines.length > 2) marloLines.shift();
-  marloLines.push({ text, t: elapsed, name });
+  if (marloLines.length > 3) { const i = marloLines.findIndex((l) => !l.priority); if (i >= 0) marloLines.splice(i, 1); }
+  marloLines.push({ text, t: elapsed, name, priority });
 }
 // Marlo and the narrator take turns, so two voices never talk over each other
 function updateMarloVoice() {
   if (!marloLines.length || narrator.speaking || narrator.busy) return;
-  const { text, t, name } = marloLines.shift();
-  if (elapsed - t > 6) return;
+  const { text, t, name, priority } = marloLines.shift();
+  if (!priority && elapsed - t > 6) return;
   showCaption(`${name || GUESTS[guestId].name}: “${text}”`);
   narrator.speakingUntil = narrator.t + 0.9 + text.split(/\s+/).length * 0.32;
   const file = narrator.manifest[text];
@@ -310,6 +311,8 @@ function updateMarloVoice() {
     voicePlayer.play(`voice/${file}`, "marlo").then((secs) => { if (secs) narrator.speakingUntil = narrator.t + secs + 0.35; }).catch(() => {});
   }
 }
+// the narrator holds its next line while a guest is waiting to speak
+narrator.holdFor = () => marloLines.length > 0;
 const mind = new MarloMind({
   ai, pip, marlo, props,
   rackPos: new THREE.Vector3(0.3, 0, 0.155),
@@ -893,7 +896,7 @@ function grandFinale() {
   setTimeout(() => music.play(), 8200);
 }
 show.onGrandFinale = grandFinale;
-function sayAs(who, key) { const l = GUESTS[who]?.task?.[key]; if (l) marloSay(l, GUESTS[who].name); }
+function sayAs(who, key) { const l = GUESTS[who]?.task?.[key]; if (l) marloSay(l, GUESTS[who].name, true); }
 
 // after the finale: the epilogue, then the credits
 $("credits-again")?.addEventListener("click", () => { storyMap.resetStory(); location.reload(); });
@@ -924,8 +927,10 @@ const taskCtx = {
   guest: () => marlo,
   coach: (t) => narrator.coach(t),
   guestSay: (k) => { const l = GUESTS[guestId].task?.[k]; if (l) marloSay(l); },
-  guestLine: (text) => marloSay(text),
-  princessSay: (k) => { const l = GUESTS.princess.task[k]; if (l) marloSay(l, GUESTS.princess.name); },
+  guestLine: (text) => marloSay(text, null, true),
+  princessSay: (k) => { const l = GUESTS.princess.task[k]; if (l) marloSay(l, GUESTS.princess.name, true); },
+  // desktop: the riddle written large on the left of the screen
+  riddleCard: (q) => { const el = $("riddlecard"); if (!el) return; if (q && !xrMode) { el.querySelector(".q").textContent = q; el.classList.add("on"); } else el.classList.remove("on"); },
   emote: (id, sym, at, text, life, yOff) => emotes.pop(id, sym, at, text, life, yOff),
   clearEmote: (id) => emotes.clear(id),
   sfx: (n, at, o) => sfx.play(n, at, o),
@@ -977,7 +982,7 @@ function playBook(place, then) {
   hints.hide();
   book.play(place, !!xrMode, then);
 }
-const sceneFor = (place) => (place.acts ? { id: place.id, title: place.title, intro: place.intro, acts: place.acts } : null);
+const sceneFor = (place) => (place.acts ? { id: place.id, title: place.title, intro: place.intro, acts: place.acts, finale: !!place.finale } : null);
 function startChapterShow() {
   if (chapter.id === "theatre") narrator.coach(STORY_LINES.theatre);
   show.start(sceneFor(chapter)); // the Grand Theatre (no acts) picks tonight's daily show
