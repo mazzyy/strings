@@ -4,6 +4,9 @@
 import * as THREE from "three";
 
 const v = new THREE.Vector3();
+// scratch objects for the per-frame code
+const AV = { a: new THREE.Vector3(), b: new THREE.Vector3(), up: new THREE.Vector3(0, 1, 0), q: new THREE.Quaternion(), e: new THREE.Euler() };
+const DV = { c: new THREE.Vector3(), up: new THREE.Vector3(), hipR: new THREE.Vector3(), hipF: new THREE.Vector3(), o: new THREE.Vector3(), d: new THREE.Vector3() };
 
 export class ActionDetector {
   constructor(puppet, other) {
@@ -38,17 +41,17 @@ export class ActionDetector {
   update(dt) {
     this.t += dt;
     const p = this.p;
-    const c = p.center(new THREE.Vector3());
+    const c = p.center(DV.c);
     const inst = v.subVectors(c, this.lastPos).divideScalar(Math.max(dt, 1e-3));
     this.vel.lerp(inst, Math.min(1, dt * 6));
     this.lastPos.copy(c);
     const speed = Math.hypot(this.vel.x, this.vel.z);
-    const up = p.upAxis(new THREE.Vector3());
+    const up = p.upAxis(DV.up);
     const tilt = Math.acos(THREE.MathUtils.clamp(up.y, -1, 1)); // 0 = upright
     // facing from the hips: stays stable even when the upper body folds over
-    const hipR = new THREE.Vector3().subVectors(p.get("rH"), p.get("lH"));
-    const hipF = new THREE.Vector3(-hipR.z, 0, hipR.x).normalize(); // right x up
-    const lean = new THREE.Vector3(up.x, 0, up.z).dot(hipF); // + = leaning forward
+    const hipR = DV.hipR.subVectors(p.get("rH"), p.get("lH"));
+    const hipF = DV.hipF.set(-hipR.z, 0, hipR.x).normalize(); // right x up
+    const lean = up.x * hipF.x + up.z * hipF.z; // + = leaning forward
     const lF = p.get("lF").y, rF = p.get("rF").y;
     const held = p.main.held;
     const headY = p.get("head").y;
@@ -119,7 +122,7 @@ export class ActionDetector {
     }
 
     // approach: close to the other puppet
-    const dist = c.distanceTo(this.other.center(new THREE.Vector3()));
+    const dist = c.distanceTo(this.other.center(DV.o));
     if (dist < 0.11) this.emit("approach", {}, 8);
 
     // idle: nothing for a while
@@ -143,6 +146,7 @@ export function describe(ev) {
     case "give": return `Sir Pip gives the ${ev.prop} to Marlo as a gift`;
     case "drop": return `The ${ev.prop} goes back on its rack`;
     case "talk": return "The audience member talks to Marlo";
+    case "snap": return "One of Sir Pip's strings snaps";
     default: return `Sir Pip: ${ev.type}`;
   }
 }
@@ -172,14 +176,17 @@ export class AIPerformer {
     if (on) { this.clip = null; this.queue.length = 0; }
   }
 
-  react(name) {
+  react(name, opts = {}) {
     if (!CLIPS[name] || this.sleeping) return;
     this.onReact?.(name);
     // don't stack the same reaction
-    if (this.clip && this.clip.name === name) return;
+    if (this.clip && this.clip.name === name && !opts.force) return;
     if (this.queue.length > 1) this.queue.shift();
-    this.queue.push(name);
+    this.queue.push({ name, opts });
   }
+
+  // anything playing or waiting?
+  get busy() { return !!this.clip || this.queue.length > 0; }
 
   _yawTo(target) {
     const d = new THREE.Vector3().subVectors(target, this.p.center(new THREE.Vector3()));
@@ -188,21 +195,22 @@ export class AIPerformer {
 
   update(dt) {
     this.t += dt;
+    // gentle clips (sulking, pointing) give way as soon as something new happens
+    if (this.clip?.interruptible && this.queue.length) { this.clip.onEnd?.(); this.clip = null; }
     if (!this.clip && this.queue.length) {
-      const name = this.queue.shift();
-      this.clip = { name, t: 0, ...CLIPS[name](this) };
+      const { name, opts } = this.queue.shift();
+      this.clip = { name, t: 0, ...CLIPS[name](this, opts) };
       this.current = name;
     }
 
     // defaults: breathing idle, gently watching Pip
-    const pose = {
-      pos: this.base.clone(),
-      yaw: this.yaw,
-      pitch: 0,
-      roll: Math.sin(this.t * 1.3) * 0.04,
-      hands: null, // {pos offset, roll} when the AI lifts the hand bar
-      held: true,
-    };
+    const pose = this._pose || (this._pose = { pos: new THREE.Vector3() });
+    pose.pos.copy(this.base);
+    pose.yaw = this.yaw;
+    pose.pitch = 0;
+    pose.roll = Math.sin(this.t * 1.3) * 0.04;
+    pose.hands = null; // {pos offset, roll} when the AI lifts the hand bar
+    pose.held = true;
     pose.pos.y += Math.sin(this.t * 2.1) * 0.003;
 
     if (this.sleeping) {
@@ -211,12 +219,13 @@ export class AIPerformer {
       this.clip.t += dt;
       const done = this.clip.run(this.clip.t, pose, dt);
       if (done) {
+        this.clip.onEnd?.();
         this.clip = null;
         this.current = "idle";
       }
     } else {
       // when idle, turn to watch the partner
-      const watch = this._yawTo(this.partner.center(new THREE.Vector3()));
+      const watch = this._yawTo(this.partner.center(AV.a));
       this.yaw = lerpAngle(this.yaw, lerpAngle(0, watch, 0.55), Math.min(1, dt * 1.2));
       pose.yaw = this.yaw;
     }
@@ -225,14 +234,14 @@ export class AIPerformer {
     const bar = this.p.main;
     bar.held = pose.held;
     bar.position.lerp(pose.pos, Math.min(1, dt * 7));
-    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(pose.pitch, pose.yaw, -pose.roll, "YXZ"));
+    const q = AV.q.setFromEuler(AV.e.set(pose.pitch, pose.yaw, -pose.roll, "YXZ"));
     bar.quaternion.slerp(q, Math.min(1, dt * 7));
     const hb = this.p.hands;
     if (pose.hands) {
       hb.held = true;
-      const target = pose.pos.clone().add(pose.hands.pos.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), pose.yaw));
+      const target = AV.b.copy(pose.hands.pos).applyAxisAngle(AV.up, pose.yaw).add(pose.pos);
       hb.position.lerp(target, Math.min(1, dt * 8));
-      const hq = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, pose.yaw, -(pose.hands.roll || 0), "YXZ"));
+      const hq = AV.q.setFromEuler(AV.e.set(0, pose.yaw, -(pose.hands.roll || 0), "YXZ"));
       hb.quaternion.slerp(hq, Math.min(1, dt * 8));
     } else {
       hb.held = false;
@@ -381,6 +390,124 @@ const CLIPS = {
     run(t, pose) {
       pose.held = t > 1.8;
       return t > 3.2;
+    },
+  }),
+
+  // giggling: a quick shake and bounce
+  laugh: () => ({
+    run(t, pose) {
+      const k = 1 - ease((t - 1.5) / 0.4);
+      pose.roll = Math.sin(t * 24) * 0.13 * k;
+      pose.pitch = -0.22 * k + Math.sin(t * 12) * 0.05 * k;
+      pose.pos.y += Math.abs(Math.sin(t * 12)) * 0.012 * k;
+      pose.hands = { pos: new THREE.Vector3(0, 0.025 * k, 0.03 * k), roll: Math.sin(t * 12) * 0.3 * k };
+      return t > 2;
+    },
+  }),
+
+  // sulking: turned away, head down, until Sir Pip comes over (or gives a gift)
+  sulk: (ai, o = {}) => {
+    const away = ai._yawTo(ai.partner.center(new THREE.Vector3())) + Math.PI * 0.8;
+    return {
+      interruptible: true,
+      run(t, pose, dt) {
+        ai.yaw = lerpAngle(ai.yaw, away, Math.min(1, dt * 2.5));
+        pose.yaw = ai.yaw;
+        const k = ease(t / 0.8);
+        pose.pitch = 0.3 * k;
+        pose.pos.y -= 0.014 * k;
+        pose.roll = Math.sin(t * 0.9) * 0.05;
+        return t > (o.dur || 8);
+      },
+    };
+  },
+
+  // pointing at something (the prop rack, the audience...)
+  point: (ai, o = {}) => {
+    const target = o.target || ai.partner.center(new THREE.Vector3());
+    return {
+      interruptible: true,
+      run(t, pose, dt) {
+        ai.yaw = lerpAngle(ai.yaw, ai._yawTo(target), Math.min(1, dt * 4));
+        pose.yaw = ai.yaw;
+        const k = ease(t / 0.5) * (1 - ease((t - 2.2) / 0.5));
+        pose.pitch = 0.18 * k;
+        pose.hands = { pos: new THREE.Vector3(0, 0.035 * k, 0.075 * k), roll: Math.sin(t * 8) * 0.15 * k };
+        return t > 2.8;
+      },
+    };
+  },
+
+  // fetch: walk to the prop rack, pick something up, bring it to Sir Pip
+  fetch: (ai, o = {}) => {
+    let phase = 0, t0 = 0;
+    const rack = o.at.clone();
+    return {
+      onEnd: () => { if (phase < 3) o.onAbort?.(); },
+      run(t, pose, dt) {
+        if (phase === 0) {
+          const stand = new THREE.Vector3(THREE.MathUtils.clamp(rack.x - 0.035, -0.33, 0.33), 0, THREE.MathUtils.clamp(rack.z - 0.07, -0.15, 0.12));
+          if (walkTo(ai, stand, dt, 0.13) || t > 6) { phase = 1; t0 = t; }
+        } else if (phase === 1) {
+          ai.yaw = lerpAngle(ai.yaw, ai._yawTo(rack), Math.min(1, dt * 5));
+          const k = Math.sin(Math.min(1, (t - t0) / 1.0) * Math.PI);
+          pose.pitch = 0.55 * k;
+          pose.hands = { pos: new THREE.Vector3(0, -0.02 * k, 0.06 * k), roll: 0 };
+          if (t - t0 > 0.5 && !this.picked) { this.picked = true; o.onPick?.(); }
+          if (t - t0 > 1.0) { phase = 2; t0 = t; }
+        } else if (phase === 2) {
+          const pc = ai.partner.center(new THREE.Vector3());
+          const dir = new THREE.Vector3(ai.base.x - pc.x, 0, ai.base.z - pc.z).normalize();
+          if (walkTo(ai, pc.clone().addScaledVector(dir, 0.12), dt, 0.13) || t - t0 > 6) { phase = 3; t0 = t; }
+        } else {
+          ai.yaw = lerpAngle(ai.yaw, ai._yawTo(ai.partner.center(new THREE.Vector3())), Math.min(1, dt * 5));
+          const k = Math.sin(Math.min(1, (t - t0) / 1.4) * Math.PI);
+          pose.pitch = 0.25 * k;
+          pose.hands = { pos: new THREE.Vector3(0, 0.02 * k, 0.08 * k), roll: 0 };
+          if (t - t0 > 0.7 && !this.delivered) { this.delivered = true; o.onDeliver?.(); }
+          if (t - t0 > 1.4) return true;
+        }
+        pose.pos.copy(ai.base).setY(pose.pos.y);
+        pose.yaw = ai.yaw;
+        return t > 16;
+      },
+    };
+  },
+
+  // endings
+  grandbow: (ai) => {
+    const face = 0; // to the audience
+    return {
+      run(t, pose, dt) {
+        ai.yaw = lerpAngle(ai.yaw, face, Math.min(1, dt * 4));
+        pose.yaw = ai.yaw;
+        const b1 = ease((t - 0.3) / 0.5) * (1 - ease((t - 1.3) / 0.5));
+        const up = ease((t - 1.6) / 0.4) * (1 - ease((t - 2.6) / 0.4));
+        const b2 = ease((t - 2.9) / 0.6) * (1 - ease((t - 4.2) / 0.6));
+        pose.pitch = 0.9 * Math.max(b1, b2);
+        pose.pos.y -= 0.02 * Math.max(b1, b2);
+        pose.hands = { pos: new THREE.Vector3(0, 0.1 * up, 0.03 * up), roll: Math.sin(t * 7) * 0.4 * up };
+        return t > 4.9;
+      },
+    };
+  },
+  pratfall: () => ({
+    run(t, pose) {
+      if (t < 0.5) pose.pos.y += Math.sin((t / 0.5) * Math.PI) * 0.08;
+      pose.held = !(t > 0.55 && t < 1.7);
+      pose.roll = t < 0.55 ? Math.sin(t * 20) * 0.3 : 0;
+      if (t > 1.7) { const k = 1 - ease((t - 2.4) / 0.4); pose.roll = Math.sin(t * 20) * 0.2 * k; }
+      return t > 2.9;
+    },
+  }),
+  faint: () => ({
+    run(t, pose) {
+      const sway = ease(t / 0.6);
+      pose.pitch = -0.45 * sway;
+      pose.roll = Math.sin(t * 7) * 0.2 * sway;
+      pose.hands = { pos: new THREE.Vector3(0.02, 0.1 * sway, 0.01), roll: 0.6 * sway };
+      pose.held = !(t > 1.3 && t < 3.2);
+      return t > 3.8;
     },
   }),
 

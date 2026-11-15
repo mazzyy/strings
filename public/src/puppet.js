@@ -2,6 +2,7 @@
 // control bars by rope constraints. All coordinates are metres in stage space
 // (stage floor at y = 0, puppet faces +z when at rest).
 import * as THREE from "three";
+import { batchParts } from "./batch.js";
 
 const GRAVITY = -3.6; // theatrical: lighter than real gravity so motion reads as floaty wood
 const STEP = 1 / 120;
@@ -55,6 +56,7 @@ const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 const tmpA = new THREE.Vector3();
 const tmpB = new THREE.Vector3();
 const tmpC = new THREE.Vector3();
+const FRAME_SCRATCH = { r: new THREE.Vector3(), u: new THREE.Vector3(), c: new THREE.Vector3(), a: new THREE.Vector3(), z: new THREE.Vector3(), m4: new THREE.Matrix4() };
 
 export class ControlBar {
   // kind: "main" | "hands"
@@ -127,6 +129,7 @@ export class Marionette {
     this.hands = new ControlBar("hands");
     this.main.position.copy(this.rootRest).add(new THREE.Vector3(0, 0.5, 0));
     this.main.quaternion.copy(rot);
+    this.main.parked = true;
     this.handsHook = new THREE.Vector3(0, -0.014, -0.088); // where the hand bar hangs on the main bar
     this._placeHandsOnHook();
     this.hands.hooked = true;
@@ -142,6 +145,11 @@ export class Marionette {
       }
     }
 
+    this.gravityScale = 1; // "moon gravity" mode
+    this.fragile = false;  // "fragile strings" mode: a hard yank snaps a string
+    this.onSnap = null;    // (stringName, position) => void
+    this.onTwang = null;   // a string snapping taut: (stringIndex, tension) => void
+    this.tension = new Float32Array(this.strings.length);
     this.gaitPhase = 0;
     this.gaitAmp = 0;
     this.acc = 0;
@@ -165,9 +173,12 @@ export class Marionette {
     this.main.trackVelocity(dt);
     this.hands.trackVelocity(dt);
 
-    // strings go limp when nobody holds the bar
-    const mainT = this.main.held ? 1 : 2.2;
-    const handT = this.hands.held || this.main.held ? 1 : 2.2;
+    // strings go limp when nobody holds the bar (until it's first picked up, the
+    // bar rests on its hook so the puppet stands ready, like a real marionette)
+    if (this.main.held) this.main.parked = false;
+    const up = this.main.held || this.main.parked;
+    const mainT = up ? 1 : 2.2;
+    const handT = this.hands.held || up ? 1 : 2.2;
     this.main.slack += (mainT - this.main.slack) * Math.min(1, dt * (this.main.held ? 6 : 2.5));
     this.hands.slack += (handT - this.hands.slack) * Math.min(1, dt * (handT === 1 ? 6 : 2.5));
 
@@ -191,6 +202,19 @@ export class Marionette {
       else if (st.name === "pelvis") st.offset = 0.004 * bowK;
     }
 
+    // fragile strings: a sharp yank of the bar snaps one of its strings for a few seconds
+    for (const st of this.strings) if (st.snapped > 0) st.snapped -= dt;
+    if (this.fragile && this.main.held && this.main.velocity.length() > 0.95) {
+      const live = this.strings.filter((st) => st.bar === this.main && !(st.snapped > 0) && st.name !== "head");
+      if (live.length && (this._snapCool || 0) <= 0) {
+        const st = live[Math.floor(Math.random() * live.length)];
+        st.snapped = 3.5;
+        this._snapCool = 1.2;
+        this.onSnap?.(st.name, this.pos[st.i]);
+      }
+    }
+    if (this._snapCool > 0) this._snapCool -= dt;
+
     this.acc += dt;
     while (this.acc >= STEP) {
       this._step(STEP);
@@ -201,7 +225,7 @@ export class Marionette {
 
   _step(h) {
     const P = this.pos, Q = this.prev;
-    const g = GRAVITY * h * h;
+    const g = GRAVITY * this.gravityScale * h * h;
     for (let i = 0; i < P.length; i++) {
       const p = P[i], q = Q[i];
       let vx = (p.x - q.x) * 0.988, vy = (p.y - q.y) * 0.988, vz = (p.z - q.z) * 0.988;
@@ -235,6 +259,7 @@ export class Marionette {
         }
       }
       for (const st of this.strings) {
+        if (st.snapped > 0) continue;
         const a = st.bar.worldPoint(st.local, tmpB);
         const p = P[st.i];
         const L = st.len * st.bar.slack + st.offset;
@@ -320,6 +345,7 @@ export class Marionette {
     this.main.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
     this.main._lastPos = null;
     this.main.velocity.set(0, 0, 0);
+    this.main.parked = true;
     this.hands.held = false;
     this._placeHandsOnHook();
   }
@@ -331,12 +357,18 @@ export class Marionette {
   _buildMeshes() {
     this.skin = this.skinFactory(this);
     this.group.add(this.skin.group);
+    // one skinned mesh per material instead of one draw call per body part
+    this.skin.update(this._frame(), 0);
+    this.batch = batchParts(this.skin.group, this.skin.bars);
     const n = this.strings.length;
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 6), 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 6), 3));
+    this._strCol = new THREE.Color(this.stringColor);
+    // strings brighten as they pull taut (vertex colours above 1 feed the bloom)
     this.stringLines = new THREE.LineSegments(
       geo,
-      new THREE.LineBasicMaterial({ color: this.stringColor, transparent: true, opacity: this.ghost ? 0.18 : 0.55 })
+      new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: this.ghost ? 0.2 : 0.8, toneMapped: false })
     );
     this.stringLines.frustumCulled = false;
     this.group.add(this.stringLines);
@@ -350,32 +382,58 @@ export class Marionette {
       qUpper: new THREE.Quaternion(), qLower: new THREE.Quaternion(), yawQ: new THREE.Quaternion(),
       up: new THREE.Vector3(), facing: new THREE.Vector3(),
     });
-    const m4 = new THREE.Matrix4();
+    // (scratch objects only: this runs for every puppet, every frame)
+    const S = FRAME_SCRATCH;
     const basis = (right, upv) => {
-      const r = right.clone().normalize();
-      const u = upv.clone().sub(r.clone().multiplyScalar(upv.dot(r))).normalize();
-      return m4.makeBasis(r, u, new THREE.Vector3().crossVectors(r, u));
+      const r = S.r.copy(right).normalize();
+      const u = S.u.copy(upv).addScaledVector(r, -upv.dot(r)).normalize();
+      return S.m4.makeBasis(r, u, S.c.crossVectors(r, u));
     };
     f.up.subVectors(this.get("neck"), this.get("pelvis"));
-    f.qUpper.setFromRotationMatrix(basis(new THREE.Vector3().subVectors(this.get("rS"), this.get("lS")), f.up));
-    f.qLower.setFromRotationMatrix(basis(new THREE.Vector3().subVectors(this.get("rH"), this.get("lH")), f.up));
+    f.qUpper.setFromRotationMatrix(basis(S.a.subVectors(this.get("rS"), this.get("lS")), f.up));
+    f.qLower.setFromRotationMatrix(basis(S.a.subVectors(this.get("rH"), this.get("lH")), f.up));
     this.facing(f.facing);
-    f.yawQ.setFromUnitVectors(new THREE.Vector3(0, 0, 1), f.facing);
+    f.yawQ.setFromUnitVectors(S.z.set(0, 0, 1), f.facing);
     f.up.normalize();
     return f;
   }
 
   _render(dt = 0) {
     this.skin.update(this._frame(), dt);
-    const arr = this.stringLines.geometry.attributes.position.array;
+    this.batch?.update();
+    const attrs = this.stringLines.geometry.attributes;
+    const arr = attrs.position.array, col = attrs.color.array;
+    const base = this._strCol;
     let k = 0;
-    for (const st of this.strings) {
+    this.strings.forEach((st, si) => {
       const a = st.bar.worldPoint(st.local, tmpB);
       const p = this.pos[st.i];
-      arr[k++] = a.x; arr[k++] = a.y; arr[k++] = a.z;
-      arr[k++] = p.x; arr[k++] = p.y; arr[k++] = p.z;
-    }
-    this.stringLines.geometry.attributes.position.needsUpdate = true;
+      if (st.snapped > 0) {
+        // a snapped string dangles from the bar
+        tmpA.copy(a).add(tmpC.set(0, -0.05, 0));
+        arr[k] = a.x; arr[k + 1] = a.y; arr[k + 2] = a.z; arr[k + 3] = tmpA.x; arr[k + 4] = tmpA.y; arr[k + 5] = tmpA.z;
+        for (let j = 0; j < 6; j += 3) { col[k + j] = 1.4; col[k + j + 1] = 0.35; col[k + j + 2] = 0.3; }
+        k += 6;
+        this.tension[si] = 0;
+        return;
+      }
+      const L = st.len * st.bar.slack + st.offset;
+      const tens = Math.max(0, Math.min(1, (a.distanceTo(p) / Math.max(L, 1e-4) - 0.93) / 0.07));
+      const prev = this.tension[si];
+      this.tension[si] += (tens - prev) * Math.min(1, dt * 12);
+      if (prev < 0.35 && tens > 0.95 && this.main.held && st.bar.velocity.length() > 0.25) this.onTwang?.(si, tens);
+      const t = this.tension[si];
+      const bright = 0.38 + t * 1.25; // slack: dim; taut: glowing
+      arr[k] = a.x; arr[k + 1] = a.y; arr[k + 2] = a.z; arr[k + 3] = p.x; arr[k + 4] = p.y; arr[k + 5] = p.z;
+      for (let j = 0; j < 6; j += 3) {
+        col[k + j] = base.r * bright + t * 0.15;
+        col[k + j + 1] = base.g * bright + t * 0.12;
+        col[k + j + 2] = base.b * bright + t * 0.1;
+      }
+      k += 6;
+    });
+    attrs.position.needsUpdate = true;
+    attrs.color.needsUpdate = true;
   }
 
   setVisible(v) { this.group.visible = v; }

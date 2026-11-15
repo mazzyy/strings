@@ -181,12 +181,15 @@ export function buildStage(assets) {
   const curtains = {
     group: mainCurtain,
     k: 0, target: 0, callT: -1,
-    open() { this.target = 1; },
+    open() { this.target = 1; this.manual = null; },
+    // the cord is being pulled: the curtain follows your hand (0..1)
+    follow(k) { this.manual = k; },
     close() { this.target = 0; },
     call() { this.target = 0.15; this.callT = 1.6; }, // dip for the curtain call, then reopen
     update(dt) {
       if (this.callT > 0 && (this.callT -= dt) <= 0) this.target = 1;
-      this.k += (this.target - this.k) * Math.min(1, dt * 1.8);
+      const goal = this.manual != null ? this.manual : this.target;
+      this.k += (goal - this.k) * Math.min(1, dt * (this.manual != null ? 10 : 1.8));
       const open = this.k;
       panels.forEach((p, i) => {
         const sx = i === 0 ? -1 : 1;
@@ -194,6 +197,39 @@ export function buildStage(assets) {
       });
     },
   };
+
+  // the curtain cord: a gold tassel hanging beside the front-right post. Pull it
+  // down to raise the curtain (the very first thing a player does).
+  const cordGroup = new THREE.Group();
+  const cordTop = postH - 0.02, tasselRest = 0.13;
+  const cordX = W / 2 + 0.008, cordZ = D / 2 + 0.002;
+  const ropeMat = new THREE.MeshStandardMaterial({ color: 0xc9a14a, metalness: 0.6, roughness: 0.45 });
+  const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0016, 1, 6).translate(0, -0.5, 0), ropeMat);
+  rope.position.set(cordX, cordTop, cordZ);
+  const tasselMat = new THREE.MeshStandardMaterial({ color: 0xe8c060, metalness: 0.7, roughness: 0.3, emissive: 0xffb030, emissiveIntensity: 0.6 });
+  const tassel = new THREE.Group();
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.0065, 14, 10), tasselMat);
+  const skirt = new THREE.Mesh(new THREE.ConeGeometry(0.008, 0.024, 14, 1, true), tasselMat);
+  skirt.position.y = -0.016;
+  tassel.add(knot, skirt);
+  tassel.position.set(cordX, tasselRest, cordZ);
+  cordGroup.add(rope, tassel);
+  root.add(cordGroup);
+  const cord = {
+    group: cordGroup, tassel, mat: tasselMat,
+    rest: tasselRest, pull: 0, held: false, t: 0,
+    // world-ish handle position in stage space
+    handle(out = new THREE.Vector3()) { return out.copy(tassel.position); },
+    update(dt, glow = true) {
+      this.t += dt;
+      if (!this.held) this.pull += (0 - this.pull) * Math.min(1, dt * 9); // springs back up
+      tassel.position.y = this.rest - this.pull;
+      tassel.rotation.z = Math.sin(this.t * 1.7) * 0.05 * (this.held ? 0 : 1);
+      rope.scale.y = cordTop - tassel.position.y;
+      tasselMat.emissiveIntensity = glow ? 0.5 + 0.9 * (0.5 + 0.5 * Math.sin(this.t * 4)) : 0.15;
+    },
+  };
+  cord.update(0);
 
   // brass footlights along the apron
   const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffd9a0, toneMapped: false });
@@ -235,7 +271,12 @@ export function buildStage(assets) {
   talkKnob.position.set(-0.26, 0.004, D / 2 - 0.05);
   root.add(talkKnob);
 
-  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob }, shadowCatcher, curtains };
+  // the "mode" knob (gold): cycles the fun modes you've unlocked
+  const modeKnob = makeKnob(0xe0b23a, "mode");
+  modeKnob.position.set(-0.21, 0.004, D / 2 - 0.05);
+  root.add(modeKnob);
+
+  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob }, shadowCatcher, curtains, cord };
 }
 
 // ---------------------------------------------------------------------------

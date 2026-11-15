@@ -5,6 +5,13 @@ A marionette theatre on your desk, with an AI co-performer. You pinch a glowing 
 In passthrough AR you set the stage down on your real desk.
 
 **What you can do**
+- **A curtain you raise yourself:** the stage starts dark with a glowing gold cord. Pinch it and pull down, and the curtain opens. Your first action teaches the pinch-and-pull you'll use all show.
+- **Marlo has a mind of his own** (fully offline, so it works on the hosted link): his mood (joy, trust, energy) shifts with what you do, and he remembers it. A third fall earns a giggle instead of help. A sword he doesn't trust yet makes him back away. Leave him alone too long and he sulks until you come over. When the stage goes quiet he acts on his own: he challenges you to copy his moves, fetches a prop for the knight, or dozes off. If you're stuck in a scene, he shows you what to do. Emote bubbles (♥ ! ? ★ z) make his mood readable at a glance.
+- **Three endings:** how you perform decides how the show ends. Graceful (bows, waves, gifts) gives The Grand Ceremony, clumsy (falls, flops) gives The Slapstick Finale, and wild (spins, sword-waving, running off) gives The Tragic Encore. The playbill shows the ending, Grace, Slapstick and Drama scores, and a critic's quote.
+- **Fun modes you unlock** by collecting playbills: Moon Gravity, Fragile Strings (yank too hard and a string snaps) and Party.
+- **Duet with your shadow:** your recording performs beside Sir Pip, and matching its moves pops an "In sync!" bubble.
+- **Built for seated play:** you can pinch a bar from below, so your arms can rest low. Hand motion is amplified a little, so small wrist moves give big stage moves. A glowing tether shows which bar your hand is holding. Hand tracking is smoothed with a One-Euro filter, the bar follows your knuckle (not your fingertips, so closing your fingers never jerks the puppet), and a brief tracking dropout doesn't drop him.
+- **Strings that glow when taut,** and pluck when they snap tight.
 - **Tonight's Show:** every visit is a short three-act scene with goals: meet the dragon, win a dance-off, give Marlo a birthday flower, patrol the stage by lantern light. Each act earns a star and applause, and the curtain call earns a playbill for your collection. There's a new show every day, plus a streak.
 - **Props:** pinch the sword, lantern or flower from the rack, put it in Sir Pip's hand, or give it to Marlo.
 - **Talk to Marlo:** say something and he answers in his own voice and acts it out. Uses Qwen or Claude locally, and simple keyword understanding on the hosted build.
@@ -96,6 +103,36 @@ The narrator speaks with Kokoro, a natural neural voice (see [CREDITS.md](CREDIT
 - **`public/src/skins.js`, `robot.js`, `stage.js`**: everything visual, built procedurally. Physically based materials are lit by a CC0 HDRI. Static parts are merged into a few draw calls (`perf.js`) to hold Quest frame rates.
 - **`public/src/puppet.js`**: Pip is a Verlet ragdoll (16 particles, rigid sticks, a soft waist). The strings are rope constraints back to two control bars. Letting go pays the strings out, so Pip slumps. Two small "assists" make crude input read well: moving the bar sideways alternately shortens the knee strings (a gait), and tipping the bar forward lets out the head strings (a bow).
 - **`public/src/input.js`**: Quest hand tracking (pinch = thumb–index gap, with hysteresis; controllers work as a fallback) and the desktop simulator. Both produce the same hand pose + pinch, so the grab logic is shared.
+- **`public/src/mind.js`**: Marlo's mood, memory and initiative (copy-me challenges, fetching, sulking, napping, demonstrating). It decides his reaction to every action, and works with or without a language model.
+- **`public/src/batch.js`**: each puppet's ~60 moving parts become bones of one skinned mesh per material, so the GPU poses them in a handful of draw calls.
 - **`public/src/director.js`**: `ActionDetector` reads Pip's body and emits walk, bow, fall, jump, wave, turn, slump, rise, approach and idle. `AIPerformer` plays Marlo with short clips (bow back, wave, help, retreat, mirror, dance, and so on) through the same bars-and-strings physics.
-- **`public/src/narrator.js` + `server.mjs`**: each batch of actions turns into one spoken line (Web Speech). Claude returns `{line, reaction}` as structured output, and the reaction queues Marlo's next move. If Claude is unavailable, slow, or declines, the built-in narrator fills in.
+- **`public/src/narrator.js` + `server.mjs`**: each batch of actions turns into one spoken line (a natural Kokoro voice, never the browser's robotic speech). Claude returns `{line, reaction}` as structured output, and the reaction queues Marlo's next move. If Claude is unavailable, slow, or declines, the built-in narrator fills in.
 - **`public/src/recorder.js`**: a performance is just the two bars' poses at 30 Hz. Replay drives a translucent ghost Pip, your shadow. Share links are quantised, delta-encoded and gzipped into the URL hash, about 4 KB for 25 s.
+
+## Performance
+
+Measured in a desktop browser, before and after the optimisation pass:
+
+| | Before | After |
+|---|---|---|
+| Assets downloaded at start (textures + lighting) | 6.7 MB | 1.0 MB |
+| Draw calls per frame, desktop | 398 | 178 |
+| Draw calls per frame, headset (both eyes) | 388 | 168 |
+| JavaScript per frame (physics, AI, UI) | 0.29 ms | 0.28 ms |
+
+Changes:
+- **Puppets:** GPU-skinned batching (`batch.js`).
+- **Static props:** merged into one mesh per material.
+- **Shadows:**
+  - Tiny parts don't cast shadows.
+  - In the headset, shadows update every other frame.
+  - In the headset, only the puppets and props cast shadows.
+- **Headset materials:** the expensive materials (velvet sheen, clearcoat) switch to standard ones.
+- **Headset rendering:** fixed foveated rendering.
+- **Desktop rendering:** pixel ratio is capped at 1.5.
+- **Shaders:** precompiled behind the loading screen.
+- **Garbage collection:** per-frame allocations removed from the physics and AI.
+- **Assets:**
+  - Textures resized: 1K colour, 512 px normal maps, 256 px roughness.
+  - The lighting HDRI is downsampled to 256×128.
+  - Voice clips load only when spoken.

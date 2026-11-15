@@ -107,6 +107,37 @@ function makeBuffers(ctx) {
     for (let i = 0; i < n; i++) { const t = i / SR; d[i] = Math.sin(2 * Math.PI * (300 + 900 * Math.exp(-t * 40)) * t) * Math.exp(-t * 28); }
     normalize(d, 0.5);
   });
+  // a taut string: Karplus-Strong pluck (pitch varies with playback rate)
+  B.pluck = buffer(ctx, 0.7, (d, n) => {
+    const period = Math.floor(SR / 392);
+    const ring = new Float32Array(period).map(() => noise() * 0.8);
+    for (let i = 0; i < n; i++) {
+      const j = i % period;
+      const next = ring[(j + 1) % period];
+      ring[j] = (ring[j] + next) * 0.5 * 0.994;
+      d[i] = ring[j];
+    }
+    lowpass(d, 0.5);
+    normalize(d, 0.4);
+  });
+  // a string snapping: sharp crack, then a sagging twang
+  B.snap = buffer(ctx, 0.6, (d, n) => {
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / SR;
+      ph += (2 * Math.PI * (700 * Math.exp(-t * 6) + 120)) / SR;
+      d[i] = noise() * Math.exp(-t * 160) + Math.sin(ph) * Math.exp(-t * 7) * 0.6;
+    }
+    normalize(d, 0.6);
+  });
+  // picking up the wooden control bar
+  B.clack = buffer(ctx, 0.09, (d, n) => {
+    for (let i = 0; i < n; i++) {
+      const t = i / SR;
+      d[i] = noise() * Math.exp(-t * 140) * 0.5 + Math.sin(2 * Math.PI * 880 * t) * Math.exp(-t * 70) + Math.sin(2 * Math.PI * 1960 * t) * Math.exp(-t * 110) * 0.5;
+    }
+    normalize(d, 0.55);
+  });
   return B;
 }
 

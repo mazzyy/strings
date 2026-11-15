@@ -95,6 +95,63 @@ export const COACH = {
   recordEnd: "And... curtain. What a performance.",
   replay: "Here comes your shadow. Perform alongside it.",
   shared: "Someone has sent you a performance. Watch their shadow, then join in.",
+  pullCord: "Welcome to our little theatre. Pinch the golden cord, and pull it down to raise the curtain.",
+  pullCordDesk: "Welcome to our little theatre. Drag the golden cord down to raise the curtain.",
+  copyIntro: "Marlo wants a turn. Copy what he does!",
+  synced: "In perfect step with your shadow!",
+  snap: "Snap! One of the strings has broken. Gently does it.",
+  modeNormal: "Back to the classic show.",
+  modeMoon: "Moon gravity. Everything floats.",
+  modeFragile: "Fragile strings. Move gently, or they'll snap.",
+  modeParty: "Party mode! The lights are dancing.",
+  unlockMoon: "You've unlocked moon gravity! Press the gold button to try it.",
+  unlockFragile: "New mode unlocked: fragile strings. Press the gold button.",
+  unlockParty: "New mode unlocked: party mode! Press the gold button.",
+};
+
+// Marlo's own voice, for things he does on his own initiative
+export const MARLO_SAYS = {
+  copyMe: "Copy me!",
+  yourTurn: "Your turn! Do what I do!",
+  yay: "Yes! Just like that!",
+  yay2: "Ha! Perfect!",
+  aww: "Aww. Maybe next time.",
+  careful: "Whoa! Careful with that sword!",
+  forMe: "For me? Oh, thank you!",
+  forMeAsk: "Is that for me?",
+  forYou: "Here. For you!",
+  fetching: "Ooh, wait right there!",
+  hmph: "Hmph. Nobody plays with me.",
+  cheerUp: "Oh! You came back!",
+  yawn: "Yawn... just resting my eyes.",
+  wake: "I'm awake! I'm awake!",
+  giggle: "Ha ha! You fell again!",
+  ohNo: "Oh no! Let me help!",
+  overHere: "Over here! Over here!",
+  likeThis: "Like this. Watch!",
+  lookThere: "Look, over there, by the edge of the stage!",
+};
+
+// how the show ends depends on HOW you performed it
+export const ENDINGS = {
+  grace: {
+    title: "The Grand Ceremony",
+    line: "What grace! What manners! Marlo declares Sir Pip a knight of the royal stage.",
+    clip: "grandbow",
+    critics: ["A triumph of good manners. I wept into my programme.", "Elegant, noble, and very well bowed.", "The most dignified knight I have ever seen. And I've seen several."],
+  },
+  slapstick: {
+    title: "The Slapstick Finale",
+    line: "Well, that was a disaster. A glorious, wobbly, wonderful disaster. Marlo falls over too, just to be polite.",
+    clip: "pratfall",
+    critics: ["I laughed until my monocle fell out.", "Clumsy, chaotic, and absolutely delightful.", "Nobody has ever fallen over with such commitment."],
+  },
+  drama: {
+    title: "The Tragic Encore",
+    line: "Such drama! Such passion! Marlo is so moved that he faints clean away.",
+    clip: "faint",
+    critics: ["Bold. Baffling. Unforgettable.", "I have no idea what happened, and I loved every second.", "Wild, unpredictable theatre. Bring a helmet."],
+  },
 };
 
 export const PROPS = { sword: "sword", lantern: "lantern", flower: "flower" };
@@ -203,5 +260,7 @@ export function allLines() {
   SHOW_LINES.bravo.forEach((l) => say(l));
   [SHOW_LINES.finale, SHOW_LINES.tomorrow, SHOW_LINES.encore].forEach((l) => say(l));
   Object.values(MARLO_TALK).forEach((l) => say(l, "marlo"));
+  Object.values(MARLO_SAYS).forEach((l) => say(l, "marlo"));
+  Object.values(ENDINGS).forEach((e) => say(e.line));
   return [...out].map(([text, who]) => ({ text, who }));
 }
