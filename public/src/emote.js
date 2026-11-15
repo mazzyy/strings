@@ -11,7 +11,10 @@ function bubble(sym, text) {
   if (cache.has(key)) return cache.get(key);
   const c = document.createElement("canvas");
   const wide = !!text;
-  c.width = wide ? 320 : 128; c.height = 128;
+  // a bubble with words grows to fit them
+  let w = 128;
+  if (wide) { const m = c.getContext("2d"); m.font = "700 52px ui-sans-serif, system-ui, sans-serif"; w = Math.min(1600, Math.max(320, Math.ceil(m.measureText(`${sym} ${text}`).width) + 80)); }
+  c.width = w; c.height = 128;
   const g = c.getContext("2d");
   g.fillStyle = "rgba(20, 14, 12, 0.82)";
   g.strokeStyle = COLORS[sym] || "#fff";

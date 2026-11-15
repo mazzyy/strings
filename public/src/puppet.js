@@ -312,19 +312,22 @@ export class Marionette {
   }
 
   _collide() {
-    const P = this.pos, Q = this.prev, B = this.bounds;
+    const P = this.pos, Q = this.prev, B = this.bounds, D = this.desk;
     for (let i = 0; i < P.length; i++) {
       const p = P[i];
       const r = i === this.idx.head ? 0.02 : 0.005;
-      if (p.y < r) {
-        p.y = r;
+      // passthrough: past the front of the stage is YOUR real desk, one step down
+      const floor = D && p.z > D.front && p.y < r ? D.y : 0;
+      if (p.y < floor + r) {
+        p.y = floor + r;
         // floor friction: kill most horizontal velocity on contact
         const q = Q[i];
         q.x += (p.x - q.x) * 0.55;
         q.z += (p.z - q.z) * 0.55;
       }
       if (p.x < B.minX) p.x = B.minX; else if (p.x > B.maxX) p.x = B.maxX;
-      if (p.z < B.minZ) p.z = B.minZ; else if (p.z > B.maxZ) p.z = B.maxZ;
+      const maxZ = D ? D.maxZ : B.maxZ;
+      if (p.z < B.minZ) p.z = B.minZ; else if (p.z > maxZ) p.z = maxZ;
     }
   }
 

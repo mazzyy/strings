@@ -286,7 +286,12 @@ export function buildStage(assets) {
   freeKnob.position.set(-0.11, 0.004, D / 2 - 0.05);
   root.add(freeKnob);
 
-  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob, map: mapKnob, free: freeKnob }, shadowCatcher, curtains, cord };
+  // the "lock" knob (violet): pinch lock, so a bar stays in your hand without holding the pinch
+  const lockKnob = makeKnob(0x9a6ad8, "lock");
+  lockKnob.position.set(-0.06, 0.004, D / 2 - 0.05);
+  root.add(lockKnob);
+
+  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob, map: mapKnob, free: freeKnob, lock: lockKnob }, shadowCatcher, curtains, cord };
 }
 
 // ---------------------------------------------------------------------------

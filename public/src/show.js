@@ -96,6 +96,36 @@ function playbillTexture(scene, stars, streak, entry = {}) {
   return t;
 }
 
+// "Backstage notes": how the guest felt about you, and what they remembered. This
+// is the offline mind (mind.js) made visible: mood, trust and real memories.
+export function mindCardTexture(m) {
+  const c = document.createElement("canvas");
+  c.width = 360; c.height = 520;
+  const g = c.getContext("2d");
+  g.fillStyle = "#f6edd6"; g.fillRect(0, 0, 360, 520);
+  g.strokeStyle = "#3a5a7a"; g.lineWidth = 8; g.strokeRect(12, 12, 336, 496);
+  g.textAlign = "center"; g.fillStyle = "#3a5a7a";
+  g.font = "600 22px Georgia, serif"; g.fillText("BACKSTAGE NOTES", 180, 62);
+  g.font = "italic 19px Georgia, serif"; g.fillStyle = "#4a3020"; g.fillText(`How ${m.name} felt about you`, 180, 94);
+  g.textAlign = "left"; g.font = "600 19px Georgia, serif"; g.fillStyle = "#2a1a10";
+  g.fillText("Trust", 40, 142);
+  g.fillStyle = "rgba(58,90,122,0.18)"; g.fillRect(110, 127, 160, 18);
+  g.fillStyle = "#3a8ac0"; g.fillRect(110, 127, 160 * m.trust / 100, 18);
+  g.fillStyle = "#2a1a10"; g.font = "17px Georgia, serif"; g.fillText(`${m.trust}%`, 280, 142);
+  g.font = "18px Georgia, serif";
+  g.fillText(`Joy: ${m.joy}   ·   Energy: ${m.energy}`, 40, 178);
+  g.fillText(`Right now: ${m.mood}`, 40, 206);
+  g.fillStyle = "#3a5a7a"; g.font = "600 18px Georgia, serif"; g.fillText("Remembered", 40, 250);
+  g.fillStyle = "#2a1a10"; g.font = "17px Georgia, serif";
+  const notes = m.notes.length ? m.notes : ["You let the story speak for itself"];
+  notes.slice(-6).forEach((n, i) => g.fillText(`•  ${n}`, 40, 282 + i * 30));
+  g.font = "italic 13px Georgia, serif"; g.fillStyle = "#6a5040"; g.textAlign = "center";
+  g.fillText("kept by the guest's own mind, offline", 180, 488);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export class Show {
   constructor(o) {
     Object.assign(this, o); // narrator, hints, sfx, ai, pip, marlo, props, curtains, setNight, isXR, stageRoot, onChange
@@ -131,6 +161,11 @@ export class Show {
     this.bill.rotation.set(-0.25, 0.35, 0);
     this.bill.visible = false;
     this.stageRoot.add(this.bill);
+    this.mindCard = new THREE.Mesh(new THREE.PlaneGeometry(0.115, 0.166), new THREE.MeshStandardMaterial({ roughness: 0.8 }));
+    this.mindCard.position.set(0.3, 0.1, 0.12);
+    this.mindCard.rotation.set(-0.25, -0.35, 0);
+    this.mindCard.visible = false;
+    this.stageRoot.add(this.mindCard);
   }
 
   pickScene() {
@@ -155,6 +190,7 @@ export class Show {
     this.starMeshes.forEach((m, i) => { m.material = this.starMats.dim; m.visible = i < n; m.position.set((i - (n - 1) / 2) * 0.035, 0, 0); });
     this.starGroup.visible = true;
     this.bill.visible = false;
+    this.mindCard.visible = false;
     this.setNight(!!this.scene.night);
     if (this.scene.sleepy) this.ai.sleep(true);
     this.narrator.coach(this.scene.intro);
@@ -265,6 +301,14 @@ export class Show {
     this.bill.material.map = playbillTexture(this.scene, this.stars, playbills.streak(), entry);
     this.bill.material.needsUpdate = true;
     this.bill.visible = true;
+    const mind = this.mindSummary?.();
+    if (mind) {
+      this.mindCard.material.map?.dispose();
+      this.mindCard.material.map = mindCardTexture(mind);
+      this.mindCard.material.needsUpdate = true;
+      this.mindCard.visible = true;
+      this.onMindCard?.(mind);
+    }
     this.onChange?.(this, entry);
   }
 

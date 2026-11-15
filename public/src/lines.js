@@ -98,7 +98,11 @@ export const COACH = {
   replay: "Here comes your shadow. Perform alongside it.",
   shared: "Someone has sent you a performance. Watch their shadow, then join in.",
   storyIntro: "Ah, there you are! Welcome, welcome. Come closer, and let me tell you a story.",
-  storyIntro2: "It's about a very small knight, and a very big adventure.",
+  lockOn: "Pinch lock is on. Pinch once to pick up a bar, and pinch again to put it down. No need to hold on.",
+  lockOff: "Pinch lock is off. Hold your pinch to hold the bar.",
+  deskAR: "Psst. The stage is sitting on your real desk. Sir Pip can step right off the front of it, and walk about on your table.",
+  warmupXR: "That's Sir Pip! Pinch the glowing bar above him, and lift him up.",
+  warmupDesk: "That's Sir Pip! Click and hold the glowing bar above him, and move him about.",
   welcomeBack: "Welcome back! Now, where were we?",
   pullCord: "Welcome to our little theatre. Pinch the golden cord, and pull it down to raise the curtain.",
   pullCordDesk: "Welcome to our little theatre. Drag the golden cord down to raise the curtain.",
@@ -370,20 +374,14 @@ export const GUESTS = {
 export const PROLOGUE = {
   id: "prologue", set: "courtyard", title: "The Tale of Sir Pip",
   pages: [
-    "Once upon a time, in a kingdom no bigger than a desk, every night ended with a song from a little golden music box.",
-    "Each evening, Princess Juniper wound its tiny key, and the whole kingdom fell asleep smiling.",
-    "But one stormy night, Clank, a clockwork robot with a heart of rusty gears, crept into the castle.",
-    "He carried the princess away to his tower, and hid the music box's three jewels where no one would find them. The kingdom fell silent.",
-    "The king called for a hero. Nobody came. Nobody, that is, except one very small knight.",
-    "His name was Sir Pip. He had shiny armour, a brave heart, and absolutely no idea what he was doing. And so, the quest began.",
+    "Once upon a time, in a kingdom no bigger than a desk, Princess Juniper wound a little golden music box every night, and everyone fell asleep smiling.",
+    "But one stormy night, Clank the clockwork robot carried her off to his tower, and hid the music box's three jewels. The kingdom fell silent.",
+    "Only one hero answered the king's call: Sir Pip. Shiny armour, a brave heart, and absolutely no idea what he was doing. And so, the quest began.",
   ],
   art: [
-    { set: "courtyard", night: true, cast: [["musicbox", 0.5]] },
     { set: "courtyard", night: true, cast: [["princess", 0.38], ["musicbox", 0.66]] },
-    { set: "tower", cast: [["clank", 0.5]] },
     { set: "tower", cast: [["clank", 0.32], ["cage", 0.72], ["princess", 0.72]] },
     { set: "courtyard", cast: [["king", 0.35], ["pip", 0.68, true]] },
-    { set: "courtyard", cast: [["pip", 0.5]] },
   ],
 };
 

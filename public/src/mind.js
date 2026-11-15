@@ -40,6 +40,36 @@ export class MarloMind {
     this.introducedCopy = false;
     this.enabled = true;
     this.pers = { sword: "wary", sulkAfter: 40, patience: 9 };
+    this.seen = {};   // every action, counted (also during tasks)
+    this.notes = [];  // what he remembers about you, in words (shown on the playbill)
+  }
+
+  // remembering, out loud: the puppeteer's eyes flash and a note appears (see main.js)
+  _note(text) {
+    if (this.notes.includes(text)) return;
+    this.notes.push(text);
+    if (this.notes.length > 6) this.notes.shift();
+    this.onMemory?.(text);
+  }
+  _remember(ev) {
+    const s = this.seen;
+    const n = (s[ev.type] = (s[ev.type] || 0) + 1);
+    const social = ["bow", "wave", "give", "talk", "approach"].reduce((a, k) => a + (s[k] || 0), 0);
+    switch (ev.type) {
+      case "bow": if (n === 1) this._note(social === 1 ? "You bowed to him first" : "You bowed to him"); break;
+      case "wave": if (n === 1) this._note("You waved hello"); break;
+      case "approach": if (n === 1) this._note("You came over to say hello"); break;
+      case "fall": if (n === 1) this._note("Saw you take a tumble"); else if (n === 3) this._note("Giggled at your third tumble"); break;
+      case "give": this._note(`You gave him the ${ev.prop || "gift"}`); break;
+      case "talk": if (n === 1) this._note("You talked to him"); break;
+      case "jump": if (n === 4) this._note("Loved all your jumping"); break;
+      case "hold": if (ev.prop === "sword" && this.pers.sword !== "duel" && this.mood.trust < 0.6) this._note("Was wary of your sword"); break;
+    }
+  }
+  // for the playbill's "backstage notes"
+  report() {
+    const lvl = (x) => (x > 0.75 ? "High" : x > 0.45 ? "Good" : x > 0.25 ? "Low" : "Very low");
+    return { trust: Math.round(this.mood.trust * 100), joy: lvl(this.mood.joy), energy: lvl(this.mood.energy), mood: this.moodName, notes: [...this.notes], falls: this.seen.fall || 0 };
   }
 
   // a new guest takes the stage: fresh mood and memory, their own personality
@@ -48,6 +78,7 @@ export class MarloMind {
     this.pers = { sword: "wary", sulkAfter: 40, patience: 9, ...personality };
     this.mood = { joy: personality.joy ?? 0.55, trust: personality.trust ?? 0.45, energy: personality.energy ?? 0.85 };
     for (const k of Object.keys(this.mem)) this.mem[k] = 0;
+    this.seen = {}; this.notes = [];
     this.state = "curious";
     this.challenge = null;
     this.napping = false;
@@ -74,6 +105,7 @@ export class MarloMind {
   hear(ev, ctx = {}) {
     this.t = ctx.t ?? this.t;
     // while a task (duel, riddle...) is running, the task directs the guest
+    if (ev.type !== "idle") this._remember(ev); // he remembers, even mid-task
     if (this.taskBusy) { this.lastEvent = this.t; return null; }
     this.lastEvent = this.t;
     this.nextIdea = this.t + 8 + Math.random() * 5;
@@ -84,6 +116,7 @@ export class MarloMind {
     if (this.challenge && COPYABLE[ev.type] === this.challenge.move) {
       this.challenge = null;
       m.copied++;
+      this._note("You copied his move");
       this._bump("joy", 0.2);
       this._bump("trust", 0.1);
       this.emote("★");
@@ -236,6 +269,7 @@ export class MarloMind {
 
   _sulk() {
     this.state = "sulking";
+    this._note("Felt ignored for a while");
     this.emote("…");
     this.say("hmph");
     this.ai.react("sulk", { dur: 14 });

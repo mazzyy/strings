@@ -12,15 +12,16 @@ import { loadAssets } from "./assets.js";
 import { mergeStatic } from "./perf.js";
 import { batchParts } from "./batch.js";
 import { Sfx, Soundscape } from "./audio.js";
+import { Phrases } from "./phrases.js";
 import { Hints } from "./hints.js";
 import { Props } from "./props.js";
-import { Show, playbills } from "./show.js";
+import { Show, playbills, mindCardTexture } from "./show.js";
 import { Talk } from "./talk.js";
 import { XRHands, DesktopHands, SimHandMeshes } from "./input.js";
 import { ActionDetector, AIPerformer, describe } from "./director.js";
 import { MarloMind } from "./mind.js";
 import { Emotes } from "./emote.js";
-import { Confetti, Sparkles } from "./fx.js";
+import { Confetti, Sparkles, makeHalo } from "./fx.js";
 import { GUESTS, STORY_LINES, PROLOGUE, EPILOGUE, TASK_LINES, CHAPTERS as CHAPTER_LIST } from "./lines.js";
 import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin, kingSkin } from "./cast.js";
 import { createTask } from "./tasks.js";
@@ -86,7 +87,7 @@ const { root: stageRoot, knobs, shadowCatcher, curtains, cord } = buildStage(ass
 stageRoot.position.set(0, STAGE_Y, 0);
 scene.add(stageRoot);
 // batch static geometry into one mesh per material (Quest needs few draw calls)
-let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, knobs.map, knobs.free, shadowCatcher, curtains.group, cord.group]);
+let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, knobs.map, knobs.free, knobs.lock, shadowCatcher, curtains.group, cord.group]);
 saved += mergeStatic(desk);
 saved += mergeStatic(room, [desk]);
 
@@ -173,7 +174,34 @@ const showCaption = (text) => {
   caption.textContent = text;
   caption.classList.add("on");
   captionTimer = 5 + text.length * 0.04;
+  xrCaption.set(text);
 };
+// subtitles in the headset too: a strip just below the front of the stage, where your
+// eyes already are (well inside a narrow field of view), turned to face you
+const xrCaption = (() => {
+  const c = document.createElement("canvas"); c.width = 1400; c.height = 170;
+  const g = c.getContext("2d");
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.056), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
+  mesh.renderOrder = 12; mesh.visible = false;
+  return {
+    mesh,
+    set(text) {
+      g.clearRect(0, 0, c.width, c.height);
+      g.fillStyle = "rgba(14,10,8,0.78)"; g.beginPath(); g.roundRect(4, 4, c.width - 8, c.height - 8, 40); g.fill();
+      g.fillStyle = "#fff6e4"; g.font = "italic 50px Georgia, serif"; g.textAlign = "center"; g.textBaseline = "middle";
+      const words = text.split(" "), lines = [""];
+      for (const w of words) { const t = lines[lines.length - 1] ? lines[lines.length - 1] + " " + w : w; if (g.measureText(t).width > c.width - 90 && lines[lines.length - 1]) lines.push(w); else lines[lines.length - 1] = t; }
+      const shown = lines.slice(0, 2);
+      if (lines.length > 2) shown[1] += " …";
+      shown.forEach((l, i) => g.fillText(l, c.width / 2, c.height / 2 + (i - (shown.length - 1) / 2) * 60));
+      tex.needsUpdate = true;
+      this.fresh = true;
+    },
+  };
+})();
+stageRoot.add(xrCaption.mesh);
+xrCaption.mesh.position.set(0, -0.05, 0.27);
 const toast = (text) => {
   const el = $("toast");
   el.textContent = text;
@@ -217,6 +245,7 @@ const voicePlayer = {
     return buffer.duration;
   },
   stop() { for (const v of [voice, marloVoice]) if (v.isPlaying) v.stop(); },
+  stopNarrator() { if (voice.isPlaying) voice.stop(); robot.talk = 0; },
 };
 // browsers only allow audio after a gesture
 const unlockAudio = () => listener.context.state !== "running" && listener.context.resume().catch(() => {});
@@ -329,6 +358,24 @@ const mind = new MarloMind({
   emote: (sym) => emotes.pop("marlo", sym, marloHead),
   coach: (k) => narrator.coach(k),
 });
+// the guest's mind, made visible: when they remember something about you, the
+// puppeteer's eyes flash gold and a note pops up beside his head
+mind.onMemory = (text) => {
+  robot.memFlash = 1.2;
+  const sc = robot.group.scale.x;
+  emotes.pop("mind", "✎", () => robotHeadLocal().add(new THREE.Vector3(0.2 * sc, 0.06 * sc, 0.06 * sc)), `${GUESTS[guestId].name} remembers: ${text.charAt(0).toLowerCase() + text.slice(1)}`, 3.2);
+};
+show.mindSummary = () => ({ ...mind.report(), name: GUESTS[guestId].name });
+// desktop: the backstage notes also appear as a card on screen for a while
+show.onMindCard = (m) => {
+  const el = $("mindcard");
+  if (!el || xrMode) return;
+  el.innerHTML = "";
+  el.appendChild(mindCardTexture(m).image);
+  el.classList.add("on");
+  clearTimeout(show._mindT);
+  show._mindT = setTimeout(() => el.classList.remove("on"), 15000);
+};
 show.onEnding = (type) => {
   confetti.burst(type);
   emotes.pop("marlo", type === "grace" ? "♥" : type === "slapstick" ? "♪" : "!", marloHead, null, 3);
@@ -418,11 +465,26 @@ const talk = new Talk({
 });
 talk.talkLines = () => GUESTS[guestId].talk;
 talk.character = () => guestId;
-// no speech recognition (e.g. some headset browsers): hide the talk button and knob
-if (!talk.supported) { knobs.talk.visible = false; document.getElementById("talk").hidden = true; }
+// talking with your hands: speech bubbles to poke (or click). Works everywhere,
+// including the Quest Browser (no speech recognition) and the hosted build (no server).
+const phrases = new Phrases(stageRoot, (p) => {
+  unlockAudio();
+  showCaption(`Sir Pip: “${p.text}”`);
+  emotes.pop("pip", "…", () => pip.get("head"), p.text, 1.8);
+  const lines = GUESTS[guestId].talk || GUESTS.marlo.talk;
+  setTimeout(() => talk.onReply({ line: lines[p.key] || lines.unknown, reaction: p.reaction }), 900);
+});
+phrases.group.position.set(0, 0.5, 0.2);
+phrases.group.scale.setScalar(1.25);
 function startTalking() {
   unlockAudio();
-  if (!talk.supported) { toast("Voice input isn't available in this browser. Try Chrome on desktop."); return; }
+  phrases.toggle(!!xrMode);
+  if (xrMode && phrases.open) faceViewer(phrases.group);
+}
+// hold V to speak instead, where the browser can recognise speech
+function startSpeaking() {
+  unlockAudio();
+  if (!talk.supported) { phrases.show(!!xrMode); return; }
   talk.start();
 }
 
@@ -459,11 +521,48 @@ function raiseCurtain() {
   cordAuto = false;
   releaseCord();
   if (hints.current === "cord") hints.hide();
+  narrator.hush(); // no more "pull the cord"
   nightTarget = 0;
   unlockAudio();
   curtains.open();
   setTimeout(() => { sfx.play("swish", null, { volume: 0.6 }); music.play(); }, 150);
-  setTimeout(() => startChapterShow(), 2600);
+  if (storyPending) {
+    // hands first: the curtain opens on Sir Pip within seconds of starting. A first-time
+    // player lifts him and Marlo says hello; then the storyteller and the (skippable) book.
+    storyPending = false;
+    const first = !storyMap.hasProgress() && chapter.id === "courtyard";
+    const story = () => storytellerIntro(first, () => openingBook(() => { setNight(false); startChapterShow(); }));
+    if (first) setTimeout(() => startWarmup(story), 1400);
+    else setTimeout(story, 1600);
+  } else setTimeout(() => startChapterShow(), 2600);
+}
+
+// the first moments on stage: "pinch the glowing bar and lift him", then Marlo bounds over
+let storyPending = false;
+const warmup = { on: false, t: 0, moved: 0, last: new THREE.Vector3(), greeted: false, next: null };
+function startWarmup(next) {
+  Object.assign(warmup, { on: true, t: 0, moved: 0, greeted: false, next });
+  warmup.last.copy(pip.get("pelvis"));
+  narrator.coach(xrMode ? "warmupXR" : "warmupDesk");
+  setTimeout(() => { if (warmup.on && !pip.main.held) hints.show("grab", !!xrMode); }, 2500);
+}
+function updateWarmup(dt) {
+  if (!warmup.on) return;
+  warmup.t += dt;
+  const p = pip.get("pelvis");
+  if (pip.main.held) warmup.moved += p.distanceTo(warmup.last);
+  warmup.last.copy(p);
+  // he's been lifted and moved (or we've waited long enough): Marlo comes to say hello
+  if (!warmup.greeted && (warmup.moved > 0.08 || warmup.t > 14)) {
+    warmup.greeted = true; warmup.t = 0;
+    if (hints.current === "grab") hints.hide();
+    ai.react("approach", { force: true }); ai.react("wave", { force: true });
+    setTimeout(() => marloSay(GUESTS.marlo.talk.hello), 500);
+    emotes.pop("marlo", "♥", () => marlo.get("head"), "Hello!", 2.2);
+  } else if (warmup.greeted && warmup.t > 4.5 && !narrator.speaking && !marloLines.length) {
+    warmup.on = false;
+    warmup.next?.();
+  }
 }
 
 // footsteps and armour clinks, played where the foot lands
@@ -557,6 +656,17 @@ function addTether(a, b, strength) {
   tetherN++;
 }
 
+// accessibility: pinch lock (no sustained pinch needed), remembered between visits
+let pinchLock = (() => { try { return localStorage.getItem("strings.pinchLock") === "1"; } catch { return false; } })();
+function setPinchLock(on, quiet = false) {
+  pinchLock = on;
+  try { localStorage.setItem("strings.pinchLock", on ? "1" : "0"); } catch { /* private mode */ }
+  knobs.lock.userData.cap.material.emissiveIntensity = on ? 1.2 : 0.35;
+  const box = $("pinchlock"); if (box) box.checked = on;
+  sim.sticky = on || sim.sticky; // desktop: the same idea (the G key)
+  if (!quiet) { narrator.coach(on ? "lockOn" : "lockOff"); sfx.play("chime", null, { volume: 0.35, rate: on ? 1.3 : 0.9 }); }
+}
+setTimeout(() => setPinchLock(pinchLock, true), 0); // reflect the saved setting on the knob
 function handleHands(hands, desktop) {
   const bars = [pip.main, pip.hands];
   const near = new Map(bars.map((b) => [b, 0]));
@@ -609,6 +719,15 @@ function handleHands(hands, desktop) {
         bar.held = true;
         sfx.play("clack", pip.group, { volume: 0.35, rate: bar === pip.main ? 1 : 1.25 });
         if (preshow) raiseCurtain(); // keen player grabbed the knight first: curtain up!
+      }
+    } else if (g && pinchLock && !desktop) {
+      // pinch lock: open your fingers and the bar stays in your hand; pinch again to put it down
+      if (!h.pinch) g.open = true;
+      else if (fresh && g.open) {
+        g.bar.held = false;
+        grabs.delete(h.id);
+        g = null;
+        sfx.play("clack", pip.group, { volume: 0.3, rate: 0.9 });
       }
     } else if (!h.pinch && g) {
       g.bar.held = false;
@@ -728,7 +847,7 @@ function setGuest(id) {
   mind.setGuest(marlo, g.personality);
   show.marlo = marlo;
   show.guestName = g.name;
-  $("talk").textContent = `🎙 Talk to ${g.name.replace("Captain ", "")}`;
+  $("talk").textContent = `💬 Talk to ${g.name.replace("Captain ", "")}`;
   for (const f of feet) if (f.guest) f.pup = marlo;
 }
 // put a chapter's set and guest on stage (no curtain business)
@@ -1254,7 +1373,7 @@ addEventListener("pointerup", () => {
   }
 });
 // hold V to talk to Marlo
-addEventListener("keydown", (e) => { if (e.key.toLowerCase() === "v" && !e.repeat) startTalking(); });
+addEventListener("keydown", (e) => { if (e.key.toLowerCase() === "v" && !e.repeat) startSpeaking(); });
 addEventListener("keyup", (e) => { if (e.key.toLowerCase() === "v") talk.stop(); });
 
 // compile every shader now, behind the loading screen, so nothing stutters the
@@ -1303,7 +1422,6 @@ function storytellerIntro(first, next) {
   }
   narrator.queue.length = 0;
   narrator.coach(first ? "storyIntro" : "welcomeBack");
-  if (first) narrator.coach("storyIntro2");
   sfx.play("chime", null, { volume: 0.4, rate: 0.8 });
 }
 function updateIntro(dt) {
@@ -1334,15 +1452,18 @@ if (loadingEl) {
     (resume
       ? `<button id="begin">Continue · ${where}</button><div class="more"><button id="newstory">Start a new story</button><button id="chapters">Chapter map</button></div>`
       : `<button id="begin">Begin the story</button>`) +
+    `<label class="lockopt"><input type="checkbox" id="pinchlock"> Pinch lock: no need to hold a pinch</label>` +
     `<small>Best with sound on · works with Quest hand tracking</small></div>`;
   loadingEl.classList.add("ready");
   const enter = () => { loadingEl.classList.add("done"); unlockAudio(); };
   const first = !storyMap.hasProgress();
   const begin = () => {
     enter();
-    storytellerIntro(first && chapter.id === "courtyard", () => openingBook(startPreshow));
+    storyPending = true; // the story plays once the curtain is up
+    startPreshow();
   };
   $("begin").onclick = begin;
+  if ($("pinchlock")) { $("pinchlock").checked = pinchLock; $("pinchlock").onchange = (e) => setPinchLock(e.target.checked, true); }
   if ($("newstory")) $("newstory").onclick = () => {
     if (!confirm("Start the tale of Sir Pip again from the beginning? Your playbills are kept.")) return;
     newStory();
@@ -1436,6 +1557,7 @@ let xrMode = null;
 let placeStage = false;
 let placing = false;
 let hitSource = null;
+let lastFoundSurface = false;
 let placeTimer = 0;
 const reticle = new THREE.Mesh(
   new THREE.RingGeometry(0.05, 0.065, 40).rotateX(-Math.PI / 2),
@@ -1471,7 +1593,7 @@ async function enterXR(mode) {
     placeStage = true;
     unlockAudio();
     // (the stage is placed on the first XR frame; open the book just after)
-    setTimeout(() => { if (!showStarted && !book.open && !intro.on) storytellerIntro(!storyMap.hasProgress() && chapter.id === "courtyard", () => openingBook(startPreshow)); }, 300);
+    setTimeout(() => { if (!showStarted && !book.open && !intro.on && !preshow) { storyPending = true; startPreshow(); } }, 300);
   }
   session.addEventListener("end", () => {
     xrMode = null;
@@ -1482,6 +1604,7 @@ async function enterXR(mode) {
     scene.background = bg;
     room.visible = true;
     shadowCatcher.visible = false;
+    setRealDesk(false);
     stageRoot.position.set(0, STAGE_Y, 0);
     stageRoot.rotation.set(0, 0, 0);
     desk.position.set(0, DESK_TOP, -0.05);
@@ -1529,6 +1652,66 @@ function setStagePose(p, fwd) {
   stageRoot.updateMatrixWorld(true);
 }
 
+// ---- mixed reality with a purpose: the real desk is part of the stage ----------------
+// Once the theatre sits on a real surface, the puppets can be walked off the front of the
+// stage and onto your actual desk (the floor drops by the stage's base height there), and
+// soft contact shadows ground them on whichever surface they stand on.
+let onRealDesk = false;
+function setRealDesk(on) {
+  onRealDesk = on;
+  const desk = on ? { front: STAGE.depth / 2 + 0.005, y: -STAGE.base, maxZ: STAGE.depth / 2 + 0.32 } : null;
+  for (const pup of [pip, marlo]) pup.desk = desk;
+}
+const blobTex = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 2, 32, 32, 31);
+  gr.addColorStop(0, "rgba(0,0,0,0.55)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+})();
+const blobs = [pip, marlo].map((pup) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.11).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, toneMapped: false }));
+  m.renderOrder = 1; m.visible = false;
+  stageRoot.add(m);
+  return { pup, m };
+});
+// in a headset real shadows are off (frame rate), so every puppet gets a soft blob instead
+// glow halos (headset, or desktop tiers without bloom): the grip knobs, the curtain
+// cord's tassel, and the hint arrow
+const halos = {
+  main: makeHalo(0x6ff0ff, 0.07, 0.55), hands: makeHalo(0x6ff0ff, 0.055, 0.45),
+  cord: makeHalo(0xffc050, 0.07, 0.6), arrow: makeHalo(0x7ff3ff, 0.09, 0.5),
+};
+stageRoot.add(halos.main, halos.hands);
+cord.tassel.add(halos.cord);
+hints.arrow.add(halos.arrow);
+halos.arrow.position.y = 0.012;
+const _halov = new THREE.Vector3();
+function updateHalos(t) {
+  const on = !!xrMode || !QUALITY[qTier].bloom;
+  for (const h of Object.values(halos)) h.visible = on;
+  if (!on) return;
+  halos.main.visible = halos.hands.visible = pip.skin.bars?.visible !== false && showStarted;
+  halos.main.position.copy(pip.main.worldPoint([0, 0.04, -0.03], _halov));
+  halos.hands.position.copy(pip.hands.worldPoint([0, 0.008, 0], _halov));
+  halos.main.material.opacity = (pip.main.held ? 0.85 : 0.45) + Math.sin(t * 3) * 0.06;
+  halos.hands.material.opacity = (pip.hands.held ? 0.75 : 0.35) + Math.sin(t * 3 + 1) * 0.05;
+  halos.cord.material.opacity = preshow ? 0.45 + 0.35 * (0.5 + 0.5 * Math.sin(t * 4)) : 0.12;
+  halos.arrow.material.opacity = 0.4 + 0.2 * Math.sin(t * 5);
+}
+function updateBlobs() {
+  for (const { pup, m } of blobs) {
+    m.visible = !!xrMode && pup.group.visible !== false;
+    if (!m.visible) continue;
+    const c = pup.get("pelvis"), feet = Math.min(pup.get("lF").y, pup.get("rF").y);
+    const floor = pup.desk && c.z > pup.desk.front ? pup.desk.y : 0;
+    const lift = THREE.MathUtils.clamp((feet - floor) / 0.12, 0, 1);
+    m.position.set(c.x, floor + 0.0015, c.z);
+    m.scale.setScalar(1 + lift * 0.6);
+    m.material.opacity = 1 - lift * 0.75;
+  }
+}
+
 const prevPinch = new Map();
 function updatePlacement(dt, frame, hands) {
   placeTimer += dt;
@@ -1548,10 +1731,11 @@ function updatePlacement(dt, frame, hands) {
       // the stage's base rests on the surface
       setStagePose(pos.clone().add(new THREE.Vector3(0, STAGE.base, 0)), fwd);
       found = true;
+      lastFoundSurface = true;
       break;
     }
   }
-  if (!found) reticle.visible = false;
+  if (!found) { reticle.visible = false; lastFoundSurface = false; }
   // a fresh pinch from either hand sets the stage down
   let pinched = false;
   for (const h of hands) {
@@ -1562,17 +1746,20 @@ function updatePlacement(dt, frame, hands) {
   if ((pinched && (found || placeTimer > 1.5)) || (!hitSource && placeTimer > 2) || placeTimer > 25) {
     placing = false;
     reticle.visible = false;
-    if (!showStarted && !book.open && !intro.on) storytellerIntro(!storyMap.hasProgress() && chapter.id === "courtyard", () => openingBook(startPreshow));
+    // set down on a real table: the desk in front of the stage becomes part of the play area
+    if (found) { setRealDesk(true); setTimeout(() => narrator.coach("deskAR"), 9000); }
+    if (!showStarted && !book.open && !intro.on && !preshow) { storyPending = true; startPreshow(); }
   }
 }
 
 // poke the apron knobs with a fingertip (XR), and hold two empty pinches to re-place the stage
-const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0, free: 0 };
+const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0, free: 0, lock: 0 };
 let recenterHold = 0;
 function xrGestures(dt, hands, t) {
   // poke the floating storybook map
   if (storyMap.mesh.visible) for (const h of hands) if (h.present && storyMap.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (book.mesh.visible) for (const h of hands) if (h.present && book.poke(stageRoot.localToWorld(h.tip.clone()))) break;
+  if (phrases.group.visible) for (const h of hands) if (h.present && phrases.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   for (const [name, knob] of Object.entries(knobs)) {
     const kp = knob.position.clone().add(new THREE.Vector3(0, 0.01, 0));
     if (!knob.visible) continue;
@@ -1585,6 +1772,7 @@ function xrGestures(dt, hands, t) {
       else if (name === "mode") { if (knob.visible) cycleMode(); }
       else if (name === "map") toggleMap();
       else if (name === "free") { if (!unbound.busy) unbound.free(); }
+      else if (name === "lock") setPinchLock(!pinchLock);
       else player.playing ? stopReplay() : startReplay();
     }
   }
@@ -1693,6 +1881,10 @@ renderer.setAnimationLoop((time, frame) => {
   scene.environmentIntensity = 0.4 - 0.3 * night;
   narrator.update(dt);
   updateBloom(dt);
+  updateWarmup(dt);
+  phrases.update(dt);
+  updateBlobs();
+  updateHalos(elapsed);
   soundscape.update(dt, narrator.speaking || marloLines.length > 0 || book.open);
 
   let [lg, rg] = unbound.busy ? unbound.frozenGrips : ai.grips();
@@ -1710,6 +1902,8 @@ renderer.setAnimationLoop((time, frame) => {
   robotBatch?.update();
 
   if (captionTimer > 0 && (captionTimer -= dt) <= 0) caption.classList.remove("on");
+  xrCaption.mesh.visible = !!xrMode && captionTimer > 0 && !book.mesh.visible;
+  if (xrCaption.mesh.visible && xrCaption.fresh) { xrCaption.fresh = false; faceViewer(xrCaption.mesh); }
   if (Math.floor(elapsed * 4) !== Math.floor((elapsed - dt) * 4)) updateStatus();
   // Quest: shadows refresh every other frame (puppets move slowly; halves that pass)
   if (xrMode) { spot.shadow.needsUpdate = (frameNo++ & 1) === 0; renderer.render(scene, camera); }
@@ -1770,4 +1964,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };
+window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, setRealDesk, phrases, warmup, get showStarted() { return showStarted; } };
