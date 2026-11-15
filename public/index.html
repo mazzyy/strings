@@ -9,7 +9,7 @@
     :root {
       --ink: #f6ead7;
       --muted: #c9b79f;
-      --panel: rgba(28, 18, 16, 0.78);
+      --panel: rgba(28, 18, 16, 0.88); /* (no backdrop blur: it costs a full-screen pass every frame) */
       --line: rgba(246, 234, 215, 0.14);
       --accent: #e0b23a;
       --rec: #d8433b;
@@ -22,7 +22,7 @@
     .hud { position: fixed; pointer-events: none; }
     .hud > * { pointer-events: auto; }
     #top { top: 16px; left: 16px; right: 16px; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; backdrop-filter: blur(6px); }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
     h1 { margin: 0; font-size: 22px; letter-spacing: 0.04em; font-weight: 600; }
     h1 small { font-size: 13px; color: var(--muted); font-weight: 400; letter-spacing: 0; margin-left: 6px; }
     .status { display: grid; grid-template-columns: auto auto; gap: 2px 12px; margin-top: 6px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); }

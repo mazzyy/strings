@@ -10,6 +10,7 @@ import { CHAPTERS, THEATRE } from "./lines.js";
 
 const WORLD = { w: 1600, h: 1000 };
 const VIEW = { w: 1200, h: 750 };
+const FIT = VIEW.w / WORLD.w; // the whole kingdom fits on the page, so every place can be picked
 const KEY = "strings.story";
 
 export const story = {
@@ -45,6 +46,13 @@ function icon(g, kind, x, y, locked) {
     g.beginPath(); g.moveTo(-50, 22); g.lineTo(-30, -26); g.lineTo(-6, -44); g.lineTo(24, -34); g.lineTo(50, 22); g.closePath(); fill("#6a6070");
     g.beginPath(); g.moveTo(-18, 22); g.quadraticCurveTo(0, -24, 18, 22); g.closePath(); fill("#1a1420");
     g.beginPath(); g.arc(0, 10, 4, 0, Math.PI * 2); g.fillStyle = "#ffcf5a"; g.fill();
+  } else if (kind === "tower") {
+    g.beginPath(); g.rect(-20, -58, 40, 80); fill("#8a8f9a");
+    g.beginPath(); g.moveTo(-26, -58); g.lineTo(0, -88); g.lineTo(26, -58); g.closePath(); fill("#5a4a6a");
+    g.beginPath(); g.arc(0, -34, 12, 0, Math.PI * 2); fill("#f2ead8");
+    g.beginPath(); g.moveTo(0, -34); g.lineTo(0, -42); g.moveTo(0, -34); g.lineTo(6, -32); g.stroke();
+    g.beginPath(); g.rect(-7, 4, 14, 18); fill("#3a2a20");
+    g.beginPath(); g.arc(0, -88, 4, 0, Math.PI * 2); g.fillStyle = "#ff3020"; g.fill();
   } else if (kind === "theatre") {
     g.beginPath(); g.rect(-40, -30, 80, 52); fill("#7a1d22");
     g.beginPath(); g.moveTo(-40, -30); g.quadraticCurveTo(0, -50, 40, -30); g.closePath(); fill("#c9a14a");
@@ -77,7 +85,7 @@ export class StoryMap {
     this.state = story.load();
     const at = this.places.find((p) => p.id === this.state.at) || CHAPTERS[0];
     this.token.x = at.map[0]; this.token.y = at.map[1];
-    this._centre(this.token.x, this.token.y, true);
+    this.zoom = 1;
 
     // desktop overlay
     this.el = document.getElementById("storymap");
@@ -134,13 +142,17 @@ export class StoryMap {
     this.mesh.visible = false;
   }
 
-  _centre(x, y, snap) {
-    const tx = Math.max(0, Math.min(WORLD.w - VIEW.w, x - VIEW.w / 2)), ty = Math.max(0, Math.min(WORLD.h - VIEW.h, y - VIEW.h / 2));
-    if (snap) { this.cam.x = tx; this.cam.y = ty; } else { this.camTarget = { x: tx, y: ty }; }
+  // while the token travels, the view leans in to follow it, then settles back
+  _view() {
+    const s = FIT * this.zoom;
+    const vw = VIEW.w / s, vh = VIEW.h / s;
+    const cx = Math.max(0, Math.min(WORLD.w - vw, this.token.x - vw / 2));
+    const cy = Math.max(0, Math.min(WORLD.h - vh, this.token.y - vh / 2));
+    return { s, cx: this.zoom === 1 ? 0 : cx, cy: this.zoom === 1 ? 0 : cy };
   }
   _placeAt(vx, vy) {
-    const wx = vx + this.cam.x, wy = vy + this.cam.y;
-    return this.places.find((p) => Math.hypot(p.map[0] - wx, p.map[1] - wy) < 70) || null;
+    const wx = vx / FIT, wy = vy / FIT;
+    return this.places.find((p) => Math.hypot(p.map[0] - wx, p.map[1] - wy) < 80) || null;
   }
 
   // a click / poke at view coordinates
@@ -181,19 +193,19 @@ export class StoryMap {
       const k = Math.min(1, tr.t / tr.dur), e = k * k * (3 - 2 * k), u = 1 - e;
       this.token.x = u * u * tr.from.x + 2 * u * e * tr.mid.x + e * e * tr.to.x;
       this.token.y = u * u * tr.from.y + 2 * u * e * tr.mid.y + e * e * tr.to.y;
-      this._centre(this.token.x, this.token.y, false);
+      this.zoom = 1 + 0.35 * Math.sin(k * Math.PI);
       if (k >= 1 && tr.t > tr.dur + 0.5) {
         this.travel = null;
+        this.zoom = 1;
         this.state.at = tr.p.id;
         story.save(this.state);
         this.hide();
         this.onChoose?.(tr.p);
       }
     }
-    if (this.camTarget) { this.cam.x += (this.camTarget.x - this.cam.x) * Math.min(1, dt * 3); this.cam.y += (this.camTarget.y - this.cam.y) * Math.min(1, dt * 3); }
     // redraw at ~30 fps while open (pulses, the walking token)
     this._acc = (this._acc || 0) + dt;
-    if (this._acc > 1 / 30) { this._acc = 0; this.draw(); }
+    if (this._acc > (this.travel ? 1 / 30 : 1 / 15)) { this._acc = 0; this.draw(); }
   }
 
   _paintParchment() {
@@ -230,9 +242,12 @@ export class StoryMap {
 
   draw() {
     const g = this.g;
-    g.drawImage(this.bg, -this.cam.x, -this.cam.y);
+    const V = this._view();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = "#ead7a8"; g.fillRect(0, 0, VIEW.w, VIEW.h);
     g.save();
-    g.translate(-this.cam.x, -this.cam.y);
+    g.setTransform(V.s, 0, 0, V.s, -V.cx * V.s, -V.cy * V.s);
+    g.drawImage(this.bg, 0, 0);
     const next = CHAPTERS.find((c, i) => i < this.state.unlocked && !this.state.done[c.id]);
     for (const p of this.places) {
       const [x, y] = p.map;
@@ -243,7 +258,7 @@ export class StoryMap {
         g.beginPath(); g.arc(x, y, 50 + k * 26, 0, Math.PI * 2); g.stroke();
       }
       icon(g, p.id, x, y, locked);
-      g.font = "600 24px Georgia, serif"; g.textAlign = "center";
+      g.font = "600 30px Georgia, serif"; g.textAlign = "center";
       g.fillStyle = locked ? "rgba(58,36,20,0.45)" : "#3a2414";
       const n = CHAPTERS.indexOf(p);
       g.fillText(n >= 0 ? `${n + 1}. ${p.title}` : p.title, x, y + 62);

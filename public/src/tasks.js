@@ -13,6 +13,14 @@ import * as THREE from "three";
 import { TASK_LINES, RIDDLES } from "./lines.js";
 
 const v = new THREE.Vector3();
+// free a task's meshes (geometry, materials, label textures) when it ends
+function dispose(obj) {
+  obj.removeFromParent();
+  obj.traverse((o) => {
+    o.geometry?.dispose();
+    for (const m of [].concat(o.material || [])) { m.map?.dispose(); m.dispose(); }
+  });
+}
 const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -99,7 +107,7 @@ function collect(spec, c, done) {
         }
       }
     },
-    end() { group.removeFromParent(); },
+    end() { dispose(group); },
   };
 }
 
@@ -152,6 +160,7 @@ function duel(spec, c, done) {
   let foe = spec.hits || 3, me = 3, phase = "intro", t = 0, kind = "high";
   let duckOK = false, jumpOK = false;
   const last = c.pip.get("pelvis").clone();
+  const velTmp = new THREE.Vector3();
   let speedTo = 0;
   const hearts = () => {
     c.emote("foeHP", "♥", () => c.guest().get("head"), `${foe}`, 999, 0.065);
@@ -170,7 +179,7 @@ function duel(spec, c, done) {
       // how fast Sir Pip is moving toward the captain (a lunge)
       const toFoe = v.subVectors(g.get("pelvis"), b.pelvis).setY(0);
       const dist = toFoe.length();
-      const vel = new THREE.Vector3().subVectors(b.pelvis, last).divideScalar(Math.max(dt, 1e-3)).setY(0);
+      const vel = velTmp.subVectors(b.pelvis, last).divideScalar(Math.max(dt, 1e-3)).setY(0);
       last.copy(b.pelvis);
       speedTo += ((dist > 1e-4 ? vel.dot(toFoe.normalize()) : 0) - speedTo) * Math.min(1, dt * 10);
 
@@ -273,7 +282,7 @@ function riddle(spec, c, done) {
         }
       });
     },
-    end() { group.removeFromParent(); },
+    end() { dispose(group); },
   };
 }
 
@@ -331,7 +340,7 @@ function sneak(spec, c, done) {
       }
       if (flat(b.pelvis, T.pedestal) < 0.07) { over = true; c.hideHint(); done(); }
     },
-    end() { over = true; cone.removeFromParent(); pool.removeFromParent(); },
+    end() { over = true; dispose(cone); dispose(pool); },
   };
 }
 
@@ -410,7 +419,7 @@ function dodge(spec, c, done) {
           }
         }
         if (zap.went > zap.dist + 0.15) {
-          zap.m.removeFromParent();
+          dispose(zap.m);
           zap = null;
           if (dodged >= spec.count) {
             finished = true;
@@ -425,7 +434,7 @@ function dodge(spec, c, done) {
         }
       }
     },
-    end() { finished = true; zap?.m.removeFromParent(); },
+    end() { finished = true; if (zap) dispose(zap.m); },
   };
 }
 

@@ -21,7 +21,7 @@ import { ActionDetector, AIPerformer, describe } from "./director.js";
 import { MarloMind } from "./mind.js";
 import { Emotes } from "./emote.js";
 import { Confetti } from "./fx.js";
-import { GUESTS, STORY_LINES } from "./lines.js";
+import { GUESTS, STORY_LINES, PROLOGUE } from "./lines.js";
 import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin } from "./cast.js";
 import { createTask } from "./tasks.js";
 import { StoryBook } from "./storybook.js";
@@ -143,6 +143,18 @@ layoutRobot(false);
 stageRoot.add(robot.group);
 
 // desktop-only bloom so the holographic bars and robot eyes glow (skipped in XR for frame rate)
+const QUALITY = [
+  { name: "high", pr: 1.5, bloom: true, shadow: 2048 },
+  { name: "medium", pr: 1.25, bloom: true, shadow: 1536 },
+  { name: "lower", pr: 1.0, bloom: true, shadow: 1024, halfShadows: true },
+  { name: "low", pr: 1.0, bloom: false, shadow: 1024, halfShadows: true },
+  { name: "lowest", pr: 0.75, bloom: false, shadow: 1024, halfShadows: true },
+];
+const qParam = new URLSearchParams(location.search).get("quality");
+const pinnedQuality = { high: 0, medium: 1, low: 3 }[qParam] ?? null;
+// big, sharp screens start one step down; the frame-rate check takes it from there
+let qTier = pinnedQuality ?? (innerWidth * innerHeight * Math.min(devicePixelRatio, 1.5) ** 2 > 3.5e6 ? 1 : 0);
+const perfWin = { last: performance.now(), sum: 0, n: 0, settle: 0, downs: 0 };
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.45, 1.05);
@@ -816,6 +828,12 @@ function faceViewer(mesh) {
   const d = head.sub(mesh.position);
   mesh.rotation.set(-Math.atan2(d.y, Math.hypot(d.x, d.z)), Math.atan2(d.x, d.z), 0, "YXZ");
 }
+// the opening: the prologue the very first time, then the chapter's own pages
+function openingBook(then) {
+  const first = chapter.id === "courtyard" && !storyMap.state.done.courtyard;
+  if (first) playBook(PROLOGUE, () => playBook(chapter, then));
+  else playBook(chapter, then);
+}
 function playBook(place, then) {
   if (!place.pages?.length) { then(); return; }
   if (xrMode) faceViewer(book.mesh);
@@ -991,7 +1009,7 @@ ghost.setVisible(false); confetti.points.visible = false;
 if (loadingEl) {
   loadingEl.innerHTML = `<div class="open"><h1>Strings</h1><p>a marionette theatre with an AI co-performer</p><button id="begin">Enter the theatre</button><small>Best with sound on · works with Quest hand tracking</small></div>`;
   loadingEl.classList.add("ready");
-  const begin = () => { loadingEl.classList.add("done"); unlockAudio(); playBook(chapter, startPreshow); };
+  const begin = () => { loadingEl.classList.add("done"); unlockAudio(); openingBook(startPreshow); };
   $("begin").onclick = begin;
   if (new URLSearchParams(location.search).has("autostart")) { loadingEl.classList.add("done"); raiseCurtain(); }
 }
@@ -1009,7 +1027,7 @@ window.addEventListener("keydown", (e) => {
   else if (k === "t") runDemo();
   else if (k === "n") cycleMode();
   else if (k === "j") toggleMap();
-  else if (k === "escape" && book.open) book.finish();
+  else if (k === "escape" && book.open) book.skipAll();
 });
 
 // shared performance in the URL?
@@ -1105,7 +1123,7 @@ async function enterXR(mode) {
     placeStage = true;
     unlockAudio();
     // (the stage is placed on the first XR frame; open the book just after)
-    setTimeout(() => { if (!showStarted && !book.open) playBook(chapter, startPreshow); }, 300);
+    setTimeout(() => { if (!showStarted && !book.open) openingBook(startPreshow); }, 300);
   }
   session.addEventListener("end", () => {
     xrMode = null;
@@ -1196,7 +1214,7 @@ function updatePlacement(dt, frame, hands) {
   if ((pinched && (found || placeTimer > 1.5)) || (!hitSource && placeTimer > 2) || placeTimer > 25) {
     placing = false;
     reticle.visible = false;
-    if (!showStarted && !book.open) playBook(chapter, startPreshow);
+    if (!showStarted && !book.open) openingBook(startPreshow);
   }
 }
 
@@ -1333,8 +1351,45 @@ renderer.setAnimationLoop((time, frame) => {
   if (Math.floor(elapsed * 4) !== Math.floor((elapsed - dt) * 4)) updateStatus();
   // Quest: shadows refresh every other frame (puppets move slowly; halves that pass)
   if (xrMode) { spot.shadow.needsUpdate = (frameNo++ & 1) === 0; renderer.render(scene, camera); }
-  else composer.render();
+  else {
+    trackPerf();
+    if (QUALITY[qTier].halfShadows) spot.shadow.needsUpdate = (frameNo++ & 1) === 0;
+    if (QUALITY[qTier].bloom) composer.render();
+    else renderer.render(scene, camera);
+  }
 });
+
+// ---- adaptive quality (desktop): measures the real frame rate and steps down
+// resolution, then the glow, then shadow detail, until the show runs smoothly.
+// ?quality=high|medium|low pins a level.
+function applyQuality(i, why = "") {
+  qTier = Math.max(0, Math.min(QUALITY.length - 1, i));
+  const q = QUALITY[qTier];
+  renderer.setPixelRatio(Math.min(devicePixelRatio, q.pr));
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setPixelRatio(Math.min(devicePixelRatio, q.pr));
+  composer.setSize(innerWidth, innerHeight);
+  if (!xrMode && spot.shadow.mapSize.x !== q.shadow) {
+    spot.shadow.mapSize.set(q.shadow, q.shadow);
+    spot.shadow.map?.dispose();
+    spot.shadow.map = null;
+  }
+  spot.shadow.autoUpdate = !q.halfShadows;
+  perfWin.n = 0; perfWin.sum = 0; perfWin.settle = performance.now() + 2500;
+  if (why) console.info(`[perf] quality → ${q.name} (${why})`);
+}
+function trackPerf() {
+  const now = performance.now(), d = now - perfWin.last;
+  perfWin.last = now;
+  if (pinnedQuality || d > 250 || document.hidden || now < perfWin.settle) return;
+  perfWin.sum += d; perfWin.n++;
+  if (perfWin.sum < 2500) return;
+  const avg = perfWin.sum / perfWin.n;
+  perfWin.sum = 0; perfWin.n = 0;
+  if (avg > 20.5 && qTier < QUALITY.length - 1) { applyQuality(qTier + 1, `${(1000 / avg).toFixed(0)} fps`); perfWin.downs++; }
+  // only climb back on fast displays with real headroom, and not after struggling twice
+  else if (avg < 11 && qTier > 0 && perfWin.downs < 2) applyQuality(qTier - 1, `${(1000 / avg).toFixed(0)} fps`);
+}
 
 function updateStatus() {
   $("st-narrator").textContent = narrator.source;
@@ -1350,6 +1405,7 @@ addEventListener("resize", () => {
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
 });
+applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };
+window.strings = { get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };

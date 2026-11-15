@@ -286,9 +286,10 @@ export class Sets {
 
   show(name) {
     if (!PAINT[name]) name = "courtyard";
-    for (const s of this.sets.values()) s.group.visible = false;
+    for (const s of this.sets.values()) { s.group.visible = false; s.group.matrixWorldAutoUpdate = false; }
     const set = this.sets.get(name) || this._build(name);
     set.group.visible = true;
+    set.group.matrixWorldAutoUpdate = true;
     this.current = name;
     return SET_LIGHT[name];
   }

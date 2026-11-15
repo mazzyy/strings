@@ -6,7 +6,9 @@ In passthrough AR you set the stage down on your real desk.
 
 **What you can do**
 - **The Tale of Sir Pip (story mode):** six chapters on a storybook map, each on its own stage set, with its own guest and its own gameplay.
-  - **Before every chapter,** an illustrated storybook opens and the narrator reads three pages that set up the story.
+  - **The quest:** a six-page prologue opens the game. Clank the clockwork robot has stolen Princess Juniper and hidden the three jewels of the kingdom's golden music box, so the kingdom has fallen silent. Only one very small knight answers the king's call.
+  - **Before every chapter,** an illustrated storybook opens and the narrator reads three pages that carry the tale on: the wizard who knows the way, the only ship that sails to the tower, the troll's bridge, the rescue, and the jewels in Marlo's cave.
+  - **The map** shows the whole kingdom at once, and leans in to follow the token while it travels.
   - **The chapters:**
     1. **The Castle Courtyard** (Marlo the dragon): the tutorial. Walk, bow, wave.
     2. **The Whispering Forest** (Old Bramble the wizard): catch five escaped fireflies with the lantern, then learn his spell by repeating his moves in order.
@@ -127,6 +129,17 @@ The narrator speaks with Kokoro, a natural neural voice (see [CREDITS.md](CREDIT
 - **`public/src/recorder.js`**: a performance is just the two bars' poses at 30 Hz. Replay drives a translucent ghost Pip, your shadow. Share links are quantised, delta-encoded and gzipped into the URL hash, about 4 KB for 25 s.
 
 ## Performance
+
+**Adaptive quality (desktop):** the game measures its real frame rate. Below about 50 fps it steps down, in order: resolution, then the glow (bloom), then shadow detail and shadow update rate, until it runs smoothly. You can pin a level with `?quality=high`, `?quality=medium` or `?quality=low`.
+
+Other changes:
+- The HUD panels no longer use a CSS backdrop blur, which cost a full-screen pass every frame.
+- Hidden guests, sets and the princess skip the per-frame matrix updates.
+- Merged static meshes compute their matrices once.
+- Task objects are disposed when a task ends.
+- The open map redraws at 15 fps, or 30 fps while travelling.
+
+Earlier measurements:
 
 Measured in a desktop browser, before and after the optimisation pass:
 

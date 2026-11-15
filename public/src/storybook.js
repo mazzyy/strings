@@ -60,6 +60,19 @@ function figure(g, kind, x, y, s = 1, flip = false) {
     g.fillStyle = "#c8508a"; g.beginPath(); g.moveTo(-36, 0); g.lineTo(36, 0); g.lineTo(12, -84); g.lineTo(-12, -84); g.closePath(); g.fill(); g.stroke();
     blob(0, -100, 17, 19, "#e8c0a0"); g.fillStyle = "#8a4a22"; g.beginPath(); g.ellipse(0, -106, 19, 14, 0, Math.PI, 0); g.fill(); eyes(0, -100, 6);
     g.fillStyle = "#e8c060"; g.beginPath(); g.moveTo(-12, -118); for (let k = 0; k < 5; k++) { g.lineTo(-12 + k * 6 + 3, -132); g.lineTo(-12 + (k + 1) * 6, -120); } g.closePath(); g.fill(); g.stroke();
+  } else if (kind === "king") {
+    g.fillStyle = "#7a1d22"; g.beginPath(); g.moveTo(-36, 0); g.lineTo(36, 0); g.lineTo(22, -96); g.lineTo(-22, -96); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#f2f0ea"; g.fillRect(-36, -8, 72, 8);
+    blob(0, -114, 20, 22, "#e6bc98"); eyes(0, -118, 7);
+    g.fillStyle = "#cfcfcf"; g.beginPath(); g.moveTo(-16, -108); g.quadraticCurveTo(0, -70, 16, -108); g.fill(); g.stroke();
+    g.fillStyle = "#e8c060"; g.beginPath(); g.moveTo(-18, -134); for (let k = 0; k < 4; k++) { g.lineTo(-18 + k * 12 + 6, -156); g.lineTo(-18 + (k + 1) * 12, -136); } g.closePath(); g.fill(); g.stroke();
+  } else if (kind === "musicbox") {
+    rect(-44, -46, 88, 46, "#c9a14a"); rect(-48, -62, 96, 18, "#e8c060");
+    g.fillStyle = "#7a1d22"; for (const dx of [-24, 0, 24]) { g.beginPath(); g.arc(dx, -24, 7, 0, Math.PI * 2); g.fill(); g.stroke(); }
+    g.strokeStyle = "#2a1a10"; g.lineWidth = 4; g.beginPath(); g.moveTo(48, -30); g.lineTo(66, -30); g.moveTo(66, -40); g.lineTo(66, -20); g.stroke();
+    // floating music notes
+    g.fillStyle = "#fff4c8";
+    for (const [nx, ny, r] of [[-30, -100, 1], [10, -128, 1.2], [44, -96, 0.9]]) { g.beginPath(); g.ellipse(nx, ny, 8 * r, 6 * r, -0.4, 0, Math.PI * 2); g.fill(); g.fillRect(nx + 6 * r, ny - 30 * r, 3, 30 * r); }
   } else if (kind === "cage") {
     g.strokeStyle = "#3a3e46"; g.lineWidth = 5;
     for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(i * 14, 0); g.lineTo(i * 14, -150); g.stroke(); }
@@ -98,7 +111,7 @@ export class StoryBook {
     if (this.el) {
       this.el.querySelector(".bookwrap").appendChild(this.canvas);
       this.canvas.addEventListener("click", () => this.turn());
-      this.el.querySelector(".skip")?.addEventListener("click", (e) => { e.stopPropagation(); this.finish(); });
+      this.el.querySelector(".skip")?.addEventListener("click", (e) => { e.stopPropagation(); this.skipAll(); });
     }
     this.tex = new THREE.CanvasTexture(this.canvas);
     this.tex.colorSpace = THREE.SRGBColorSpace;
@@ -119,9 +132,16 @@ export class StoryBook {
     return this.illos.get(set);
   }
 
+  // Skip: closes this book and any book chained right after it (prologue → chapter one)
+  skipAll() {
+    this.skipping = true;
+    this.finish();
+    setTimeout(() => { this.skipping = false; }, 60);
+  }
+
   // play a chapter's pages, then call onDone
   play(chapter, xr, onDone) {
-    if (!chapter.pages?.length) { onDone?.(); return; }
+    if (!chapter.pages?.length || this.skipping) { onDone?.(); return; }
     this.chapter = chapter;
     this.page = -1;
     this.onDone = onDone;
@@ -190,8 +210,10 @@ export class StoryBook {
     const fx = 62, fy = 70, fw = W / 2 - 100, fh = 420;
     g.save();
     g.beginPath(); g.roundRect(fx, fy, fw, fh, 8); g.clip();
-    g.drawImage(this._illo(ch.set), 0, 0, 1024, 376, fx, fy, fw, fh);
-    for (const [kind, px, flip] of CASTS[ch.id]?.[n] || []) figure(g, kind, fx + fw * px, fy + fh - 30, 1.15, flip);
+    const art = ch.art?.[n];
+    g.drawImage(this._illo(art?.set || ch.set), 0, 0, 1024, 376, fx, fy, fw, fh);
+    if (art?.night) { g.fillStyle = "rgba(10,16,48,0.55)"; g.fillRect(fx, fy, fw, fh); g.fillStyle = "#f6f0d0"; g.beginPath(); g.arc(fx + fw * 0.82, fy + 60, 26, 0, Math.PI * 2); g.fill(); }
+    for (const [kind, px, flip] of art?.cast || CASTS[ch.id]?.[n] || []) figure(g, kind, fx + fw * px, fy + fh - 30, 1.15, flip);
     g.restore();
     g.strokeStyle = "#c9a14a"; g.lineWidth = 6; g.beginPath(); g.roundRect(fx, fy, fw, fh, 8); g.stroke();
     g.fillStyle = "#7a1d22"; g.font = "italic 22px Georgia, serif"; g.textAlign = "center";
@@ -199,7 +221,7 @@ export class StoryBook {
     // right page: the words, with a decorated first letter
     const tx = W / 2 + 60, tw = W / 2 - 120;
     g.textAlign = "left"; g.fillStyle = "#7a1d22"; g.font = "600 24px Georgia, serif";
-    g.fillText(n === 0 ? "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six"][this._index()] : "", tx, 110);
+    g.fillText(n === 0 ? (ch.id === "prologue" ? "Prologue" : "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six"][this._index()]) : "", tx, 110);
     const text = ch.pages[n];
     g.fillStyle = "#c9a14a"; g.font = "700 96px Georgia, serif"; g.fillText(text[0], tx, 240);
     g.fillStyle = "#2a1a10"; g.font = "32px Georgia, serif";
