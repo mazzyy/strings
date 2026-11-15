@@ -101,9 +101,9 @@ export class ActionDetector {
       }
     } else this.walkTime = Math.max(0, this.walkTime - dt * 2);
 
-    // wave: a hand raised above the head
+    // wave: a hand raised above the head (not while bowing: the head drops below the hands then)
     const hand = Math.max(p.get("lW").y, p.get("rW").y);
-    if (hand > headY - 0.01) {
+    if (hand > headY - 0.01 && !bowing && !recentlyBowed && lean < 0.25 && headY > 0.15) {
       this.waveTime += dt;
       if (this.waveTime > 0.3) this.emit("wave", {}, 4);
     } else this.waveTime = 0;

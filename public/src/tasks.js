@@ -144,7 +144,7 @@ function simon(spec, c, done) {
   const pool = Object.keys(MOVE_NAMES);
   const seq = [];
   while (seq.length < (spec.length || 3)) { const m = pool[Math.floor(Math.random() * pool.length)]; if (m !== seq[seq.length - 1]) seq.push(m); }
-  let phase = "watch", t = 0, shown = 0, idx = 0;
+  let phase = "watch", t = 0, shown = 0, idx = 0, lastGood = -9;
   const watch = () => { phase = "watch"; t = 0; shown = 0; idx = 0; c.guestSay("watch"); };
   watch();
   return {
@@ -167,12 +167,17 @@ function simon(spec, c, done) {
     },
     hear(ev) {
       if (phase !== "repeat" || !MOVE_NAMES[ev.type]) return;
+      const since = t - lastGood;
       if (ev.type === seq[idx]) {
         idx++;
+        lastGood = t;
         c.sfx("chime", null, { volume: 0.3, rate: 1.2 + idx * 0.12 });
         c.emote("pip", "✦", () => c.pip.get("head"), `${idx} / ${seq.length}`, 1.4);
         if (idx === seq.length) { phase = "won"; c.guestSay("spellDone"); c.confetti("grace"); setTimeout(done, 1200); }
       } else {
+        // leftovers right after a good move (landing from a jump, settling from a spin), or a
+        // repeat of the move just made, are forgiven; only a clearly different move is a mistake
+        if (since < 1.6 || (idx > 0 && ev.type === seq[idx - 1])) return;
         phase = "wrong";
         c.guestSay("wrong");
         setTimeout(watch, 1800);
@@ -295,9 +300,11 @@ function riddle(spec, c, done) {
   });
   // the riddle, written on a sign at stage left
   const board = sign("Grumble's riddle", r.q);
-  board.position.set(-0.33, 0.12, -0.14);
-  board.rotation.y = 0.35;
+  board.position.set(-0.22, 0.13, -0.15);
+  board.rotation.y = 0.18;
+  board.scale.setScalar(1.45);
   group.add(board);
+  c.riddleCard?.(r.q);
   let t = 0, cool = 0, solved = false;
   const ask = () => c.guestLine(r.line);
   ask();
@@ -308,7 +315,9 @@ function riddle(spec, c, done) {
       const b = body(c);
       stones.forEach((st, i) => {
         const here = flat(st.s.position, b.pelvis) < 0.065;
-        st.on = here ? st.on + dt : 0;
+        // a stone only answers once Sir Pip has stepped onto it (not if he simply starts there)
+        if (!here) st.armed = true;
+        st.on = here && st.armed ? st.on + dt : 0;
         st.ring.material.opacity = here ? 0.9 : 0.4 + 0.2 * Math.sin(t * 3 + i);
         if (!solved && st.on > 0.8 && cool <= 0) {
           st.on = -2; // step off and back on to answer again
@@ -330,7 +339,7 @@ function riddle(spec, c, done) {
         }
       });
     },
-    end() { dispose(group); },
+    end() { dispose(group); c.riddleCard?.(null); },
   };
 }
 
@@ -670,7 +679,11 @@ function kindness(spec, c, done) {
     update(dt) {
       // stay facing Sir Pip, just in front of him
       const p = c.pip.get("pelvis");
-      if (!kind) { K.target.set(THREE.MathUtils.clamp(p.x + 0.14, -0.32, 0.34), 0.5, THREE.MathUtils.clamp(p.z, -0.1, 0.1)); K.yaw = -Math.PI / 2; }
+      if (!kind) {
+        const side = p.x > 0.08 ? -1 : 1; // whichever side of Sir Pip has room
+        K.target.set(THREE.MathUtils.clamp(p.x + side * 0.14, -0.3, 0.3), 0.5, THREE.MathUtils.clamp(p.z, -0.1, 0.1));
+        K.yaw = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+      }
       lean = leaning(c) > 0.32 ? lean + dt : 0;
       if (lean > 0.35) redeem();
     },
