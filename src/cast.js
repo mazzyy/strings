@@ -9,7 +9,7 @@ import { span, pin, shadowed, makeBars } from "./skins.js";
 import { mergeStatic } from "./perf.js";
 
 // A generic humanoid skin. `build(api)` adds meshes and says where they hang.
-function humanoidSkin(assets, build) {
+function humanoidSkin(assets, build, opts = {}) {
   return (m) => {
     const group = new THREE.Group();
     const head = new THREE.Group();
@@ -27,9 +27,10 @@ function humanoidSkin(assets, build) {
     };
     build(api);
     mergeStatic(head, api.headSkip);
-    const bars = makeBars(m, "wood", assets);
+    const bars = makeBars(m, opts.bars || "wood", assets); // "holo" when you play this character
     group.add(bars.group);
     shadowed(group);
+    if (opts.bars === "holo") bars.group.traverse((o) => { if (o.isMesh) o.castShadow = false; });
     let t = 0;
     const mid = new THREE.Vector3();
     const P = (n) => (n === "mid" ? mid.copy(m.get("neck")).lerp(m.get("pelvis"), 0.45) : m.get(n));
@@ -79,7 +80,7 @@ function starTexture(bg, fg) {
 }
 
 // ---------------------------------------------------------------------------
-export function wizardSkin(assets) {
+export function wizardSkin(assets, opts = {}) {
   return humanoidSkin(assets, (api) => {
     const { add, M, head, pin, at, anim } = api;
     const robe = M({ color: 0x4a2f86, roughness: 0.85, map: starTexture("#4a2f86", "#d9c06a") });
@@ -138,11 +139,11 @@ export function wizardSkin(assets) {
     api.group.add(staff);
     pin(staff, "rW", "upper", [0.006, 0, 0.004]);
     anim((t) => { orb.rotation.y = t * 1.5; crystal.emissiveIntensity = 1.3 + Math.sin(t * 3) * 0.4; });
-  });
+  }, opts);
 }
 
 // ---------------------------------------------------------------------------
-export function pirateSkin(assets) {
+export function pirateSkin(assets, opts = {}) {
   return humanoidSkin(assets, (api) => {
     const { add, M, head, pin, at, anim } = api;
     const coat = M({ color: 0x9a1f24, roughness: 0.75 });
@@ -223,11 +224,11 @@ export function pirateSkin(assets) {
     mergeStatic(parrot);
     pin(parrot, "rS", "upper", [0.004, 0.012, -0.002]);
     anim((t) => { parrot.position.y += Math.abs(Math.sin(t * 5)) * 0.002; });
-  });
+  }, opts);
 }
 
 // ---------------------------------------------------------------------------
-export function trollSkin(assets) {
+export function trollSkin(assets, opts = {}) {
   return humanoidSkin(assets, (api) => {
     const { add, M, head, pin, at } = api;
     const hide = M({ color: 0x7d8f5a, roughness: 0.85 });
@@ -264,12 +265,12 @@ export function trollSkin(assets) {
     const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.011, 12, 8), moss); tuft.position.set(0, 0.022, -0.002); tuft.scale.set(1.2, 0.6, 1.1);
     const sprout = new THREE.Mesh(new THREE.ConeGeometry(0.003, 0.012, 6), moss); sprout.position.set(0.004, 0.03, 0); sprout.rotation.z = -0.3;
     head.add(skull, jaw, nose, brow, ...eyes, ...tusks, ...ears, tuft, sprout);
-  });
+  }, opts);
 }
 
 // ---------------------------------------------------------------------------
 // Clank: the evil clockwork robot of the tower (boxy tin, red eye, antenna)
-export function clankSkin(assets) {
+export function clankSkin(assets, opts = {}) {
   return humanoidSkin(assets, (api) => {
     const { add, M, head, pin, at, anim } = api;
     const tin = M({ color: 0xb4bcc6, metalness: 0.55, roughness: 0.38 });
@@ -318,12 +319,12 @@ export function clankSkin(assets) {
       redeem: () => { red.color.set(0x8ad8ff); red.emissive.set(0x3aa0ff); },
       reset: () => { red.color.set(0xff3020); red.emissive.set(0xff2010); spin = 0.3; },
     };
-  });
+  }, opts);
 }
 
 // ---------------------------------------------------------------------------
 // Princess Juniper (in a gown and a little crown)
-export function princessSkin(assets) {
+export function princessSkin(assets, opts = {}) {
   return humanoidSkin(assets, (api) => {
     const { add, M, head, pin, at } = api;
     const gown = M({ color: 0xc8508a, roughness: 0.7 });
@@ -355,12 +356,12 @@ export function princessSkin(assets) {
     const jewel = new THREE.Mesh(new THREE.OctahedronGeometry(0.0024, 0), gem); jewel.position.set(0, 0.002, 0.012); crown.add(jewel);
     crown.position.y = 0.018;
     head.add(face, hairBack, tail, ...eyes, smile, crown);
-  });
+  }, opts);
 }
 
 // ---------------------------------------------------------------------------
 // The King: a red velvet robe with ermine trim, a beard and a crown, and a sword for the knighting
-export function kingSkin(assets) {
+export function kingSkin(assets, opts = {}) {
   return humanoidSkin(assets, (api) => {
     const { add, M, head, pin, at } = api;
     const robe = M({ color: 0x8c1520, roughness: 0.75 });
@@ -399,5 +400,5 @@ export function kingSkin(assets) {
     api.group.add(sword);
     mergeStatic(sword);
     pin(sword, "rW", "upper", [0.002, -0.002, 0.006]);
-  });
+  }, opts);
 }

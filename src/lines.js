@@ -98,6 +98,7 @@ export const COACH = {
   replay: "Here comes your shadow. Perform alongside it.",
   shared: "Someone has sent you a performance. Watch their shadow, then join in.",
   storyIntro: "Ah, there you are! Welcome, welcome. Come closer, and let me tell you a story.",
+  freePlay: "Free play! No story tonight. Pick who you'd like to be, who plays with you, and which stage. Then just have fun.",
   lockOn: "Pinch lock is on. Pinch once to pick up a bar, and pinch again to put it down. No need to hold on.",
   lockOff: "Pinch lock is off. Hold your pinch to hold the bar.",
   deskAR: "Psst. The stage is sitting on your real desk. Sir Pip can step right off the front of it, and walk about on your table.",
