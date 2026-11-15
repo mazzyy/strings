@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Strings</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Cpath d=%22M6 5h20M10 5v12M22 5v8M16 5v6%22 stroke=%22%23e0b23a%22 stroke-width=%222%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%225%22 fill=%22%23f0c9a0%22/%3E%3Crect x=%2212%22 y=%2221%22 width=%228%22 height=%229%22 fill=%22%232f7a8c%22/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --ink: #f6ead7;
+      --muted: #c9b79f;
+      --panel: rgba(28, 18, 16, 0.78);
+      --line: rgba(246, 234, 215, 0.14);
+      --accent: #e0b23a;
+      --rec: #d8433b;
+      --play: #4aa36b;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #1d1416; color: var(--ink); font: 14px/1.4 ui-serif, Georgia, "Times New Roman", serif; }
+    #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+    body.in-xr .hud { display: none; }
+    .hud { position: fixed; pointer-events: none; }
+    .hud > * { pointer-events: auto; }
+    #top { top: 16px; left: 16px; right: 16px; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; backdrop-filter: blur(6px); }
+    h1 { margin: 0; font-size: 22px; letter-spacing: 0.04em; font-weight: 600; }
+    h1 small { font-size: 13px; color: var(--muted); font-weight: 400; letter-spacing: 0; margin-left: 6px; }
+    .status { display: grid; grid-template-columns: auto auto; gap: 2px 12px; margin-top: 6px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); }
+    .status b { color: var(--ink); font-weight: 500; }
+    .buttons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    button { font: 13px ui-sans-serif, system-ui, sans-serif; color: var(--ink); background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; cursor: pointer; }
+    button:hover { background: rgba(255,255,255,0.13); }
+    button.xr { background: var(--accent); color: #241810; border-color: transparent; font-weight: 600; }
+    button.live#rec { background: var(--rec); border-color: transparent; }
+    button.live#play { background: var(--play); border-color: transparent; }
+    #help { bottom: 16px; left: 16px; max-width: 330px; font: 12.5px/1.55 ui-sans-serif, system-ui, sans-serif; }
+    #help.collapsed .body { display: none; }
+    #help .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    #help .head strong { font: 600 13px ui-serif, Georgia, serif; }
+    #help-toggle { padding: 2px 9px; font-size: 12px; }
+    #help table { border-collapse: collapse; margin-top: 6px; }
+    #help td { padding: 1px 0; vertical-align: top; }
+    #help td:first-child { color: var(--accent); padding-right: 10px; white-space: nowrap; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+    #help p { margin: 8px 0 0; color: var(--muted); }
+    #logwrap { bottom: 16px; right: 16px; max-width: 360px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); }
+    #log { list-style: none; margin: 0; padding: 0; }
+    #log li:first-child { color: var(--ink); }
+    #caption { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); max-width: min(720px, calc(100% - 32px)); text-align: center; font: italic 20px/1.35 ui-serif, Georgia, serif; color: #fff8ea; text-shadow: 0 2px 12px #000, 0 0 2px #000; opacity: 0; transition: opacity .5s; pointer-events: none; }
+    #caption.on { opacity: 1; }
+    #caption.hidden { display: none; }
+    #toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); border: 1px solid var(--line); padding: 10px 16px; border-radius: 10px; opacity: 0; transition: opacity .3s; pointer-events: none; font: 14px ui-sans-serif, system-ui, sans-serif; }
+    #toast.on { opacity: 1; }
+    #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #140d0a; z-index: 10; transition: opacity .6s; font: italic 22px ui-serif, Georgia, serif; color: var(--ink); --p: 0; }
+    #loading::after { content: ""; position: absolute; left: 50%; top: calc(50% + 34px); width: 220px; height: 2px; transform: translateX(-50%); background: linear-gradient(90deg, var(--accent) calc(var(--p) * 100%), rgba(255,255,255,0.12) 0); }
+    #loading.done { opacity: 0; pointer-events: none; }
+    #loading.ready { background: radial-gradient(ellipse at 50% 40%, rgba(60,20,20,0.55), rgba(10,6,5,0.92)); }
+    #loading.ready::after { display: none; }
+    .open { text-align: center; font-style: normal; }
+    .open h1 { font: 600 64px/1 ui-serif, Georgia, serif; letter-spacing: 0.06em; margin: 0 0 10px; color: #f3dfb0; text-shadow: 0 4px 30px rgba(224,178,58,0.35); }
+    .open p { margin: 0 0 28px; color: var(--muted); font: italic 18px ui-serif, Georgia, serif; }
+    .open button { font: 600 17px ui-sans-serif, system-ui, sans-serif; background: linear-gradient(#e7bf55, #c9962e); color: #241810; border: 0; padding: 14px 30px; border-radius: 999px; box-shadow: 0 8px 30px rgba(224,178,58,0.35); }
+    .open small { display: block; margin-top: 14px; color: var(--muted); font: 12px ui-sans-serif, system-ui, sans-serif; }
+    /* "what do I do next" chip */
+    #hint { position: fixed; left: 50%; bottom: 92px; transform: translate(-50%, 12px); display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: rgba(10, 24, 32, 0.86); border: 1px solid rgba(127, 243, 255, 0.7); box-shadow: 0 0 24px rgba(41, 230, 255, 0.25); color: #eafcff; font: 15px ui-sans-serif, system-ui, sans-serif; opacity: 0; transition: opacity .35s, transform .35s; pointer-events: none; white-space: nowrap; }
+    #hint.on { opacity: 1; transform: translate(-50%, 0); animation: nudge 2.4s ease-in-out infinite; }
+    @keyframes nudge { 0%, 100% { box-shadow: 0 0 18px rgba(41,230,255,0.2); } 50% { box-shadow: 0 0 34px rgba(41,230,255,0.5); } }
+    #hint kbd { font: 600 13px ui-monospace, Menlo, monospace; padding: 4px 9px; border-radius: 7px; background: #eafcff; color: #0a1820; box-shadow: 0 3px 0 #7ab9c6; }
+    #hint .plus { color: #7ff3ff; }
+    #hint .txt { margin-left: 6px; }
+    /* tonight's show */
+    #show { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); text-align: center; padding: 8px 18px 10px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); opacity: 0; transition: opacity .4s; pointer-events: none; max-width: min(460px, calc(100% - 32px)); }
+    #show.on { opacity: 1; }
+    #show .title { font: italic 14px ui-serif, Georgia, serif; color: var(--muted); }
+    #show .stars { font-size: 22px; color: var(--accent); letter-spacing: 4px; }
+    #show .goal { font: 14px ui-sans-serif, system-ui, sans-serif; }
+    #billpanel { position: fixed; inset: 0; margin: auto; width: min(420px, calc(100% - 32px)); height: fit-content; max-height: 70vh; overflow: auto; padding: 18px 20px; border-radius: 16px; background: #efe2c2; color: #2a1a10; display: none; z-index: 5; box-shadow: 0 20px 60px rgba(0,0,0,0.6); border: 6px double #7a1d22; }
+    #billpanel.on { display: block; }
+    #billpanel h2 { margin: 0; font: 600 22px Georgia, serif; color: #7a1d22; }
+    #billpanel .streak { margin: 4px 0 12px; font-style: italic; }
+    #billpanel .bill { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 0; border-top: 1px solid rgba(122,29,34,0.25); }
+    #billpanel .bill span { color: #b8862a; }
+    #billpanel .bill i { font-size: 12px; color: #6a5040; }
+    #billpanel button { margin-top: 12px; background: #7a1d22; color: #fff; border: 0; }
+    button.live#talk { background: #3f8fe0; border-color: transparent; }
+    #xr-note { color: var(--muted); font: 12px ui-sans-serif, system-ui, sans-serif; align-self: center; }
+    @media (max-width: 1100px) { #show { top: auto; bottom: 150px; } }
+    @media (max-width: 760px) {
+      #logwrap { display: none; }
+      #help { right: 16px; max-width: none; }
+      #caption { bottom: 120px; font-size: 17px; }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="loading">The curtain is rising…</div>
+
+  <div id="top" class="hud">
+    <div class="card">
+      <h1>Strings <small>a marionette theatre with an AI co-performer</small></h1>
+      <div class="status">
+        <span>mode</span><b id="st-mode">desktop simulator</b>
+        <span>your hand</span><b id="st-grip">open hand</b>
+        <span>Marlo</span><b id="st-marlo">idle</b>
+        <span>narrator</span><b id="st-narrator">built-in</b>
+        <span>take</span><b id="st-rec">—</b>
+      </div>
+    </div>
+    <div class="buttons">
+      <span id="xr-note" hidden>No headset found — using the hand simulator</span>
+      <button id="enter-ar" class="xr" hidden>Enter AR (passthrough)</button>
+      <button id="enter-vr" class="xr" hidden>Enter VR</button>
+      <button id="demo" title="T">Demo</button>
+      <button id="talk" title="Hold V">🎙 Talk to Marlo</button>
+      <button id="bills">Playbills (0)</button>
+      <button id="rec" title="R">● Record</button>
+      <button id="play" title="P">▶ Replay</button>
+      <button id="share" title="L">Share link</button>
+      <button id="mute" title="M">Voice: on</button>
+      <button id="reset" title="Backspace">Reset</button>
+    </div>
+  </div>
+
+  <div id="help" class="hud card">
+    <div class="head"><strong>Hand simulator</strong><button id="help-toggle">hide</button></div>
+    <div class="body">
+      <table>
+        <tr><td>hold left click</td><td>pinch the bar (G = sticky pinch)</td></tr>
+        <tr><td>move mouse</td><td>move your hand — raise, carry, walk</td></tr>
+        <tr><td>wheel</td><td>hand nearer / further</td></tr>
+        <tr><td>Q / E</td><td>rock the wrist — legs lift</td></tr>
+        <tr><td>W / S</td><td>tip forward / back — bow</td></tr>
+        <tr><td>A / D</td><td>twist — turn</td></tr>
+        <tr><td>Space</td><td>flick up — jump</td></tr>
+        <tr><td>Shift + mouse</td><td>your other hand — arms (H = sticky)</td></tr>
+        <tr><td>click a prop</td><td>hand it to Sir Pip · click Marlo to give it</td></tr>
+        <tr><td>hold V</td><td>talk to Marlo</td></tr>
+        <tr><td>release</td><td>open hand — the puppet slumps</td></tr>
+        <tr><td>R · P · L</td><td>record · replay shadow · copy share link</td></tr>
+        <tr><td>T · M · C</td><td>demo · voice · captions</td></tr>
+      </table>
+      <p>On Quest: pinch a bar to hold it, pinch a prop to carry it. Poke the red knob to record, green to replay, blue to talk to Marlo. Pinch both hands in the air for 1.5 s to move the stage.</p>
+    </div>
+  </div>
+
+  <div id="logwrap" class="hud card"><ul id="log"><li>Pinch the glowing bar to wake Sir Pip.</li></ul></div>
+  <div id="show"></div>
+  <div id="hint"></div>
+  <div id="billpanel"></div>
+  <div id="caption"></div>
+  <div id="toast"></div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
