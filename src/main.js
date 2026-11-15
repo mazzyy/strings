@@ -25,6 +25,7 @@ import { GUESTS, STORY_LINES, PROLOGUE, EPILOGUE, TASK_LINES, CHAPTERS as CHAPTE
 import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin, kingSkin } from "./cast.js";
 import { createTask } from "./tasks.js";
 import { StoryBook } from "./storybook.js";
+import { Unbound } from "./unbound.js";
 import { Sets, SET_LIGHT } from "./sets.js";
 import { StoryMap } from "./storymap.js";
 import { Narrator } from "./narrator.js";
@@ -85,7 +86,7 @@ const { root: stageRoot, knobs, shadowCatcher, curtains, cord } = buildStage(ass
 stageRoot.position.set(0, STAGE_Y, 0);
 scene.add(stageRoot);
 // batch static geometry into one mesh per material (Quest needs few draw calls)
-let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, knobs.map, shadowCatcher, curtains.group, cord.group]);
+let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, knobs.map, knobs.free, shadowCatcher, curtains.group, cord.group]);
 saved += mergeStatic(desk);
 saved += mergeStatic(room, [desk]);
 
@@ -898,6 +899,23 @@ function grandFinale() {
 show.onGrandFinale = grandFinale;
 function sayAs(who, key) { const l = GUESTS[who]?.task?.[key]; if (l) marloSay(l, GUESTS[who].name, true); }
 
+// ---- EXPERIMENT: Marlo breaks free into your room, and real applause (see unbound.js) -----
+const _hv = new THREE.Vector3();
+const unbound = new Unbound({
+  marlo: () => marlo,
+  get ai() { return ai; },
+  sfx: (n, at, o) => sfx.play(n, at, o),
+  coach: (k) => narrator.coach(k),
+  sayAs,
+  head: () => stageRoot.worldToLocal(camera.getWorldPosition(_hv).clone()),
+  confetti: (k) => confetti.burst(k),
+  bowAll: () => { ai.react("bow", { force: true }); emotes.pop("pip", "♥", pipHead, "Bravo!", 1.6); for (const e of extras.values()) if (e.on && e.pup !== marlo) { e.mode = "proud"; setTimeout(() => (e.mode = "dance"), 2500); } },
+  xr: () => !!xrMode,
+  emote: (id, sym, at, text, life) => emotes.pop(id, sym, at, text, life),
+  hint: (n) => hints.show(n, !!xrMode),
+  hideHint: () => hints.hide(),
+});
+
 // after the finale: the epilogue, then the credits
 $("credits-again")?.addEventListener("click", () => { storyMap.resetStory(); location.reload(); });
 $("credits-theatre")?.addEventListener("click", () => { $("credits").classList.remove("on"); openMap(); });
@@ -1052,8 +1070,14 @@ function changeScene(place) {
 }
 show.onDone = () => setTimeout(() => {
   if (show.state !== "done" || changing) return;
-  if (chapter.finale) playBook(EPILOGUE, showCredits);
-  else openMap();
+  if (chapter.finale) {
+    // the last beat: your applause sets Marlo free (then the epilogue and credits)
+    const toEpilogue = () => playBook(EPILOGUE, showCredits);
+    narrator.coach("clapForMarlo");
+    hints.show("clap", !!xrMode);
+    unbound.armForApplause(toEpilogue);
+    setTimeout(() => { if (unbound.armed) { unbound.disarm(); hints.hide(); toEpilogue(); } }, 16000);
+  } else openMap();
 }, 2500);
 
 const demo = makeDemo(sim);
@@ -1212,6 +1236,8 @@ window.addEventListener("keydown", (e) => {
   else if (k === "t") runDemo();
   else if (k === "n") cycleMode();
   else if (k === "j") toggleMap();
+  else if (k === "u") { if (!unbound.busy) unbound.free(); }
+  else if (k === "k") unbound.applause(); // desktop stand-in for clapping
   else if (k === "escape" && book.open) book.skipAll();
 });
 
@@ -1404,7 +1430,7 @@ function updatePlacement(dt, frame, hands) {
 }
 
 // poke the apron knobs with a fingertip (XR), and hold two empty pinches to re-place the stage
-const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0 };
+const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0, free: 0 };
 let recenterHold = 0;
 function xrGestures(dt, hands, t) {
   // poke the floating storybook map
@@ -1421,6 +1447,7 @@ function xrGestures(dt, hands, t) {
       else if (name === "talk") startTalking();
       else if (name === "mode") { if (knob.visible) cycleMode(); }
       else if (name === "map") toggleMap();
+      else if (name === "free") { if (!unbound.busy) unbound.free(); }
       else player.playing ? stopReplay() : startReplay();
     }
   }
@@ -1512,6 +1539,7 @@ renderer.setAnimationLoop((time, frame) => {
   book.update(dt);
   updatePrincess(dt);
   updateExtras(dt);
+  unbound.update(dt, hands);
   if (mode.id === "party") {
     spot.color.setHSL((elapsed * 0.12) % 1, 0.75, 0.7);
     if (!ai.busy && Math.floor(elapsed) % 9 === 0 && Math.floor(elapsed - dt) % 9 !== 0) ai.react("dance");
@@ -1524,7 +1552,7 @@ renderer.setAnimationLoop((time, frame) => {
   scene.environmentIntensity = 0.4 - 0.3 * night;
   narrator.update(dt);
 
-  const [lg, rg] = ai.grips();
+  const [lg, rg] = unbound.busy ? unbound.frozenGrips : ai.grips();
   // the robot watches the knight, and looks out at you while it narrates
   const viewCam = xrMode ? renderer.xr.getCamera() : camera;
   const lookAt = robot.talk > 0
@@ -1594,4 +1622,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };
+window.strings = { unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };

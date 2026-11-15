@@ -481,7 +481,7 @@ export function dragonSkin(assets) {
         const y = P("chest").y;
         const vy = dt > 0 ? (y - lastY) / dt : 0;
         lastY = y;
-        flap += (Math.min(1, Math.abs(vy) * 4) - flap) * Math.min(1, dt * 4);
+        flap += (Math.max(m.flapBoost || 0, Math.min(1, Math.abs(vy) * 4)) - flap) * Math.min(1, dt * 4);
         const ang = 0.35 + Math.sin(t * (2 + flap * 10)) * (0.12 + flap * 0.5);
         wings.forEach((w, i) => {
           const s = i === 0 ? -1 : 1;

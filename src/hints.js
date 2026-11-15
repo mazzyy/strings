@@ -28,6 +28,8 @@ export const HINTS = {
   fly:         { target: "mainBar",  motion: "up",       desk: [["Move mouse ↑ ↓"], "Steer through the rings"], xr: "Move your hand up and down to steer", voice: "hintFly" },
   flyDodge:    { target: "mainBar",  motion: "up",       desk: [["Move mouse ↑ ↓"], "Dodge the flying gears"], xr: "Move up or down to dodge the gears", voice: "hintFlyDodge" },
   chase:       { target: "task",     motion: "sideways", desk: [["Move mouse"], "Fly right up to Clank"], xr: "Fly right up to Clank", voice: "hintChase" },
+  clap:        { target: "guest",    motion: "none",     desk: [["K"], "Clap for Marlo"], xr: "Clap your hands!", voice: "clapForMarlo" },
+  perch:       { target: "guest",    motion: "none",     desk: [["Shift + hold still"], "Offer your other hand"], xr: "Hold out your open hand, very still", voice: "holdHand" },
   record:      { target: "knob:record", motion: "poke",  desk: [["R"], "Record your scene"], xr: "Poke the red button", voice: ["hintRecordDesk", "hintRecord"] },
   talk:        { target: "marlo",    motion: "none",     desk: [["Hold V"], "Talk to Marlo"], xr: "Poke the blue button and speak", voice: "talk" },
 };

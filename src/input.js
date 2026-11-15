@@ -21,12 +21,14 @@ export class HandState {
     this.position = new THREE.Vector3();   // pinch point (thumb + index tips)
     this.quaternion = new THREE.Quaternion();
     this.anchor = new THREE.Vector3();     // a point that stays put while the fingers close
+    this.palm = new THREE.Vector3();       // the middle of the palm (for perching, clapping)
     this.tip = new THREE.Vector3();
   }
-  setPose(pos, quat, anchor = pos) {
+  setPose(pos, quat, anchor = pos, palm = null) {
     this.position.copy(pos);
     this.quaternion.copy(quat);
     this.anchor.copy(anchor);
+    this.palm.copy(palm || pos);
     this.matrix.compose(pos, quat, ONE);
   }
 }
@@ -87,7 +89,8 @@ export class XRHands {
       return slot;
     });
     this._pinch = [false, false];
-    this.filters = [0, 1].map(() => ({ mid: new OneEuroVec3(), anchor: new OneEuroVec3(), rot: new OneEuroQuat() }));
+    this.filters = [0, 1].map(() => ({ mid: new OneEuroVec3(), anchor: new OneEuroVec3(), palm: new OneEuroVec3(), rot: new OneEuroQuat() }));
+    this._pw = new THREE.Vector3(); this._mw = new THREE.Vector3();
     this.lost = [0, 0]; // seconds since the hand was last tracked
     this._tw = new THREE.Vector3(); this._iw = new THREE.Vector3(); this._kw = new THREE.Vector3();
     this._q = new THREE.Quaternion(); this._sq = new THREE.Quaternion();
@@ -124,7 +127,9 @@ export class XRHands {
         const mid = F.mid.filter(tmpV.addVectors(tw, iw).multiplyScalar(0.5).applyMatrix4(inv), dt);
         const anchor = F.anchor.filter(knuckle.getWorldPosition(this._kw).applyMatrix4(inv), dt);
         const q = F.rot.filter(this._q.copy(this._sq).multiply(wrist.getWorldQuaternion(tmpQ)), dt);
-        hs.setPose(mid, q, anchor);
+        const midMeta = j["middle-finger-metacarpal"] || knuckle;
+        const palm = F.palm.filter(wrist.getWorldPosition(this._pw).add(midMeta.getWorldPosition(this._mw)).multiplyScalar(0.5).applyMatrix4(inv), dt);
+        hs.setPose(mid, q, anchor, palm);
         hs.pinch = this._pinch[i];
         hs.present = true;
       } else {

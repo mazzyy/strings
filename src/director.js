@@ -210,6 +210,7 @@ export class AIPerformer {
 
   update(dt) {
     this.t += dt;
+    if (this.suspended) return; // (experiment: Marlo has broken free of his strings)
     // gentle clips (sulking, pointing) give way as soon as something new happens
     if (this.clip?.interruptible && this.queue.length) { this.clip.onEnd?.(); this.clip = null; }
     if (!this.clip && this.queue.length) {

@@ -281,7 +281,12 @@ export function buildStage(assets) {
   mapKnob.position.set(-0.16, 0.004, D / 2 - 0.05);
   root.add(mapKnob);
 
-  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob, map: mapKnob }, shadowCatcher, curtains, cord };
+  // experiment: the "free" knob (green) lets Marlo break his strings
+  const freeKnob = makeKnob(0x4ad06a, "free");
+  freeKnob.position.set(-0.11, 0.004, D / 2 - 0.05);
+  root.add(freeKnob);
+
+  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob, map: mapKnob, free: freeKnob }, shadowCatcher, curtains, cord };
 }
 
 // ---------------------------------------------------------------------------
