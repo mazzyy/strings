@@ -93,15 +93,22 @@ export class Props {
     rack.add(tray);
     stageRoot.add(rack);
 
+    // an invisible, generous hit ball per prop: the props are only 1-2 cm, so
+    // clicking (or pinching) them exactly would be fiddly
+    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
     const make = (name, mesh, local, rot) => {
       mesh.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       mergeStatic(mesh); // one draw call per material, not one per petal
+      const hit = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), hitMat);
+      hit.position.y = name === "lantern" ? -0.012 : 0.0;
+      hit.userData.hit = true;
+      mesh.add(hit);
       stageRoot.add(mesh);
       const home = rack.position.clone().add(new THREE.Vector3(...local));
       const homeQ = new THREE.Quaternion().setFromEuler(rot || new THREE.Euler());
       mesh.position.copy(home);
       mesh.quaternion.copy(homeQ);
-      return { name, mesh, home, homeQ, state: "rest", hand: null, offset: null, t: 0, from: null };
+      return { name, mesh, home, homeQ, state: "rest", hand: null, offset: null, t: 0, from: null, glow: 0 };
     };
     this.items = new Map([
       ["sword", make("sword", buildSword(), [-0.032, 0.009, 0], new THREE.Euler(0, 0.3, Math.PI / 2))],
@@ -190,12 +197,27 @@ export class Props {
   }
 
   // ---- desktop -------------------------------------------------------------------
-  // returns true if the click was used by a prop or by Marlo
+  // what's under the mouse: a prop, the guest (when Sir Pip has something to give), or nothing
+  pickAt(raycaster) {
+    const hits = raycaster.intersectObjects(this.meshes(), true);
+    if (hits.length) {
+      const obj = hits[0].object;
+      const it = [...this.items.values()].find((i) => { let o = obj; while (o) { if (o === i.mesh) return true; o = o.parent; } return false; });
+      if (it && (it.state === "rest" || it.state === "return" || it.state === "pip")) return { prop: it };
+    }
+    // the guest: anywhere near their body counts
+    const local = raycaster.ray.clone().applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert());
+    const chest = this.marlo.get("chest");
+    if (local.distanceToPoint(chest) < 0.06 || local.distanceToPoint(this.marlo.get("head")) < 0.05) return { guest: true };
+    return null;
+  }
+  setHover(name) { for (const it of this.items.values()) it.hover = it.name === name; }
+
+  // returns true if the click was used by a prop or by the guest
   click(raycaster) {
-    const hits = raycaster.intersectObjects([...this.meshes(), this.marlo.group], true);
-    if (!hits.length) return false;
-    let obj = hits[0].object;
-    const it = [...this.items.values()].find((i) => { let o = obj; while (o) { if (o === i.mesh) return true; o = o.parent; } return false; });
+    const target = this.pickAt(raycaster);
+    if (!target) return false;
+    const it = target.prop;
     if (it) {
       if (it.state === "rest" || it.state === "return") this._give(it, "pip");
       else if (it.state === "pip") this._give(it, "marlo");
@@ -228,9 +250,12 @@ export class Props {
         it.mesh.quaternion.slerpQuaternions(it.fromQ, it.homeQ, k);
         if (it.t >= 1) it.state = "rest";
       } else if (it.state === "rest") {
-        // a gentle shimmer so props read as "pick me up"
-        it.mesh.position.y = it.home.y + Math.max(0, Math.sin(performance.now() / 600 + it.home.x * 40)) * 0.002;
+        // a gentle shimmer so props read as "pick me up"; hovered ones lift and grow
+        it.glow += ((it.hover ? 1 : 0) - it.glow) * Math.min(1, dt * 10);
+        it.mesh.position.y = it.home.y + Math.max(0, Math.sin(performance.now() / 600 + it.home.x * 40)) * 0.002 + it.glow * 0.012;
+        it.mesh.scale.setScalar(1 + it.glow * 0.35);
       }
+      if (it.state !== "rest" && it.mesh.scale.x !== 1 && it.state !== "hand") it.mesh.scale.setScalar(1);
     }
   }
 

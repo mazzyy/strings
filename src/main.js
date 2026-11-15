@@ -21,7 +21,10 @@ import { ActionDetector, AIPerformer, describe } from "./director.js";
 import { MarloMind } from "./mind.js";
 import { Emotes } from "./emote.js";
 import { Confetti } from "./fx.js";
-import { MARLO_SAYS } from "./lines.js";
+import { GUESTS, STORY_LINES } from "./lines.js";
+import { wizardSkin, pirateSkin, trollSkin } from "./cast.js";
+import { Sets, SET_LIGHT } from "./sets.js";
+import { StoryMap } from "./storymap.js";
 import { Narrator } from "./narrator.js";
 import { Recorder, Player, encodePerformance, decodePerformance, library } from "./recorder.js";
 import { makeDemo } from "./demo.js";
@@ -80,7 +83,7 @@ const { root: stageRoot, knobs, shadowCatcher, curtains, cord } = buildStage(ass
 stageRoot.position.set(0, STAGE_Y, 0);
 scene.add(stageRoot);
 // batch static geometry into one mesh per material (Quest needs few draw calls)
-let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, shadowCatcher, curtains.group, cord.group]);
+let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, knobs.map, shadowCatcher, curtains.group, cord.group]);
 saved += mergeStatic(desk);
 saved += mergeStatic(room, [desk]);
 
@@ -104,7 +107,12 @@ stageRoot.add(rim);
 // ---- the cast ------------------------------------------------------------------
 const PIP_ROOT = [-0.15, 0, 0.03];
 const pip = new Marionette({ root: PIP_ROOT, yaw: 0.35, skin: knightSkin(assets), stringColor: 0x9ff3ff });
-const marlo = new Marionette({ root: [0.17, 0, -0.02], yaw: -0.45, skin: dragonSkin(assets) });
+// the guest on stage: Marlo to begin with; others join as the story travels
+const GUEST_ROOT = [0.17, 0, -0.02];
+let marlo = new Marionette({ root: GUEST_ROOT, yaw: -0.45, skin: dragonSkin(assets) });
+const guests = { marlo };
+let guestId = "marlo";
+const GUEST_SKINS = { wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin };
 // your recorded "shadow" performs beside Sir Pip (a little upstage), so you can duet with it
 const GHOST_OFF = new THREE.Vector3(-0.09, 0, -0.07);
 const ghost = new Marionette({ root: [PIP_ROOT[0] + GHOST_OFF.x, 0, PIP_ROOT[2] + GHOST_OFF.z], yaw: 0.35, skin: knightSkin(assets, { ghost: true }), ghost: true, stringColor: 0x7fdcff });
@@ -211,7 +219,17 @@ const narrator = new Narrator({
 // ---- sound, hints, props, the show, talking ----------------------------------------
 const sfx = new Sfx(listener);
 const music = { play() { sfx.play("music", null, { volume: 0.45, rate: 1 }); } };
-ai.onReact = (name) => sfx.play(name === "dance" || name === "jump" ? "roar" : "chirp", marloMouth, { volume: 0.55 });
+// each guest has their own little sound when they react
+const GUEST_SFX = {
+  marlo: (big) => (big ? ["roar", 0.55, 1] : ["chirp", 0.55, 1]),
+  wizard: (big) => ["chime", big ? 0.4 : 0.25, big ? 1.2 : 1.6],
+  pirate: (big) => (big ? ["clink", 0.5, 0.8] : ["clink", 0.3, 1.2]),
+  troll: (big) => ["roar", big ? 0.6 : 0.35, big ? 0.6 : 0.75],
+};
+ai.onReact = (name) => {
+  const [n, v, r] = GUEST_SFX[guestId](name === "dance" || name === "jump");
+  sfx.play(n, marloMouth, { volume: v, rate: r });
+};
 
 const GRIP = { main: [0, 0.04, -0.03], hands: [0, 0.008, 0] };
 const props = new Props(stageRoot, pip, marlo, { sfx, assets, onEvent: (ev) => detector.emit(ev.type, { prop: ev.prop, from: ev.from }, 0.5) });
@@ -225,14 +243,25 @@ const hints = new Hints(stageRoot, (target) => {
   return null;
 });
 
+// stage sets (one per chapter): the set decides the base light; a scene can still ask for full night
+const sets = new Sets(stageRoot);
+let setLight = SET_LIGHT.courtyard;
 let night = 0, nightTarget = 0;
-function setNight(on) { nightTarget = on ? 1 : 0; props.setNight(on); }
+function setNight(on) { nightTarget = on ? 1 : setLight.night; props.setNight(nightTarget > 0.5); }
+function applySet(name) {
+  setLight = sets.show(name);
+  if (mode?.id !== "party") spot.color.set(setLight.spot);
+  if (!preshow) setNight(false);
+}
 
 const show = new Show({
   narrator, hints, sfx, ai, pip, marlo, props, curtains, setNight, stageRoot,
   onChange: (sh, entry) => {
     updateShowHud();
     if (entry) {
+      const prog = storyMap.complete(chapter.id, entry);
+      if (prog.finished && chapter.id === "cave") narrator.coach(STORY_LINES.theEnd);
+      else if (prog.newChapter) narrator.coach(STORY_LINES.unlocked);
       toast(`New playbill: ${entry.title} ${"★".repeat(entry.stars)}`);
       if (!recorder.recording && !lastPerfLocal) recordHintPending = true;
     }
@@ -247,7 +276,7 @@ const marloHead = () => marlo.get("head");
 const pipHead = () => pip.get("head");
 const marloLines = [];
 function marloSay(key) {
-  const text = MARLO_SAYS[key] || key;
+  const text = GUESTS[guestId].says[key] || key;
   if (marloLines.length > 1) marloLines.shift();
   marloLines.push({ text, t: elapsed });
 }
@@ -256,7 +285,7 @@ function updateMarloVoice() {
   if (!marloLines.length || narrator.speaking || narrator.busy) return;
   const { text, t } = marloLines.shift();
   if (elapsed - t > 6) return;
-  showCaption(`Marlo: “${text}”`);
+  showCaption(`${GUESTS[guestId].name}: “${text}”`);
   narrator.speakingUntil = narrator.t + 0.9 + text.split(/\s+/).length * 0.32;
   const file = narrator.manifest[text];
   if (file && !narrator.muted) {
@@ -295,7 +324,7 @@ function applyMode(m, announce = true) {
   mode = m;
   for (const p of [pip, marlo, ghost]) p.gravityScale = m.id === "moon" ? 0.35 : 1;
   pip.fragile = m.id === "fragile";
-  if (m.id !== "party") spot.color.set(0xffe6c4);
+  if (m.id !== "party") spot.color.set(setLight.spot);
   refreshModeUi();
   if (announce) { narrator.coach(m.line); toast(`Mode: ${m.name}`); sfx.play("chime", null, { volume: 0.35, rate: 1.4 }); }
 }
@@ -346,7 +375,7 @@ const talk = new Talk({
   onState: (on) => { $("talk")?.classList.toggle("live", on); knobs.talk.userData.cap.material.emissiveIntensity = on ? 1.2 : 0.35; },
   onReply: async ({ line, reaction, audio }) => {
     const clip = audio || (narrator.manifest[line] ? `voice/${narrator.manifest[line]}` : null);
-    setTimeout(() => showCaption(`Marlo: “${line}”`), 200);
+    setTimeout(() => showCaption(`${GUESTS[guestId].name}: “${line}”`), 200);
     if (reaction) ai.react(reaction);
     if (clip && !narrator.muted) {
       const secs = await voicePlayer.play(clip, "marlo").catch(() => 0);
@@ -357,6 +386,8 @@ const talk = new Talk({
     if (r && !reaction) ai.react(r);
   },
 });
+talk.talkLines = () => GUESTS[guestId].talk;
+talk.character = () => guestId;
 // no speech recognition (e.g. some headset browsers): hide the talk button and knob
 if (!talk.supported) { knobs.talk.visible = false; document.getElementById("talk").hidden = true; }
 function startTalking() {
@@ -402,14 +433,14 @@ function raiseCurtain() {
   unlockAudio();
   curtains.open();
   setTimeout(() => { sfx.play("swish", null, { volume: 0.6 }); music.play(); }, 150);
-  setTimeout(() => show.start(), 2600);
+  setTimeout(() => startChapterShow(), 2600);
 }
 
 // footsteps and armour clinks, played where the foot lands
 const feet = [[pip, "lF"], [pip, "rF"], [marlo, "lF"], [marlo, "rF"]].map(([pup, n]) => {
   const o = new THREE.Object3D();
   stageRoot.add(o);
-  return { pup, n, o, up: false };
+  return { pup, n, o, up: false, guest: pup !== pip };
 });
 function footsteps() {
   for (const f of feet) {
@@ -419,7 +450,7 @@ function footsteps() {
     else if (f.up && p.y < 0.008) {
       f.up = false;
       const isPip = f.pup === pip;
-      sfx.play("step", f.o, { volume: isPip ? 0.5 : 0.6, rate: isPip ? 1.15 : 0.8 });
+      sfx.play("step", f.o, { volume: isPip ? 0.5 : 0.6, rate: isPip ? 1.15 : guestId === "troll" ? 0.6 : 0.8 });
       if (isPip && Math.random() < 0.5) sfx.play("clink", f.o, { volume: 0.18 });
     }
   }
@@ -444,7 +475,7 @@ detector.on((ev) => {
   if (r) ai.react(r);
   narrator.hear(ev);
   checkSync(ev.type, lastPipMove, lastGhostMove);
-  log(`${describe(ev)} → Marlo ${r ? r : "watches"} (${mind.moodName})`);
+  log(`${describe(ev)} → ${GUESTS[guestId].name} ${r ? r : "watches"} (${mind.moodName})`);
 });
 
 // ---- input -------------------------------------------------------------------
@@ -629,7 +660,7 @@ async function share() {
     prompt("Copy this link:", url);
   }
 }
-function resetAll() {
+function resetAll(quiet = false) {
   for (const [, g] of grabs) g.bar.held = false;
   grabs.clear();
   pip.reset();
@@ -637,8 +668,98 @@ function resetAll() {
   props.reset();
   ai.base.copy(ai.home);
   ai.yaw = marlo.yaw;
-  toast("Puppets reset");
+  if (!quiet) toast("Puppets reset");
 }
+
+// ---- the story: chapters, guests and the storybook map --------------------------------
+function guestPuppet(id) {
+  if (!guests[id]) {
+    const g = new Marionette({ root: GUEST_ROOT, yaw: -0.45, skin: GUEST_SKINS[id](assets) });
+    g.setVisible(false);
+    stageRoot.add(g.group);
+    guests[id] = g;
+  }
+  return guests[id];
+}
+function setGuest(id) {
+  const next = guestPuppet(id);
+  if (props.heldBy("marlo")) props.moveTo(props.heldBy("marlo"), "rack", { silent: true });
+  if (next !== marlo) marlo.setVisible(false);
+  marlo = next;
+  guestId = id;
+  marlo.reset();
+  marlo.setVisible(true);
+  const g = GUESTS[id];
+  ai.setPuppet(marlo);
+  for (const d of [detector, ghostDetector]) { d.other = marlo; d.otherName = g.name; }
+  props.marlo = marlo;
+  mind.setGuest(marlo, g.personality);
+  show.marlo = marlo;
+  show.guestName = g.name;
+  $("talk").textContent = `🎙 Talk to ${g.name.replace("Captain ", "")}`;
+  for (const f of feet) if (f.guest) f.pup = marlo;
+}
+// put a chapter's set and guest on stage (no curtain business)
+function stagePlace(place) {
+  applySet(place.set);
+  setGuest(place.guest);
+}
+const sceneFor = (place) => (place.acts ? { id: place.id, title: place.title, intro: place.intro, acts: place.acts } : null);
+function startChapterShow() {
+  if (chapter.id === "theatre") narrator.coach(STORY_LINES.theatre);
+  show.start(sceneFor(chapter)); // the Grand Theatre (no acts) picks tonight's daily show
+}
+
+const storyMap = new StoryMap({ onChoose: (place) => changeScene(place) });
+storyMap.mesh.position.set(-0.56, 0.4, 0.1);
+storyMap.mesh.scale.setScalar(1.3);
+stageRoot.add(storyMap.mesh);
+storyMap.onDepart = () => { narrator.coach(STORY_LINES.travel); sfx.play("step", null, { volume: 0.3, rate: 0.9 }); };
+let chapter = storyMap.current();
+stagePlace(chapter);
+
+function openMap() {
+  if (storyMap.travel) return;
+  $("tip")?.classList.remove("on");
+  props.setHover(null);
+  storyMap.show(!!xrMode);
+  // headset: the parchment floats beside the stage, turned to face you
+  if (xrMode) {
+    // turn toward the head, then tilt back so it's square to your eyes (never rolled)
+    const head = stageRoot.worldToLocal(camera.getWorldPosition(new THREE.Vector3()));
+    const d = head.sub(storyMap.mesh.position);
+    storyMap.mesh.rotation.set(-Math.atan2(d.y, Math.hypot(d.x, d.z)), Math.atan2(d.x, d.z), 0, "YXZ");
+  }
+  narrator.coach(STORY_LINES.mapOpen);
+  if (hints.current) hints.hide();
+}
+function toggleMap() { storyMap.open ? storyMap.hide() : openMap(); }
+
+// the scene change: curtain down, new set and guest, curtain up, the chapter begins
+let changing = false;
+function changeScene(place) {
+  if (changing) return;
+  changing = true;
+  chapter = place;
+  hints.hide();
+  narrator.queue.length = 0; // lines from the last chapter no longer apply
+  narrator.pending.length = 0;
+  marloLines.length = 0;
+  show.state = "idle";
+  show.starGroup.visible = false;
+  show.bill.visible = false;
+  curtains.close();
+  sfx.play("swish", null, { volume: 0.5 });
+  setTimeout(() => {
+    resetAll(true);
+    stagePlace(place);
+    curtains.open();
+    sfx.play("swish", null, { volume: 0.6 });
+    music.play();
+    setTimeout(() => { changing = false; startChapterShow(); }, 2400);
+  }, 1700);
+}
+show.onDone = () => setTimeout(() => { if (show.state === "done" && !changing) openMap(); }, 2500);
 
 const demo = makeDemo(sim);
 function runDemo() {
@@ -661,12 +782,13 @@ $("mute").onclick = () => {
 $("help-toggle").onclick = () => { const c = $("help").classList.toggle("collapsed"); $("help-toggle").textContent = c ? "show" : "hide"; };
 $("talk").onclick = startTalking;
 $("mode").onclick = cycleMode;
+$("storybtn").onclick = () => { unlockAudio(); toggleMap(); };
 refreshModeUi();
 $("bills").onclick = () => {
   const panel = $("billpanel");
   const list = playbills.list();
   panel.innerHTML = `<h2>Your playbills</h2><p class="streak">${playbills.streak() > 1 ? `${playbills.streak()}-night streak` : "Come back tomorrow for a new show"}</p>` +
-    (list.length ? list.map((b) => `<div class="bill"><b>${b.title}</b><span>${"★".repeat(b.stars)}${"☆".repeat(3 - b.stars)}</span><i>${b.date}</i></div>`).join("") : "<p>Finish tonight's show to earn your first playbill.</p>") +
+    (list.length ? list.map((b) => `<div class="bill"><b>${b.title}</b><span>${"★".repeat(b.stars)}${"☆".repeat(3 - b.stars)}</span><i>${b.date}${b.guest ? ` · with ${b.guest}` : ""}${b.ending ? ` · ${b.ending}` : ""}</i></div>`).join("") : "<p>Finish tonight's show to earn your first playbill.</p>") +
     `<button id="billclose">Close</button>`;
   panel.classList.add("on");
   $("billclose").onclick = () => panel.classList.remove("on");
@@ -700,6 +822,26 @@ addEventListener("pointerdown", (e) => {
   clickRay.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
   if (props.click(clickRay)) sim.lmbBlocked = true;
 }, true);
+// hovering a prop (or the guest, when Sir Pip holds something) shows what a click will do
+const tipEl = $("tip");
+canvas.addEventListener("pointerleave", () => { tipEl?.classList.remove("on"); props.setHover(null); });
+canvas.addEventListener("pointerdown", () => tipEl?.classList.remove("on"));
+canvas.addEventListener("pointermove", (e) => {
+  if (xrMode || cordDrag || (e.buttons & 1)) { props.setHover(null); tipEl?.classList.remove("on"); return; }
+  const r = canvas.getBoundingClientRect();
+  clickRay.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+  const t = props.pickAt(clickRay);
+  const held = props.heldBy("pip");
+  let text = null;
+  if (t?.prop) text = t.prop.state === "pip" ? `Click: give the ${t.prop.name} to ${GUESTS[guestId].name}` : `Click: hand the ${t.prop.name} to Sir Pip`;
+  else if (t?.guest && held) text = `Click: give the ${held} to ${GUESTS[guestId].name}`;
+  props.setHover(t?.prop?.name || null);
+  canvas.style.cursor = text ? "pointer" : "";
+  if (tipEl) {
+    tipEl.classList.toggle("on", !!text);
+    if (text) { tipEl.textContent = text; tipEl.style.left = `${e.clientX + 16}px`; tipEl.style.top = `${e.clientY + 14}px`; }
+  }
+});
 addEventListener("pointermove", (e) => {
   if (!cordDrag) return;
   const y = cordY(e);
@@ -750,6 +892,7 @@ window.addEventListener("keydown", (e) => {
   else if (k === "backspace") resetAll();
   else if (k === "t") runDemo();
   else if (k === "n") cycleMode();
+  else if (k === "j") toggleMap();
 });
 
 // shared performance in the URL?
@@ -765,10 +908,14 @@ if (location.hash.startsWith("#perf=")) {
 
 // Quest: a smaller shadow map, only the marionettes and props cast shadows, and
 // the expensive physical materials (velvet sheen, clearcoat) become standard ones
-const shadowKeep = new Set();
-for (const g of [pip.group, marlo.group, ghost.group, ...props.meshes()]) g.traverse((o) => shadowKeep.add(o));
-const casters = [];
-stageRoot.traverse((o) => { if (o.isMesh && o.castShadow && !shadowKeep.has(o)) casters.push(o); });
+// (re-scanned on each entry: guests and sets are built as the story goes)
+let casters = [];
+function scanCasters() {
+  const keep = new Set();
+  for (const g of [pip.group, ...Object.values(guests).map((x) => x.group), ghost.group, ...props.meshes()]) g.traverse((o) => keep.add(o));
+  casters = [];
+  stageRoot.traverse((o) => { if (o.isMesh && o.castShadow && !keep.has(o)) casters.push(o); });
+}
 const cheapMats = new Map();
 function cheapVersion(m) {
   if (!cheapMats.has(m)) {
@@ -788,6 +935,7 @@ function setXRQuality(xr) {
   spot.shadow.mapSize.set(xr ? 1024 : 2048, xr ? 1024 : 2048);
   spot.shadow.map?.dispose();
   spot.shadow.map = null;
+  if (xr) scanCasters();
   for (const o of casters) o.castShadow = !xr;
   if (xr) {
     scene.traverse((o) => { if (o.isMesh && o.material?.isMeshPhysicalMaterial) { swapped.push([o, o.material]); o.material = cheapVersion(o.material); } });
@@ -935,9 +1083,11 @@ function updatePlacement(dt, frame, hands) {
 }
 
 // poke the apron knobs with a fingertip (XR), and hold two empty pinches to re-place the stage
-const knobCool = { record: 0, replay: 0, talk: 0, mode: 0 };
+const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0 };
 let recenterHold = 0;
 function xrGestures(dt, hands, t) {
+  // poke the floating storybook map
+  if (storyMap.mesh.visible) for (const h of hands) if (h.present && storyMap.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   for (const [name, knob] of Object.entries(knobs)) {
     const kp = knob.position.clone().add(new THREE.Vector3(0, 0.01, 0));
     if (!knob.visible) continue;
@@ -948,6 +1098,7 @@ function xrGestures(dt, hands, t) {
       if (name === "record") toggleRecord();
       else if (name === "talk") startTalking();
       else if (name === "mode") { if (knob.visible) cycleMode(); }
+      else if (name === "map") toggleMap();
       else player.playing ? stopReplay() : startReplay();
     }
   }
@@ -1034,6 +1185,8 @@ renderer.setAnimationLoop((time, frame) => {
   cord.update(dt, preshow);
   emotes.update(dt);
   confetti.update(dt);
+  sets.update(dt);
+  storyMap.update(dt);
   if (mode.id === "party") {
     spot.color.setHSL((elapsed * 0.12) % 1, 0.75, 0.7);
     if (!ai.busy && Math.floor(elapsed) % 9 === 0 && Math.floor(elapsed - dt) % 9 !== 0) ai.react("dance");
@@ -1064,7 +1217,7 @@ renderer.setAnimationLoop((time, frame) => {
 
 function updateStatus() {
   $("st-narrator").textContent = narrator.source;
-  $("st-marlo").textContent = `${mind.moodName} · ${ai.current}`;
+  $("st-marlo").textContent = `${GUESTS[guestId].name}: ${mind.moodName} · ${ai.current}`;
   $("st-grip").textContent = pip.main.held ? (pip.hands.held ? "both bars" : "main bar") : pip.hands.held ? "arm bar" : "open hand";
   $("st-rec").textContent = recorder.recording ? `● ${recorder.duration.toFixed(1)}s` : lastPerf ? `${(lastPerf.frames.length / lastPerf.rate).toFixed(1)}s take` : "—";
   $("st-mode").textContent = sim.autopilot ? "demo autopilot" : xrMode ? xrMode.replace("immersive-", "").toUpperCase() : "desktop simulator";
@@ -1078,4 +1231,4 @@ addEventListener("resize", () => {
 });
 
 // exposed for debugging / automated checks
-window.strings = { ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };
+window.strings = { storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };

@@ -39,6 +39,20 @@ export class MarloMind {
     this.state = "curious"; // curious | happy | sulking | sleepy | wary | playful
     this.introducedCopy = false;
     this.enabled = true;
+    this.pers = { sword: "wary", sulkAfter: 40, patience: 9 };
+  }
+
+  // a new guest takes the stage: fresh mood and memory, their own personality
+  setGuest(puppet, personality = {}) {
+    this.marlo = puppet;
+    this.pers = { sword: "wary", sulkAfter: 40, patience: 9, ...personality };
+    this.mood = { joy: personality.joy ?? 0.55, trust: personality.trust ?? 0.45, energy: personality.energy ?? 0.85 };
+    for (const k of Object.keys(this.mem)) this.mem[k] = 0;
+    this.state = "curious";
+    this.challenge = null;
+    this.napping = false;
+    this.lastClose = this.lastEvent = this.t;
+    this.nextIdea = this.t + 9;
   }
 
   get moodName() {
@@ -107,7 +121,7 @@ export class MarloMind {
         return pick(["wave", "jump"]);
       case "walk":
         m.walk++;
-        if (ev.where === "toward Marlo") return this.mood.trust < 0.3 ? "retreat" : pick(["bow", "approach", "wave"]);
+        if (ev.toOther) return this.mood.trust < 0.3 ? "retreat" : pick(["bow", "approach", "wave"]);
         return pick(["approach", "mirror", "turn"]);
       case "approach":
         m.approach++; this.lastClose = this.t; this._bump("trust", 0.05); this._bump("joy", 0.04);
@@ -117,7 +131,9 @@ export class MarloMind {
       case "hold":
         if (ev.prop === "sword") {
           m.sword++;
-          if (this.mood.trust < 0.6) { this.state = "wary"; this.emote("!"); this.say("careful"); return "retreat"; }
+          // a pirate loves a duel; a troll hates swords; most are wary until they trust you
+          if (this.pers.sword === "duel") { this.state = "playful"; this.emote("!"); this.say("careful"); this._bump("joy", 0.1); return "jump"; }
+          if (this.pers.sword === "angry" || this.mood.trust < 0.6) { this.state = "wary"; this.emote("!"); this.say("careful"); return "retreat"; }
           this.state = "playful"; return "jump"; // a friendly duel
         }
         if (ev.prop === "lantern") { this.emote("✦"); return "approach"; }
@@ -164,12 +180,12 @@ export class MarloMind {
     this.nextIdea = this.t + 10 + Math.random() * 6;
 
     // during a scene Marlo lets you focus, but if you're stuck he shows you how
-    if (ctx.act) { if (ctx.actT > 9) this._demonstrate(ctx.act); return; }
+    if (ctx.act) { if (ctx.actT > this.pers.patience) this._demonstrate(ctx.act); return; }
 
     const quiet = this.t - this.lastEvent;
     const ignored = this.t - this.lastClose;
     if (this.mood.energy < 0.22 && quiet > 14) return this._nap();
-    if (ignored > 40 && this.state !== "sulking" && Math.random() < 0.6) return this._sulk();
+    if (ignored > this.pers.sulkAfter && this.state !== "sulking" && Math.random() < 0.6) return this._sulk();
     const options = ["challenge", "challenge", "fetch"];
     if (this.mood.joy > 0.65) options.push("dance");
     const idea = pick(options);
