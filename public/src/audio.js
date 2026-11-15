@@ -212,6 +212,10 @@ const FILES = {
   thud: ["dropLeather"],
 };
 
+// Character voices with feeling (recorded sounds: giggles, grunts, gasps...), listed
+// in audio/voices/index.json as { character: { emotion: numberOfTakes } } and named
+// audio/voices/<character>_<emotion>.mp3, <character>_<emotion>_2.mp3, ...
+export const EMOTIONS = ["happy", "laugh", "excited", "greet", "surprised", "scared", "sad", "hurt", "sleepy", "angry"];
 export class Sfx {
   constructor(listener) {
     this.listener = listener;
@@ -222,6 +226,7 @@ export class Sfx {
     this.pool = [];
     this.enabled = true;
     const loader = new THREE.AudioLoader();
+    this.loader = loader;
     for (const [name, list] of Object.entries(FILES)) {
       this.F[name] = [];
       for (const f of list) loader.load(`${BASE}${f}.mp3`, (buf) => this.F[name].push(buf), undefined, () => {});
@@ -229,6 +234,19 @@ export class Sfx {
   }
 
   // play a named effect at a THREE.Object3D (spatial) or non-spatially if none
+  async loadVoices() {
+    let index = {};
+    try { const r = await fetch(`${BASE}voices/index.json`, { cache: "no-cache" }); if (r.ok) index = await r.json(); } catch { /* none yet */ }
+    for (const [who, emos] of Object.entries(index)) {
+      for (const [emo, takes] of Object.entries(emos)) {
+        const key = `${who}_${emo}`;
+        this.F[key] = [];
+        for (let i = 1; i <= takes; i++) this.loader.load(`${BASE}voices/${key}${i > 1 ? "_" + i : ""}.mp3`, (buf) => this.F[key].push(buf), undefined, () => {});
+      }
+    }
+  }
+  has(name) { return !!this.F[name]?.length; }
+
   play(name, at = null, { volume = 1, rate = 1 } = {}) {
     if (!this.enabled || this.ctx.state !== "running") return;
     const real = this.F[name];
@@ -262,7 +280,7 @@ const BEDS = {
   courtyard: { music: ["music_courtyard", 0.12], amb: ["amb_birds", 0.2] },
   theatre:   { music: ["music_courtyard", 0.12], amb: ["amb_birds", 0.15] },
   forest:    { music: ["music_story", 0.08], amb: ["amb_crickets", 0.3], extras: [["nightbird", 7, 13], ["frog", 9, 16]] },
-  ship:      { music: ["music_ship", 0.14], amb: ["amb_sea", 0.32], extras: [["creak", 5, 9]] },
+  ship:      { music: ["music_ship", 0.14], amb: ["amb_sea", 0.08], extras: [["creak", 6, 11]] },
   bridge:    { music: ["music_story", 0.06], amb: ["amb_crickets", 0.26], extras: [["frog", 6, 12]] },
   tower:     { music: ["music_tower", 0.13], amb: ["amb_cave", 0.12] },
   cave:      { amb: ["amb_cave", 0.38] },

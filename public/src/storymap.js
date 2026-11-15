@@ -120,6 +120,7 @@ export class StoryMap {
   }
 
   unlocked(p) {
+    if (this.state.all) return true; // "play any chapter": everything open (for judges and the curious)
     if (p.id === "theatre") return !!this.state.done.courtyard;
     return CHAPTERS.indexOf(p) < this.state.unlocked;
   }
@@ -132,6 +133,12 @@ export class StoryMap {
     story.save(this.state);
     const at = CHAPTERS[0];
     this.token.x = at.map[0]; this.token.y = at.map[1];
+    this.draw();
+  }
+  unlockAll() {
+    this.state.unlocked = CHAPTERS.length;
+    this.state.all = true;
+    story.save(this.state);
     this.draw();
   }
   hasProgress() { return Object.keys(this.state.done).length > 0 || this.state.at !== "courtyard"; }
