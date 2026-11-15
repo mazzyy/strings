@@ -98,6 +98,7 @@ export const COACH = {
   replay: "Here comes your shadow. Perform alongside it.",
   shared: "Someone has sent you a performance. Watch their shadow, then join in.",
   storyIntro: "Ah, there you are! Welcome, welcome. Come closer, and let me tell you a story.",
+  audienceClaps: "Listen to that! The whole audience is clapping for Marlo.",
   freePlay: "Free play! No story tonight. Pick who you'd like to be, who plays with you, and which stage. Then just have fun.",
   lockOn: "Pinch lock is on. Pinch once to pick up a bar, and pinch again to put it down. No need to hold on.",
   lockOff: "Pinch lock is off. Hold your pinch to hold the bar.",
@@ -114,6 +115,7 @@ export const COACH = {
   landed: "He landed on your hand!",
   applause: "What wonderful applause! Thank you, thank you!",
   clapForMarlo: "Give Marlo a round of applause! Clap your hands!",
+  clapForMarloDesk: "Give Marlo a round of applause! Press K to clap.",
   hintFly: "Move your hand up and down to steer Marlo through the rings.",
   hintFlyDodge: "Move up or down to dodge the gears as they fly at you.",
   hintChase: "Fly right up to Clank to catch him.",
@@ -135,9 +137,9 @@ export const COACH = {
   modeMoon: "Moon gravity. Everything floats.",
   modeFragile: "Fragile strings. Move gently, or they'll snap.",
   modeParty: "Party mode! The lights are dancing.",
-  unlockMoon: "You've unlocked moon gravity! Press the gold button to try it.",
-  unlockFragile: "New mode unlocked: fragile strings. Press the gold button.",
-  unlockParty: "New mode unlocked: party mode! Press the gold button.",
+  unlockMoon: "You've unlocked moon gravity! Press the gold Modes button on the front of the stage to try it.",
+  unlockFragile: "New mode unlocked: fragile strings. Press the gold Modes button on the front of the stage.",
+  unlockParty: "New mode unlocked: party mode! Press the gold Modes button on the front of the stage.",
 };
 
 // Marlo's own voice, for things he does on his own initiative

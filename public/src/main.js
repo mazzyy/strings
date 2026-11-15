@@ -438,7 +438,10 @@ function cycleMode() {
 show.onUnlock = (count) => {
   const m = MODES.find((x) => x.unlock === count);
   refreshModeUi();
-  if (m) { narrator.coach(m.unlockLine); setTimeout(() => toast(`Unlocked: ${m.name} mode`), 9000); }
+  if (!m) return;
+  // (not during the last chapter's finale: that moment belongs to Marlo and your applause)
+  if (!chapter.finale) narrator.coach(m.unlockLine);
+  setTimeout(() => toast(`Unlocked: ${m.name} mode · gold "Modes" button on the stage`), chapter.finale ? 30000 : 9000);
 };
 
 // string sounds: a pluck when a string snaps taut, a crack when one breaks
@@ -1317,10 +1320,11 @@ show.onDone = () => setTimeout(() => {
   if (chapter.finale) {
     // the last beat: your applause sets Marlo free (then the epilogue and credits)
     const toEpilogue = () => playBook(EPILOGUE, showCredits);
-    narrator.coach("clapForMarlo");
+    narrator.coach(xrMode ? "clapForMarlo" : "clapForMarloDesk");
     hints.show("clap", !!xrMode);
     unbound.armForApplause(toEpilogue);
-    setTimeout(() => { if (unbound.armed) { unbound.disarm(); hints.hide(); toEpilogue(); } }, 16000);
+    // no clap (or the headset missed it)? The audience applauds for you, and he breaks free anyway
+    setTimeout(() => { if (unbound.armed) { hints.hide(); narrator.coach("audienceClaps"); unbound.applause(); } }, 10000);
   } else openMap();
 }, 2500);
 

@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { withRepeat } from "./assets.js";
 
+const KNOB_LABELS = { record: "Record", replay: "Replay", talk: "Talk", mode: "Modes", map: "Map", free: "Free Marlo", lock: "Pinch lock" };
 export const STAGE = { width: 0.86, depth: 0.42, base: 0.075 };
 
 const gold = () => new THREE.MeshStandardMaterial({ color: 0xd8ac4f, metalness: 1, roughness: 0.24 });
@@ -250,7 +251,18 @@ export function buildStage(assets) {
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.008, 24), new THREE.MeshStandardMaterial({ color, roughness: 0.3, emissive: color, emissiveIntensity: 0.35 }));
     cap.position.y = 0.008;
     grp.add(base, cap);
-    grp.userData = { cap, label };
+    // a little sign above the button saying what it does
+    const name = KNOB_LABELS[label] || label;
+    const c = document.createElement("canvas"); c.width = 256; c.height = 64;
+    const g = c.getContext("2d");
+    g.fillStyle = "rgba(20,12,8,0.7)"; g.beginPath(); g.roundRect(2, 6, 252, 52, 26); g.fill();
+    g.fillStyle = "#f3dfb0"; g.font = `600 ${name.length > 8 ? 30 : 34}px Georgia, serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(name, 128, 33);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.048, 0.012), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
+    tag.rotation.x = -0.35; // a little sign standing just above the button, leaning back
+    tag.position.set(0, 0.024, -0.004);
+    grp.add(tag);
+    grp.userData = { cap, label, tag };
     return grp;
   };
   const recKnob = makeKnob(0xd8433b, "record");
