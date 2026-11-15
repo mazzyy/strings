@@ -277,7 +277,30 @@ const GUEST_SFX = {
   troll: (big) => ["roar", big ? 0.6 : 0.35, big ? 0.6 : 0.75],
   clank: (big) => ["clink", big ? 0.5 : 0.3, big ? 0.6 : 0.9],
 };
+// what each performance says about how the guest feels
+const EMOTION_OF = {
+  dance: "happy", cheer: "happy", mirror: "happy", grandbow: "happy",
+  wave: "greet", bow: "greet", approach: "greet",
+  jump: "excited", laugh: "laugh",
+  hide: "scared", retreat: "scared",
+  sulk: "sad", slump: "sad",
+  stagger: "hurt", knockout: "hurt", pratfall: "hurt", faint: "hurt", crashland: "hurt",
+  help: "surprised", slash: "angry", zap: "angry",
+};
+const EMOTION_OF_EMOTE = { "!": "surprised", "♪": "laugh", "♥": "happy", "…": "sad", "★": "excited", z: "sleepy" };
+sfx.loadVoices(); // recorded character sounds, where they exist (audio/voices/)
+let vocalCool = 0;
+// a recorded giggle, grunt or gasp for the guest's feeling; false when there isn't one
+function vocalize(emotion, force = false) {
+  const key = `${guestId}_${emotion}`;
+  if (!emotion || !sfx.has(key) || marloVoice.isPlaying) return false;
+  if (!force && elapsed < vocalCool) return true; // (has one, but not so often)
+  vocalCool = elapsed + 1.4;
+  sfx.play(key, marloMouth, { volume: 0.85, rate: 1 });
+  return true;
+}
 ai.onReact = (name) => {
+  if (vocalize(EMOTION_OF[name])) return;
   const [n, v, r] = GUEST_SFX[guestId](name === "dance" || name === "jump");
   sfx.play(n, marloMouth, { volume: v, rate: r });
 };
@@ -355,7 +378,7 @@ const mind = new MarloMind({
   ai, pip, marlo, props,
   rackPos: new THREE.Vector3(0.3, 0, 0.155),
   say: marloSay,
-  emote: (sym) => emotes.pop("marlo", sym, marloHead),
+  emote: (sym) => { emotes.pop("marlo", sym, marloHead); vocalize(EMOTION_OF_EMOTE[sym]); },
   coach: (k) => narrator.coach(k),
 });
 // the guest's mind, made visible: when they remember something about you, the
@@ -1475,8 +1498,8 @@ if (loadingEl) {
   const resume = storyMap.hasProgress();
   loadingEl.innerHTML = `<div class="open"><h1>Strings</h1><p>a marionette theatre with an AI co-performer</p>` +
     (resume
-      ? `<button id="begin">Continue · ${where}</button><div class="more"><button id="newstory">Start a new story</button><button id="chapters">Chapter map</button></div>`
-      : `<button id="begin">Begin the story</button>`) +
+      ? `<button id="begin">Continue · ${where}</button><div class="more"><button id="newstory">Start a new story</button><button id="chapters">Play any chapter · all unlocked</button></div>`
+      : `<button id="begin">Begin the story</button><div class="more"><button id="chapters">Play any chapter · all unlocked</button></div>`) +
     `<label class="lockopt"><input type="checkbox" id="pinchlock"> Pinch lock: no need to hold a pinch</label>` +
     `<small>Best with sound on · works with Quest hand tracking</small></div>`;
   loadingEl.classList.add("ready");
@@ -1495,6 +1518,7 @@ if (loadingEl) {
     begin();
   };
   if ($("chapters")) $("chapters").onclick = () => {
+    storyMap.unlockAll(); // every chapter (and the Grand Theatre) can be picked on the map
     enter();
     // straight to the stage with the curtain up, and the map open
     showStarted = true; preshow = false;
