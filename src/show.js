@@ -143,6 +143,7 @@ export class Show {
 
   // curtain is up; begin a scene
   start(scene = null) {
+    this._endTask();
     this.scene = scene || this.pickScene();
     this._doneFired = false;
     this.state = "intro";
@@ -166,7 +167,13 @@ export class Show {
     this.hints.hide();
     if (this.act >= this.scene.acts.length) return this._ending();
     this.state = "act";
-    this.narrator.coach(this.scene.acts[this.act].goal);
+    const act = this.scene.acts[this.act];
+    this.narrator.coach(act.goal);
+    // a playable task (duel, riddle, sneak...) runs the act and says when it's won
+    if (act.task) {
+      const myAct = this.act;
+      this.task = this.makeTask?.(act.task, () => { if (this.state === "act" && this.act === myAct) this._complete(); }) || null;
+    }
     this.onChange?.(this);
   }
 
@@ -184,10 +191,14 @@ export class Show {
     }
     if (this.state !== "act") return;
     const act = this.scene.acts[this.act];
-    if (this._matches(act.check, ev)) this._complete();
+    if (this.task) { this.task.hear?.(ev); return; }
+    if (act.check && this._matches(act.check, ev)) this._complete();
   }
 
+  _endTask() { if (this.task) { this.task.end?.(); this.task = null; } }
+
   _complete() {
+    this._endTask();
     this.stars++;
     this.starMeshes[this.stars - 1].material = this.starMats.gold;
     this.sfx?.play("chime", null, { volume: 0.5 });
@@ -278,15 +289,18 @@ export class Show {
     if (this.state !== "act") return;
     this.actT += dt;
     const act = this.scene.acts[this.act];
+    if (this.task) this.task.update(dt);
+    const check = act.check || "task";
     // "approach" is also satisfied simply by being close
-    if (act.check === "approach" && this.pip.center().distanceTo(this.marlo.center()) < 0.13) return this._complete();
-    if (this.notHeld > 4 && !act.check.startsWith("hold") && !act.check.startsWith("give")) return this._hint("grab", xr);
+    if (check === "approach" && this.pip.center().distanceTo(this.marlo.center()) < 0.13) return this._complete();
+    const handsFree = check.startsWith("hold") || check.startsWith("give") || act.task?.type === "unlock";
+    if (this.notHeld > 4 && !handsFree) return this._hint("grab", xr);
     if (this.hints.current === "grab" && held) this.hints.hide();
     if (this.actT > this.nextHintAt) {
       this.nextHintAt = this.actT + 16;
       // giving needs the prop to be in Sir Pip's hand first
-      let hint = act.hint;
-      if (act.check.startsWith("give") && !this.props.heldBy("pip")) hint = "take" + act.check.split(":")[1].replace(/^./, (c) => c.toUpperCase());
+      let hint = this.task?.hint?.() || act.hint;
+      if (check.startsWith("give") && !this.props.heldBy("pip")) hint = "take" + check.split(":")[1].replace(/^./, (c) => c.toUpperCase());
       this._hint(hint, xr, true);
     }
   }

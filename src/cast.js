@@ -198,6 +198,17 @@ export function pirateSkin(assets) {
     tricorn.add(trim, skull);
     head.add(face, nose, beard, eye, patch, strap, earring, crown, tricorn);
 
+    // his cutlass, in the right hand
+    const cutlass = new THREE.Group();
+    const steelM = M({ color: 0xd5d9e0, metalness: 1, roughness: 0.2 });
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.065, 0.0016), steelM); blade.position.y = 0.04; blade.rotation.z = -0.12;
+    const guard = new THREE.Mesh(new THREE.TorusGeometry(0.007, 0.0015, 6, 12, Math.PI), gold); guard.position.y = 0.006; guard.rotation.z = Math.PI;
+    const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0022, 0.013, 8), black);
+    cutlass.add(blade, guard, hilt);
+    api.group.add(cutlass);
+    mergeStatic(cutlass);
+    pin(cutlass, "rW", "upper", [0.002, -0.002, 0.006]);
+
     // a parrot on his right shoulder
     const parrot = new THREE.Group();
     const green = M({ color: 0x2fa84a, roughness: 0.6 }), red = M({ color: 0xd8322a, roughness: 0.6 }), beakM = M({ color: 0xf0c040, roughness: 0.5 });
@@ -252,5 +263,83 @@ export function trollSkin(assets) {
     const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.011, 12, 8), moss); tuft.position.set(0, 0.022, -0.002); tuft.scale.set(1.2, 0.6, 1.1);
     const sprout = new THREE.Mesh(new THREE.ConeGeometry(0.003, 0.012, 6), moss); sprout.position.set(0.004, 0.03, 0); sprout.rotation.z = -0.3;
     head.add(skull, jaw, nose, brow, ...eyes, ...tusks, ...ears, tuft, sprout);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Clank: the evil clockwork robot of the tower (boxy tin, red eye, antenna)
+export function clankSkin(assets) {
+  return humanoidSkin(assets, (api) => {
+    const { add, M, head, pin, at, anim } = api;
+    const tin = M({ color: 0xb4bcc6, metalness: 0.55, roughness: 0.38 });
+    const dark = M({ color: 0x3a3e46, metalness: 0.8, roughness: 0.45 });
+    const brass = M({ color: 0xb8893a, metalness: 1, roughness: 0.35 });
+    const red = new THREE.MeshStandardMaterial({ color: 0xff3020, emissive: 0xff2010, emissiveIntensity: 2.2, toneMapped: false });
+    const body = add(new THREE.BoxGeometry(0.05, 0.062, 0.036), tin);
+    pin(body, "mid", "upper", [0, 0.004, 0]);
+    const panel = add(new THREE.BoxGeometry(0.03, 0.03, 0.004), dark);
+    pin(panel, "mid", "upper", [0, 0.004, 0.019]);
+    const dial = add(new THREE.CylinderGeometry(0.006, 0.006, 0.004, 14), brass); dial.rotation.x = Math.PI / 2;
+    const dialG = new THREE.Group(); dialG.add(dial); api.group.add(dialG);
+    pin(dialG, "mid", "upper", [0, 0.008, 0.021]);
+    const lights = new THREE.Group();
+    for (let i = 0; i < 3; i++) { const l = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 6, 5), i === 1 ? red : brass); l.position.set((i - 1) * 0.008, -0.006, 0.021); lights.add(l); }
+    api.group.add(lights); pin(lights, "mid", "upper", [0, 0, 0]);
+    const hips = add(new THREE.BoxGeometry(0.04, 0.018, 0.03), dark);
+    pin(hips, "pelvis", "lower", [0, 0.006, 0]);
+    limbs(api, [[0.0055, 0.0055, 8], dark, [0.0055, 0.0065, 8], tin], [[0.0065, 0.0065, 8], dark, [0.0065, 0.0075, 8], tin]);
+    const jointG = new THREE.SphereGeometry(0.0075, 10, 8);
+    for (const n of ["lE", "rE", "lK", "rK", "lS", "rS"]) at(add(jointG, brass), n);
+    const clawG = new THREE.BoxGeometry(0.012, 0.014, 0.01);
+    for (const n of ["lW", "rW"]) pin(add(clawG, tin), n, "upper", [0, -0.004, 0]);
+    const footG = new THREE.BoxGeometry(0.016, 0.008, 0.026); footG.translate(0, 0, 0.006);
+    for (const n of ["lF", "rF"]) pin(add(footG, dark), n, "yaw", [0, 0.002, 0]);
+    // head: a tin box with one big red eye, a grille mouth and an antenna
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.03, 0.032), tin);
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.01, 0.004), dark); visor.position.set(0, 0.004, 0.016);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.0045, 12, 10), red); eye.position.set(0, 0.004, 0.018);
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.004, 0.003), dark); grille.position.set(0, -0.008, 0.016);
+    const bolts = [-1, 1].map((sx) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.006, 10), brass); b.rotation.z = Math.PI / 2; b.position.set(sx * 0.02, 0, 0); return b; });
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.022, 6), dark); mast.position.y = 0.026;
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.003, 8, 6), red); ball.position.y = 0.038;
+    head.add(box, visor, eye, grille, ...bolts, mast, ball);
+    anim((t) => { dial.rotation.y = t * 2; red.emissiveIntensity = 1.8 + Math.sin(t * 6) * 0.6; });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Princess Juniper (in a gown and a little crown)
+export function princessSkin(assets) {
+  return humanoidSkin(assets, (api) => {
+    const { add, M, head, pin, at } = api;
+    const gown = M({ color: 0xc8508a, roughness: 0.7 });
+    const gownLight = M({ color: 0xf0a8cc, roughness: 0.75 });
+    const skin = M({ color: 0xe8c0a0, roughness: 0.6 });
+    const hair = M({ color: 0x8a4a22, roughness: 0.8 });
+    const gold = M({ color: 0xe8c060, metalness: 1, roughness: 0.25 });
+    const gem = new THREE.MeshStandardMaterial({ color: 0x8ad8ff, emissive: 0x3aa8ff, emissiveIntensity: 1.2, roughness: 0.2, toneMapped: false });
+    const bodice = add(torsoLathe(0.021, 0.07, 0.007), gown); bodice.scale.set(1.05, 1, 0.82);
+    pin(bodice, "mid", "upper", [0, 0.004, 0]);
+    const skirt = add(new THREE.CylinderGeometry(0.024, 0.05, 0.1, 22, 1, true), gown);
+    skirt.material.side = THREE.DoubleSide;
+    pin(skirt, "pelvis", "lower", [0, -0.036, 0]);
+    const hem = add(new THREE.TorusGeometry(0.05, 0.003, 6, 26), gownLight); hem.rotation.x = Math.PI / 2;
+    const hemG = new THREE.Group(); hemG.add(hem); api.group.add(hemG);
+    pin(hemG, "pelvis", "lower", [0, -0.085, 0]);
+    limbs(api, [[0.0065, 0.0055], gownLight, [0.005, 0.0045], skin], [[0.006, 0.0055], gown, [0.005, 0.0045], gown]);
+    for (const n of ["lW", "rW"]) at(add(new THREE.SphereGeometry(0.0055, 10, 8), skin), n);
+    const face = new THREE.Mesh(new THREE.SphereGeometry(0.0165, 20, 16), skin); face.scale.set(0.95, 1.06, 1);
+    const hairBack = new THREE.Mesh(new THREE.SphereGeometry(0.019, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.62), hair); hairBack.position.set(0, 0.002, -0.003);
+    const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.008, 0.03, 4, 8), hair); tail.position.set(0, -0.022, -0.012);
+    const eyeM = M({ color: 0x2a1a10, roughness: 0.3 });
+    const eyes = [-1, 1].map((sx) => { const e = new THREE.Mesh(new THREE.SphereGeometry(0.0019, 8, 6), eyeM); e.position.set(sx * 0.006, 0.002, 0.0155); return e; });
+    const smile = new THREE.Mesh(new THREE.TorusGeometry(0.0035, 0.0008, 4, 10, Math.PI), M({ color: 0xb04050, roughness: 0.5 })); smile.position.set(0, -0.006, 0.0155); smile.rotation.z = Math.PI;
+    const crown = new THREE.Group();
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.012, 0.005, 16, 1, true), gold);
+    crown.add(band);
+    for (let k = 0; k < 5; k++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(0.0022, 0.007, 4), gold); const a = (k / 5) * Math.PI * 2; sp.position.set(Math.sin(a) * 0.011, 0.005, Math.cos(a) * 0.011); crown.add(sp); }
+    const jewel = new THREE.Mesh(new THREE.OctahedronGeometry(0.0024, 0), gem); jewel.position.set(0, 0.002, 0.012); crown.add(jewel);
+    crown.position.y = 0.018;
+    head.add(face, hairBack, tail, ...eyes, smile, crown);
   });
 }

@@ -22,7 +22,9 @@ import { MarloMind } from "./mind.js";
 import { Emotes } from "./emote.js";
 import { Confetti } from "./fx.js";
 import { GUESTS, STORY_LINES } from "./lines.js";
-import { wizardSkin, pirateSkin, trollSkin } from "./cast.js";
+import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin } from "./cast.js";
+import { createTask } from "./tasks.js";
+import { StoryBook } from "./storybook.js";
 import { Sets, SET_LIGHT } from "./sets.js";
 import { StoryMap } from "./storymap.js";
 import { Narrator } from "./narrator.js";
@@ -112,7 +114,8 @@ const GUEST_ROOT = [0.17, 0, -0.02];
 let marlo = new Marionette({ root: GUEST_ROOT, yaw: -0.45, skin: dragonSkin(assets) });
 const guests = { marlo };
 let guestId = "marlo";
-const GUEST_SKINS = { wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin };
+const GUEST_SKINS = { wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin, clank: clankSkin };
+const GUEST_ROOTS = { clank: [0.05, 0, -0.07] }; // Clank guards the middle of the tower
 // your recorded "shadow" performs beside Sir Pip (a little upstage), so you can duet with it
 const GHOST_OFF = new THREE.Vector3(-0.09, 0, -0.07);
 const ghost = new Marionette({ root: [PIP_ROOT[0] + GHOST_OFF.x, 0, PIP_ROOT[2] + GHOST_OFF.z], yaw: 0.35, skin: knightSkin(assets, { ghost: true }), ghost: true, stringColor: 0x7fdcff });
@@ -225,6 +228,7 @@ const GUEST_SFX = {
   wizard: (big) => ["chime", big ? 0.4 : 0.25, big ? 1.2 : 1.6],
   pirate: (big) => (big ? ["clink", 0.5, 0.8] : ["clink", 0.3, 1.2]),
   troll: (big) => ["roar", big ? 0.6 : 0.35, big ? 0.6 : 0.75],
+  clank: (big) => ["clink", big ? 0.5 : 0.3, big ? 0.6 : 0.9],
 };
 ai.onReact = (name) => {
   const [n, v, r] = GUEST_SFX[guestId](name === "dance" || name === "jump");
@@ -232,7 +236,7 @@ ai.onReact = (name) => {
 };
 
 const GRIP = { main: [0, 0.04, -0.03], hands: [0, 0.008, 0] };
-const props = new Props(stageRoot, pip, marlo, { sfx, assets, onEvent: (ev) => detector.emit(ev.type, { prop: ev.prop, from: ev.from }, 0.5) });
+const props = new Props(stageRoot, pip, marlo, { sfx, assets, onEvent: (ev) => detector.emit(ev.type, { prop: ev.prop, from: ev.from, target: ev.target }, ev.type === "use" ? 0 : 0.5) });
 const hints = new Hints(stageRoot, (target) => {
   if (target === "mainBar") return pip.main.worldPoint(GRIP.main, new THREE.Vector3());
   if (target === "handsBar") return pip.hands.worldPoint(GRIP.hands, new THREE.Vector3());
@@ -240,6 +244,8 @@ const hints = new Hints(stageRoot, (target) => {
   if (target.startsWith("prop:")) return props.position(target.slice(5));
   if (target.startsWith("knob:")) return knobs[target.slice(5)]?.position.clone();
   if (target === "cord") return cord.handle();
+  if (target === "task") return currentTask?.target?.() || null;
+  if (target === "guest") return marlo.get("head").clone().add(new THREE.Vector3(0, 0.03, 0));
   return null;
 });
 
@@ -275,17 +281,17 @@ const confetti = new Confetti(stageRoot);
 const marloHead = () => marlo.get("head");
 const pipHead = () => pip.get("head");
 const marloLines = [];
-function marloSay(key) {
+function marloSay(key, name = null) {
   const text = GUESTS[guestId].says[key] || key;
-  if (marloLines.length > 1) marloLines.shift();
-  marloLines.push({ text, t: elapsed });
+  if (marloLines.length > 2) marloLines.shift();
+  marloLines.push({ text, t: elapsed, name });
 }
 // Marlo and the narrator take turns, so two voices never talk over each other
 function updateMarloVoice() {
   if (!marloLines.length || narrator.speaking || narrator.busy) return;
-  const { text, t } = marloLines.shift();
+  const { text, t, name } = marloLines.shift();
   if (elapsed - t > 6) return;
-  showCaption(`${GUESTS[guestId].name}: “${text}”`);
+  showCaption(`${name || GUESTS[guestId].name}: “${text}”`);
   narrator.speakingUntil = narrator.t + 0.9 + text.split(/\s+/).length * 0.32;
   const file = narrator.manifest[text];
   if (file && !narrator.muted) {
@@ -674,7 +680,7 @@ function resetAll(quiet = false) {
 // ---- the story: chapters, guests and the storybook map --------------------------------
 function guestPuppet(id) {
   if (!guests[id]) {
-    const g = new Marionette({ root: GUEST_ROOT, yaw: -0.45, skin: GUEST_SKINS[id](assets) });
+    const g = new Marionette({ root: GUEST_ROOTS[id] || GUEST_ROOT, yaw: id === "clank" ? 0 : -0.45, skin: GUEST_SKINS[id](assets) });
     g.setVisible(false);
     stageRoot.add(g.group);
     guests[id] = g;
@@ -703,6 +709,118 @@ function setGuest(id) {
 function stagePlace(place) {
   applySet(place.set);
   setGuest(place.guest);
+  // the Clockwork Tower: a princess in a cage, and a key on Clank's pedestal
+  const T = place.princess ? sets.refs("tower") : null;
+  princessOn(!!T);
+  if (T) {
+    T.closeCage();
+    props.setAvailable("key", true, T.pedestal.clone().add(new THREE.Vector3(0, 0.036, 0)));
+    props.targets = [{ name: "cage", pos: T.cage.clone().add(new THREE.Vector3(0, 0.09, 0)), r: 0.09, consume: true }];
+  } else {
+    props.setAvailable("key", false);
+    props.targets = [];
+  }
+}
+
+// ---- Princess Juniper: waits in her cage, walks out when freed, cheers --------------------
+let princess = null;
+const princessDrv = { state: "off", t: 0, pos: new THREE.Vector3() };
+function princessOn(on) {
+  if (on && !princess) {
+    princess = new Marionette({ root: [0.3, 0, -0.12], yaw: 0.25, skin: princessSkin(assets) });
+    stageRoot.add(princess.group);
+  }
+  if (!princess) return;
+  princess.setVisible(on);
+  if (on) { princess.reset(); princess.main.held = true; princessDrv.state = "caged"; princessDrv.t = 0; princessDrv.pos.copy(princess.main.position); }
+  else princessDrv.state = "off";
+}
+const _pq = new THREE.Quaternion(), _pe = new THREE.Euler();
+function updatePrincess(dt) {
+  if (!princess || princessDrv.state === "off") return;
+  const d = princessDrv;
+  d.t += dt;
+  const m = princess.main;
+  m.held = true;
+  let yaw = 0.25, roll = Math.sin(d.t * 1.4) * 0.05, bob = Math.sin(d.t * 2) * 0.003;
+  if (d.state === "caged") {
+    // anxious little hops while Sir Pip is near
+    if (pip.center().distanceTo(princess.center()) < 0.25) bob += Math.abs(Math.sin(d.t * 6)) * 0.008;
+  } else if (d.state === "free") {
+    const goal = new THREE.Vector3(0.2, d.pos.y, 0.06);
+    const to = goal.clone().sub(d.pos).setY(0);
+    if (to.length() > 0.01) { d.pos.addScaledVector(to.normalize(), Math.min(to.length(), dt * 0.08)); yaw = Math.atan2(to.x, to.z); }
+    else d.state = "happy";
+  } else if (d.state === "happy") {
+    const toPip = pip.center().sub(princess.center());
+    yaw = Math.atan2(toPip.x, toPip.z);
+    bob += Math.abs(Math.sin(d.t * 5)) * 0.012;
+    roll = Math.sin(d.t * 5) * 0.25;
+  }
+  m.position.lerp(new THREE.Vector3(d.pos.x, d.pos.y + bob, d.pos.z), Math.min(1, dt * 8));
+  m.quaternion.slerp(_pq.setFromEuler(_pe.set(0, yaw, -roll, "YXZ")), Math.min(1, dt * 6));
+  princess.update(dt);
+}
+function towerRefs() {
+  const T = sets.refs("tower");
+  return { cage: T.cage, pedestal: T.pedestal, openCage: () => { T.openCage(); setTimeout(() => { princessDrv.state = "free"; }, 700); } };
+}
+
+// ---- tasks: duels, riddles, sneaking... (see tasks.js) -----------------------------------
+let currentTask = null;
+// teleport Sir Pip (and the bars your hand holds) so his pelvis lands at x, z
+function movePipTo(x, z) {
+  const p = pip.get("pelvis"), d = new THREE.Vector3(x - p.x, 0, z - p.z);
+  for (let i = 0; i < pip.pos.length; i++) { pip.pos[i].add(d); pip.prev[i].add(d); }
+  for (const b of [pip.main, pip.hands]) { b.position.add(d); b._lastPos?.add(d); }
+  for (const g of grabs.values()) g.barPos.add(d);
+}
+// a shove (a sword hit, a zap): gives the particles a little velocity
+function knockPip(dir, amount) {
+  const d = dir.clone().setY(0).normalize();
+  for (let i = 0; i < pip.pos.length; i++) { pip.pos[i].addScaledVector(d, amount * 0.5); pip.pos[i].y += amount * 0.25; }
+}
+const taskCtx = {
+  root: stageRoot, pip, props,
+  get ai() { return ai; },
+  guest: () => marlo,
+  coach: (t) => narrator.coach(t),
+  guestSay: (k) => { const l = GUESTS[guestId].task?.[k]; if (l) marloSay(l); },
+  guestLine: (text) => marloSay(text),
+  princessSay: (k) => { const l = GUESTS.princess.task[k]; if (l) marloSay(l, GUESTS.princess.name); },
+  emote: (id, sym, at, text, life, yOff) => emotes.pop(id, sym, at, text, life, yOff),
+  clearEmote: (id) => emotes.clear(id),
+  sfx: (n, at, o) => sfx.play(n, at, o),
+  showHint: (name) => hints.show(name, !!xrMode),
+  hideHint: () => hints.hide(),
+  knockPip, movePipTo,
+  confetti: (k) => confetti.burst(k),
+  tower: () => towerRefs(),
+};
+show.makeTask = (spec, done) => {
+  mind.taskBusy = true;
+  const t = createTask(spec, taskCtx, done);
+  const end = t.end;
+  t.end = () => { end?.call(t); mind.taskBusy = false; if (currentTask === t) currentTask = null; };
+  currentTask = t;
+  return t;
+};
+
+// ---- the storybook: three illustrated, narrated pages before each chapter -------------------
+const book = new StoryBook({ narrator });
+book.mesh.position.set(0, 0.42, 0.14);
+book.mesh.scale.setScalar(1.25);
+stageRoot.add(book.mesh);
+function faceViewer(mesh) {
+  const head = stageRoot.worldToLocal(camera.getWorldPosition(new THREE.Vector3()));
+  const d = head.sub(mesh.position);
+  mesh.rotation.set(-Math.atan2(d.y, Math.hypot(d.x, d.z)), Math.atan2(d.x, d.z), 0, "YXZ");
+}
+function playBook(place, then) {
+  if (!place.pages?.length) { then(); return; }
+  if (xrMode) faceViewer(book.mesh);
+  hints.hide();
+  book.play(place, !!xrMode, then);
 }
 const sceneFor = (place) => (place.acts ? { id: place.id, title: place.title, intro: place.intro, acts: place.acts } : null);
 function startChapterShow() {
@@ -724,12 +842,7 @@ function openMap() {
   props.setHover(null);
   storyMap.show(!!xrMode);
   // headset: the parchment floats beside the stage, turned to face you
-  if (xrMode) {
-    // turn toward the head, then tilt back so it's square to your eyes (never rolled)
-    const head = stageRoot.worldToLocal(camera.getWorldPosition(new THREE.Vector3()));
-    const d = head.sub(storyMap.mesh.position);
-    storyMap.mesh.rotation.set(-Math.atan2(d.y, Math.hypot(d.x, d.z)), Math.atan2(d.x, d.z), 0, "YXZ");
-  }
+  if (xrMode) faceViewer(storyMap.mesh); // turned square to your eyes, never rolled
   narrator.coach(STORY_LINES.mapOpen);
   if (hints.current) hints.hide();
 }
@@ -753,10 +866,12 @@ function changeScene(place) {
   setTimeout(() => {
     resetAll(true);
     stagePlace(place);
-    curtains.open();
-    sfx.play("swish", null, { volume: 0.6 });
-    music.play();
-    setTimeout(() => { changing = false; startChapterShow(); }, 2400);
+    playBook(place, () => {
+      curtains.open();
+      sfx.play("swish", null, { volume: 0.6 });
+      music.play();
+      setTimeout(() => { changing = false; startChapterShow(); }, 2400);
+    });
   }, 1700);
 }
 show.onDone = () => setTimeout(() => { if (show.state === "done" && !changing) openMap(); }, 2500);
@@ -834,6 +949,7 @@ canvas.addEventListener("pointermove", (e) => {
   const held = props.heldBy("pip");
   let text = null;
   if (t?.prop) text = t.prop.state === "pip" ? `Click: give the ${t.prop.name} to ${GUESTS[guestId].name}` : `Click: hand the ${t.prop.name} to Sir Pip`;
+  else if (t?.target && held) text = `Click: use the ${held} on the ${t.target.name}`;
   else if (t?.guest && held) text = `Click: give the ${held} to ${GUESTS[guestId].name}`;
   props.setHover(t?.prop?.name || null);
   canvas.style.cursor = text ? "pointer" : "";
@@ -875,7 +991,7 @@ ghost.setVisible(false); confetti.points.visible = false;
 if (loadingEl) {
   loadingEl.innerHTML = `<div class="open"><h1>Strings</h1><p>a marionette theatre with an AI co-performer</p><button id="begin">Enter the theatre</button><small>Best with sound on · works with Quest hand tracking</small></div>`;
   loadingEl.classList.add("ready");
-  const begin = () => { loadingEl.classList.add("done"); unlockAudio(); startPreshow(); };
+  const begin = () => { loadingEl.classList.add("done"); unlockAudio(); playBook(chapter, startPreshow); };
   $("begin").onclick = begin;
   if (new URLSearchParams(location.search).has("autostart")) { loadingEl.classList.add("done"); raiseCurtain(); }
 }
@@ -893,6 +1009,7 @@ window.addEventListener("keydown", (e) => {
   else if (k === "t") runDemo();
   else if (k === "n") cycleMode();
   else if (k === "j") toggleMap();
+  else if (k === "escape" && book.open) book.finish();
 });
 
 // shared performance in the URL?
@@ -987,7 +1104,8 @@ async function enterXR(mode) {
   } else {
     placeStage = true;
     unlockAudio();
-    startPreshow();
+    // (the stage is placed on the first XR frame; open the book just after)
+    setTimeout(() => { if (!showStarted && !book.open) playBook(chapter, startPreshow); }, 300);
   }
   session.addEventListener("end", () => {
     xrMode = null;
@@ -1078,7 +1196,7 @@ function updatePlacement(dt, frame, hands) {
   if ((pinched && (found || placeTimer > 1.5)) || (!hitSource && placeTimer > 2) || placeTimer > 25) {
     placing = false;
     reticle.visible = false;
-    startPreshow();
+    if (!showStarted && !book.open) playBook(chapter, startPreshow);
   }
 }
 
@@ -1088,6 +1206,7 @@ let recenterHold = 0;
 function xrGestures(dt, hands, t) {
   // poke the floating storybook map
   if (storyMap.mesh.visible) for (const h of hands) if (h.present && storyMap.poke(stageRoot.localToWorld(h.tip.clone()))) break;
+  if (book.mesh.visible) for (const h of hands) if (h.present && book.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   for (const [name, knob] of Object.entries(knobs)) {
     const kp = knob.position.clone().add(new THREE.Vector3(0, 0.01, 0));
     if (!knob.visible) continue;
@@ -1187,6 +1306,8 @@ renderer.setAnimationLoop((time, frame) => {
   confetti.update(dt);
   sets.update(dt);
   storyMap.update(dt);
+  book.update(dt);
+  updatePrincess(dt);
   if (mode.id === "party") {
     spot.color.setHSL((elapsed * 0.12) % 1, 0.75, 0.7);
     if (!ai.busy && Math.floor(elapsed) % 9 === 0 && Math.floor(elapsed - dt) % 9 !== 0) ai.react("dance");
@@ -1231,4 +1352,4 @@ addEventListener("resize", () => {
 });
 
 // exposed for debugging / automated checks
-window.strings = { storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };
+window.strings = { book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };

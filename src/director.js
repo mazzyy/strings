@@ -489,6 +489,80 @@ const CLIPS = {
     };
   },
 
+  // ---- task moves ----
+  // a sword swing: wind up (telegraph), then a fast cut at `impact` seconds
+  slash: (ai, o = {}) => {
+    const high = o.kind !== "low", impact = o.impact || 1.0;
+    const face = ai._yawTo(ai.partner.center(new THREE.Vector3()));
+    return {
+      run(t, pose, dt) {
+        ai.yaw = lerpAngle(ai.yaw, face, Math.min(1, dt * 6));
+        pose.yaw = ai.yaw;
+        const wind = ease(t / (impact * 0.8)), cut = ease((t - impact * 0.85) / 0.18), back = ease((t - impact - 0.4) / 0.4);
+        const k = wind * (1 - back);
+        if (high) {
+          pose.hands = { pos: new THREE.Vector3(0.02, 0.1 * k - 0.11 * cut * (1 - back), 0.02 + 0.08 * cut * (1 - back)), roll: 0.6 * k - 1.2 * cut * (1 - back) };
+          pose.pitch = -0.25 * k + 0.55 * cut * (1 - back);
+        } else {
+          pose.hands = { pos: new THREE.Vector3(0.06 * k - 0.1 * cut * (1 - back), -0.02 * k, 0.03 + 0.07 * cut * (1 - back)), roll: -0.9 * k + 1.6 * cut * (1 - back) };
+          pose.pitch = 0.35 * k;
+          pose.pos.y -= 0.02 * k;
+        }
+        return t > impact + 0.85;
+      },
+    };
+  },
+  // knocked back by a hit
+  stagger: (ai) => {
+    const away = new THREE.Vector3().subVectors(ai.base, ai.partner.center(new THREE.Vector3())).setY(0).normalize();
+    const start = ai.base.clone();
+    return {
+      run(t, pose) {
+        const k = ease(t / 0.35);
+        ai.base.copy(start).addScaledVector(away, 0.05 * k);
+        ai.base.x = THREE.MathUtils.clamp(ai.base.x, -0.34, 0.34); ai.base.z = THREE.MathUtils.clamp(ai.base.z, -0.15, 0.14);
+        pose.pos.copy(ai.base).setY(pose.pos.y);
+        pose.pitch = -0.5 * Math.sin(Math.min(1, t / 0.9) * Math.PI);
+        pose.roll = Math.sin(t * 18) * 0.2 * (1 - Math.min(1, t));
+        return t > 1.1;
+      },
+    };
+  },
+  // a searchlight sweep, until told to stop
+  scan: (ai, o = {}) => {
+    const centre = o.centre ?? 0;
+    return {
+      run(t, pose, dt) {
+        ai.yaw = lerpAngle(ai.yaw, centre + Math.sin(t * (o.speed || 0.7)) * (o.range || 1.25), Math.min(1, dt * 4));
+        pose.yaw = ai.yaw;
+        pose.pos.y += Math.sin(t * 5) * 0.002;
+        return o.stop?.() || t > 120;
+      },
+    };
+  },
+  // aim and fire a zap at the partner
+  zap: (ai) => {
+    const face = ai._yawTo(ai.partner.center(new THREE.Vector3()));
+    return {
+      run(t, pose, dt) {
+        ai.yaw = lerpAngle(ai.yaw, face, Math.min(1, dt * 6));
+        pose.yaw = ai.yaw;
+        const aim = ease(t / 0.5), kick = Math.max(0, Math.sin(Math.min(1, (t - 0.6) / 0.25) * Math.PI));
+        pose.hands = { pos: new THREE.Vector3(0, 0.03 * aim, 0.07 * aim), roll: 0 };
+        pose.pitch = 0.1 * aim - 0.3 * kick;
+        return t > 1.2;
+      },
+    };
+  },
+  cheer: () => ({
+    run(t, pose) {
+      const up = ease(t / 0.3) * (1 - ease((t - 2.2) / 0.3));
+      pose.hands = { pos: new THREE.Vector3(0, 0.1 * up, 0.02), roll: Math.sin(t * 10) * 0.5 * up };
+      pose.pos.y += Math.abs(Math.sin(t * 7)) * 0.025 * up;
+      return t > 2.6;
+    },
+  }),
+
   // endings
   grandbow: (ai) => {
     const face = 0; // to the audience

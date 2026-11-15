@@ -55,15 +55,17 @@ export class Emotes {
   }
 
   // id: which puppet; at: () => Vector3 in stage space
-  pop(id, sym, at, text = null, life = 1.8) {
+  pop(id, sym, at, text = null, life = 1.8, yOff = 0) {
     const s = this._slot(id);
     const { tex, aspect } = bubble(sym, text);
     s.sprite.material.map = tex;
     s.sprite.material.needsUpdate = true;
     s.aspect = aspect;
-    s.t = 0; s.life = life; s.at = at;
+    s.t = 0; s.life = life; s.at = at; s.yOff = yOff;
     s.sprite.visible = true;
   }
+
+  clear(id) { const s = this.slots.get(id); if (s) s.sprite.visible = false; }
 
   update(dt) {
     for (const s of this.slots.values()) {
@@ -74,8 +76,9 @@ export class Emotes {
       const pop = s.t < 0.18 ? (s.t / 0.18) * 1.25 : s.t < 0.3 ? 1.25 - ((s.t - 0.18) / 0.12) * 0.25 : 1;
       const h = 0.044 * pop;
       s.sprite.scale.set(h * s.aspect, h, 1);
-      s.sprite.position.copy(s.at()).add(new THREE.Vector3(0, 0.055 + k * 0.02, 0));
-      s.sprite.material.opacity = k > 0.8 ? (1 - k) / 0.2 : 1;
+      const rise = s.life > 100 ? 0 : k * 0.02; // long-lived bubbles (health) stay put
+      s.sprite.position.copy(s.at()).add(new THREE.Vector3(0, 0.055 + s.yOff + rise, 0));
+      s.sprite.material.opacity = s.life > 100 ? 1 : k > 0.8 ? (1 - k) / 0.2 : 1;
     }
   }
 }
