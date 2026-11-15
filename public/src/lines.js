@@ -480,9 +480,9 @@ export const TASK_LINES = {
   overheat: "Clank is overheating!",
 };
 export const RIDDLES = [
-  { line: "Grumble's riddle. What gets wetter, the more it dries? A towel, a fish, or a rain cloud?", options: ["A towel", "A fish", "A rain cloud"], answer: 0 },
-  { line: "Grumble's riddle. What has to be broken before you can use it? A sword, an egg, or a bridge?", options: ["A sword", "An egg", "A bridge"], answer: 1 },
-  { line: "Grumble's riddle. What has keys, but can't open a single lock? A door, a troll, or a piano?", options: ["A door", "A troll", "A piano"], answer: 2 },
+  { line: "Grumble's riddle. What gets wetter, the more it dries? A towel, a fish, or a rain cloud?", options: ["A towel", "A fish", "A rain cloud"], answer: 0, q: "What gets wetter, the more it dries?" },
+  { line: "Grumble's riddle. What has to be broken before you can use it? A sword, an egg, or a bridge?", options: ["A sword", "An egg", "A bridge"], answer: 1, q: "What has to be broken before you can use it?" },
+  { line: "Grumble's riddle. What has keys, but can't open a single lock? A door, a troll, or a piano?", options: ["A door", "A troll", "A piano"], answer: 2, q: "What has keys, but can't open a single lock?" },
 ];
 
 // the Grand Theatre: once the first chapter is done, a new show every night

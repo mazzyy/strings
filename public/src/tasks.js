@@ -42,6 +42,30 @@ function label(text, color = "#3a2414") {
   return s;
 }
 
+// a parchment sign standing on the stage (for the riddle's question)
+function sign(title, text) {
+  const c = document.createElement("canvas");
+  c.width = 512; c.height = 360;
+  const g = c.getContext("2d");
+  g.fillStyle = "#efe0bc"; g.strokeStyle = "#7a5a32"; g.lineWidth = 10;
+  g.beginPath(); g.roundRect(8, 8, 496, 344, 24); g.fill(); g.stroke();
+  g.fillStyle = "#7a1d22"; g.font = "600 40px Georgia, serif"; g.textAlign = "center";
+  g.fillText(title, 256, 66);
+  g.fillStyle = "#2a1a10"; g.font = "36px Georgia, serif";
+  const words = text.split(" "); let line = "", y = 130;
+  for (const w of words) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > 440 && line) { g.fillText(line, 256, y); y += 48; line = w; } else line = t; }
+  g.fillText(line, 256, y);
+  g.fillStyle = "#7a5a32"; g.font = "italic 26px Georgia, serif"; g.fillText("Stand on the right answer", 256, 326);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.12), new THREE.MeshBasicMaterial({ map: t, toneMapped: false }));
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.16, 6), new THREE.MeshStandardMaterial({ color: 0x5a3b22, roughness: 0.8 }));
+  post.position.set(0, -0.08, -0.002);
+  const grp = new THREE.Group();
+  board.position.y = 0.06;
+  grp.add(board, post);
+  return grp;
+}
+
 // Sir Pip's body readouts, shared by the tasks
 function body(c) {
   const p = c.pip;
@@ -70,13 +94,16 @@ function collect(spec, c, done) {
     }
     // spread around the stage, away from where Sir Pip starts
     let p;
-    do { p = new THREE.Vector3(rand(-0.3, 0.33), gem ? 0.014 : rand(0.08, 0.13), rand(-0.12, 0.13)); } while (p.distanceTo(c.pip.get("pelvis")) < 0.12 || items.some((it) => flat(it.home, p) < 0.1));
+    // close to Sir Pip's walking line, so side-to-side moves reach them (the wheel moves nearer/further)
+    let tries = 0;
+    do { p = new THREE.Vector3(rand(-0.32, 0.34), gem ? 0.014 : rand(0.075, 0.115), rand(-0.04, 0.06)); tries++; } while (tries < 60 && (flat(p, c.pip.get("pelvis")) < 0.1 || items.some((it) => Math.abs(it.home.x - p.x) < 0.08)));
     o.position.copy(p);
     group.add(o);
     items.push({ o, home: p.clone(), seed: Math.random() * 6, got: false });
   }
   let got = 0, t = 0, toldLantern = -99;
   return {
+    debug: () => ({ got, items: items.filter((i) => !i.got).map((i) => i.o.position.toArray().map((x) => +x.toFixed(3))) }),
     target() { const left = items.filter((i) => !i.got); return left.length ? left.reduce((a, b) => (flat(b.o.position, c.pip.get("pelvis")) < flat(a.o.position, c.pip.get("pelvis")) ? b : a)).o.position.clone() : null; },
     update(dt) {
       t += dt;
@@ -87,8 +114,8 @@ function collect(spec, c, done) {
         // fireflies drift lazily; gems glint
         if (!gem) it.o.position.set(it.home.x + Math.sin(t * 0.5 + it.seed) * 0.03, it.home.y + Math.sin(t * 1.3 + it.seed * 2) * 0.012, it.home.z + Math.cos(t * 0.4 + it.seed) * 0.025);
         else it.o.rotation.y = t * 1.5 + it.seed;
-        const near = flat(it.o.position, b.pelvis) < (gem ? 0.05 : 0.06);
-        const reached = gem ? near : lantern && lantern.distanceTo(it.o.position) < 0.06;
+        const near = flat(it.o.position, b.pelvis) < (gem ? 0.06 : 0.065);
+        const reached = gem ? near : lantern && lantern.distanceTo(it.o.position) < 0.07;
         if (reached) {
           it.got = true;
           got++;
@@ -162,6 +189,9 @@ function duel(spec, c, done) {
   const last = c.pip.get("pelvis").clone();
   const velTmp = new THREE.Vector3();
   let speedTo = 0;
+  // the striking point (sword tip, or Sir Pip's fist) and how fast it's moving
+  const strikeAt = new THREE.Vector3(), strikeLast = new THREE.Vector3();
+  let strikeSpeed = 0, haveStrike = false;
   const hearts = () => {
     c.emote("foeHP", "♥", () => c.guest().get("head"), `${foe}`, 999, 0.065);
     c.emote("pipHP", "♥", () => c.pip.get("head"), `${me}`, 999, 0.065);
@@ -182,6 +212,11 @@ function duel(spec, c, done) {
       const vel = velTmp.subVectors(b.pelvis, last).divideScalar(Math.max(dt, 1e-3)).setY(0);
       last.copy(b.pelvis);
       speedTo += ((dist > 1e-4 ? vel.dot(toFoe.normalize()) : 0) - speedTo) * Math.min(1, dt * 10);
+      if (!c.props.swordTip(strikeAt)) strikeAt.copy(c.pip.get("rW"));
+      if (haveStrike) strikeSpeed += (strikeAt.distanceTo(strikeLast) / Math.max(dt, 1e-3) - strikeSpeed) * Math.min(1, dt * 12);
+      strikeLast.copy(strikeAt); haveStrike = true;
+      // a real hit: the blade (or fist) meets his body, fast
+      const contact = strikeSpeed > 0.28 && ["chest", "head", "pelvis"].some((n) => strikeAt.distanceTo(g.get(n)) < 0.04);
 
       if (phase === "intro" && t > 2.2) next(0);
       else if (phase === "wait" && t > 0) {
@@ -214,16 +249,23 @@ function duel(spec, c, done) {
         }
       } else if (phase === "strike") {
         // a lunge toward him, or the sword arm raised, while close enough
-        if (dist < 0.24 && (speedTo > 0.16 || b.hand > b.head - 0.005)) {
+        if (contact || (dist < 0.24 && (speedTo > 0.16 || b.hand > b.head - 0.005))) {
           foe--;
           c.hideHint();
-          c.ai.react("stagger", { force: true });
+          c.knockGuest(toFoe, contact ? 0.03 : 0.02);
+          c.ai.react(foe <= 0 ? "knockout" : "stagger", { force: true });
           c.sfx("clink", g.group, { volume: 0.9, rate: 1.3 });
           c.sfx("pop", g.group, { volume: 0.5 });
           c.coach(TASK_LINES.hit);
           c.emote("pip", "✦", () => c.pip.get("head"), "Hit!", 1.2);
           hearts();
-          if (foe <= 0) { phase = "won"; c.guestSay("surrender"); setTimeout(done, 2400); }
+          if (foe <= 0) {
+            phase = "won";
+            c.emote("marlo", "★", () => g.get("head"), "Knockout!", 2.4);
+            c.sfx("applause", null, { volume: 0.45 });
+            setTimeout(() => c.guestSay("surrender"), 2600);
+            setTimeout(done, 4600);
+          }
           else { c.guestSay("hitMe"); next(1.8); }
         } else if (t > 3) { c.hideHint(); next(0.4); }
       }
@@ -237,32 +279,38 @@ function riddle(spec, c, done) {
   const r = RIDDLES[Math.floor(Date.now() / 86400000) % RIDDLES.length];
   const group = new THREE.Group();
   c.root.add(group);
+  // big stones right on Sir Pip's walking line (moving the mouse side to side reaches them)
   const stones = r.options.map((text, i) => {
     const s = new THREE.Group();
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.036, 0.008, 18), new THREE.MeshStandardMaterial({ color: 0x8a8f9a, roughness: 0.9 }));
-    top.position.y = 0.004;
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.0025, 6, 28), new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.5, toneMapped: false }));
-    ring.rotation.x = Math.PI / 2; ring.position.y = 0.009;
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.006, 24), new THREE.MeshStandardMaterial({ color: 0x8a8f9a, roughness: 0.9 }));
+    top.position.y = 0.003;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.0035, 6, 32), new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.5, toneMapped: false }));
+    ring.rotation.x = Math.PI / 2; ring.position.y = 0.007;
     const tag = label(text);
-    tag.position.y = 0.07;
+    tag.position.set(0, 0.03, 0.065); // in front of the stone, so Sir Pip never hides it
     s.add(top, ring, tag);
-    s.position.set(-0.17 + i * 0.15, 0, 0.11);
+    s.position.set(-0.3 + i * 0.15, 0, 0.02);
     group.add(s);
     return { s, ring, on: 0 };
   });
+  // the riddle, written on a sign at stage left
+  const board = sign("Grumble's riddle", r.q);
+  board.position.set(-0.33, 0.12, -0.14);
+  board.rotation.y = 0.35;
+  group.add(board);
   let t = 0, cool = 0, solved = false;
   const ask = () => c.guestLine(r.line);
   ask();
   return {
-    target() { return stones[1].s.position.clone().add(v.set(0, 0.03, 0)); },
+    target() { return board.position.clone().add(v.set(0, 0.14, 0)); },
     update(dt) {
       t += dt; cool -= dt;
       const b = body(c);
       stones.forEach((st, i) => {
-        const here = flat(st.s.position, b.pelvis) < 0.045;
+        const here = flat(st.s.position, b.pelvis) < 0.065;
         st.on = here ? st.on + dt : 0;
         st.ring.material.opacity = here ? 0.9 : 0.4 + 0.2 * Math.sin(t * 3 + i);
-        if (!solved && st.on > 1.0 && cool <= 0) {
+        if (!solved && st.on > 0.8 && cool <= 0) {
           st.on = -2; // step off and back on to answer again
           if (i === r.answer) {
             solved = true;

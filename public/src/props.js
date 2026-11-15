@@ -136,6 +136,12 @@ export class Props {
   }
 
   get(name) { return this.items.get(name); }
+  // where the held sword's tip is (stage space), for physical hits
+  swordTip(out = new THREE.Vector3()) {
+    const it = this.items.get("sword");
+    if (it.state !== "pip") return null;
+    return out.set(0, 0.075, 0).applyQuaternion(it.mesh.quaternion).add(it.mesh.position);
+  }
   // show or hide a prop (and where it lives when it's put back)
   setAvailable(name, on, home = null) {
     const it = this.items.get(name);
