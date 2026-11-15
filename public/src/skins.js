@@ -294,7 +294,7 @@ function scaleTexture() {
   return t;
 }
 
-export function dragonSkin(assets) {
+export function dragonSkin(assets, opts = {}) {
   return (m) => {
     const group = new THREE.Group();
     const scales = scaleTexture();
@@ -447,9 +447,10 @@ export function dragonSkin(assets) {
     const tailSpikes = Array.from({ length: N - 2 }, () => add(new THREE.ConeGeometry(0.0032, 0.009, 6), horn));
     const tailTip = add(new THREE.ConeGeometry(0.008, 0.016, 4), horn);
 
-    const bars = makeBars(m, "wood", assets);
+    const bars = makeBars(m, opts.bars || "wood", assets); // "holo" when you play the dragon
     group.add(bars.group);
     shadowed(group);
+    if (opts.bars === "holo") bars.group.traverse((o) => { if (o.isMesh) o.castShadow = false; });
 
     let t = 0;
     const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3();
@@ -457,6 +458,7 @@ export function dragonSkin(assets) {
     return {
       group,
       bars: bars.group,
+      setHighlight: bars.setHighlight,
       update(f, dt) {
         t += dt;
         const P = (n) => m.get(n);

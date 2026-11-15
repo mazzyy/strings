@@ -92,6 +92,18 @@
     #mindcard { position: fixed; left: 16px; top: 50%; transform: translate(-20px, -50%); width: min(240px, 26vw); opacity: 0; pointer-events: none; transition: opacity .5s, transform .5s; z-index: 4; }
     #mindcard.on { opacity: 1; transform: translate(0, -50%); }
     #mindcard canvas { width: 100%; height: auto; border-radius: 8px; box-shadow: 0 16px 50px rgba(0,0,0,0.5); }
+    #playground { position: fixed; left: 16px; top: 190px; bottom: 80px; width: 236px; overflow-y: auto; padding: 12px; border-radius: 16px; background: rgba(255,248,232,0.95); border: 3px solid #c9a14a; box-shadow: 0 16px 50px rgba(0,0,0,0.5); z-index: 5; display: none; }
+    #playground.on { display: block; }
+    #playground.min .sec { display: none; }
+    #playground.min { bottom: auto; }
+    #playground .hd { display: flex; justify-content: space-between; align-items: center; font: 600 18px Georgia, serif; color: #7a1d22; margin-bottom: 6px; }
+    #playground .hd .x { border: 0; background: none; font-size: 20px; cursor: pointer; color: #7a1d22; }
+    #playground .sec { margin: 8px 0 4px; }
+    #playground .t { font: 600 13px Georgia, serif; color: #3a5a7a; text-transform: uppercase; letter-spacing: .06em; margin: 6px 2px; }
+    #playground button[data-s] { font: 600 13px Georgia, serif; color: #3a2414; background: #fff; border: 2px solid #d8b878; border-radius: 999px; padding: 5px 10px; margin: 0 4px 6px 0; cursor: pointer; }
+    #playground button[data-s]:hover { background: #fff3d6; }
+    #playground button[data-s].on, #playground button[data-s].on:hover { background: #c0303a; color: #fff8e8; border-color: #c0303a; }
+    body.free-play #mindcard { display: none; }
     #phrases { position: fixed; right: 16px; top: 50%; transform: translate(20px, -50%); width: 210px; padding: 14px; border-radius: 16px; background: rgba(255,248,232,0.95); border: 3px solid #c9a14a; box-shadow: 0 16px 50px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; z-index: 5; display: grid; gap: 8px; }
     #phrases.on { opacity: 1; pointer-events: auto; transform: translate(0, -50%); }
     #phrases .t { font: 600 16px Georgia, serif; color: #7a1d22; }
@@ -221,6 +233,7 @@
     <div class="more"><button id="credits-again">Play the story again</button><button id="credits-theatre">Visit the Grand Theatre</button></div>
   </div></div>
   <div id="phrases"></div>
+  <div id="playground"></div>
   <div id="mindcard"></div>
   <div id="storybook"><div class="bookwrap"><button class="skip">Skip · start the show ›</button></div></div>
   <div id="storymap"><div class="mapwrap"><button class="close">Close</button><button class="restart">Start a new story</button></div></div>

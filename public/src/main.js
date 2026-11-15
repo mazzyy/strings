@@ -13,6 +13,7 @@ import { mergeStatic } from "./perf.js";
 import { batchParts } from "./batch.js";
 import { Sfx, Soundscape } from "./audio.js";
 import { Phrases } from "./phrases.js";
+import { Playground } from "./playground.js";
 import { Hints } from "./hints.js";
 import { Props } from "./props.js";
 import { Show, playbills, mindCardTexture } from "./show.js";
@@ -110,7 +111,7 @@ stageRoot.add(rim);
 
 // ---- the cast ------------------------------------------------------------------
 const PIP_ROOT = [-0.15, 0, 0.03];
-const pip = new Marionette({ root: PIP_ROOT, yaw: 0.35, skin: knightSkin(assets), stringColor: 0x9ff3ff });
+let pip = new Marionette({ root: PIP_ROOT, yaw: 0.35, skin: knightSkin(assets), stringColor: 0x9ff3ff });
 // the guest on stage: Marlo to begin with; others join as the story travels
 const GUEST_ROOT = [0.17, 0, -0.02];
 let marlo = new Marionette({ root: GUEST_ROOT, yaw: -0.45, skin: dragonSkin(assets) });
@@ -324,6 +325,7 @@ const sets = new Sets(stageRoot);
 let setLight = SET_LIGHT.courtyard;
 let night = 0, nightTarget = 0;
 let flowers = null; // Bramble's blooming spell (see bloomForest)
+let freePlay = false; // the playground: no story (see startFreePlay)
 function setNight(on) { nightTarget = on ? 1 : setLight.night; props.setNight(nightTarget > 0.5); }
 function applySet(name) {
   clearBloom();
@@ -413,7 +415,7 @@ const MODES = [
   { id: "party", name: "Party", line: "modeParty", unlock: 3, unlockLine: "unlockParty" },
 ];
 let mode = MODES[0];
-const unlockedModes = () => MODES.filter((m) => !m.unlock || playbills.list().length >= m.unlock);
+const unlockedModes = () => MODES.filter((m) => freePlay || !m.unlock || playbills.list().length >= m.unlock);
 function refreshModeUi() {
   const n = unlockedModes().length;
   knobs.mode.visible = n > 1;
@@ -492,7 +494,7 @@ talk.character = () => guestId;
 // including the Quest Browser (no speech recognition) and the hosted build (no server).
 const phrases = new Phrases(stageRoot, (p) => {
   unlockAudio();
-  showCaption(`Sir Pip: “${p.text}”`);
+  showCaption(`${playerName()}: “${p.text}”`);
   emotes.pop("pip", "…", () => pip.get("head"), p.text, 1.8);
   const lines = GUESTS[guestId].talk || GUESTS.marlo.talk;
   setTimeout(() => talk.onReply({ line: lines[p.key] || lines.unknown, reaction: p.reaction }), 900);
@@ -628,9 +630,9 @@ detector.on((ev) => {
   if (["jump", "approach", "fall", "give", "wave"].includes(ev.type)) mind.wakeIfNapping();
   const r = mind.hear(ev, { t: elapsed });
   if (r) ai.react(r);
-  narrator.hear(ev);
+  if (playerId === "knight") narrator.hear(ev);
   checkSync(ev.type, lastPipMove, lastGhostMove);
-  log(`${describe(ev)} → ${GUESTS[guestId].name} ${r ? r : "watches"} (${mind.moodName})`);
+  log(`${describe(ev).replace("Sir Pip", playerName())} → ${GUESTS[guestId].name} ${r ? r : "watches"} (${mind.moodName})`);
 });
 
 // ---- input -------------------------------------------------------------------
@@ -1265,7 +1267,8 @@ function openMap() {
   narrator.coach(STORY_LINES.mapOpen);
   if (hints.current) hints.hide();
 }
-function toggleMap() { if (storyMap.open) { storyMap.hide(); if (showStarted) soundscape.set(chapterBed); } else openMap(); }
+function toggleMap() {
+  if (freePlay) { playground.toggle(!!xrMode); if (xrMode && playground.open) faceViewer(playground.group); return; } if (storyMap.open) { storyMap.hide(); if (showStarted) soundscape.set(chapterBed); } else openMap(); }
 // back to chapter one (the prologue plays again; playbills and modes are kept)
 function newStory() {
   storyMap.resetStory();
@@ -1489,6 +1492,94 @@ function updateIntro(dt) {
 const gripL = new THREE.Vector3(), gripR = new THREE.Vector3();
 let gripInit = false;
 
+// ---- free play: no story, just the theatre and everything in it ------------------------
+const PLAYER_SKINS = { knight: knightSkin, dragon: dragonSkin, wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin, clank: clankSkin, princess: princessSkin, king: kingSkin };
+const PLAYER_NAMES = { knight: "Sir Pip", dragon: "Marlo", wizard: "Bramble", pirate: "Captain Pegg", troll: "Grumble", clank: "Clank", princess: "Juniper", king: "The King" };
+const players = { knight: pip };
+let playerId = "knight";
+const playerName = () => PLAYER_NAMES[playerId];
+// play as anyone: the puppet in your hands becomes another character (on glowing bars)
+function setPlayer(id) {
+  if (id === playerId) return;
+  if (!players[id]) {
+    const p = new Marionette({ root: PIP_ROOT, yaw: 0.35, skin: PLAYER_SKINS[id](assets, { bars: "holo" }), stringColor: 0x9ff3ff });
+    p.setVisible(false);
+    stageRoot.add(p.group);
+    players[id] = p;
+  }
+  if (flying) setFlight(false);
+  for (const [hid, g] of grabs) { g.bar.held = false; grabs.delete(hid); }
+  for (const it of ["sword", "lantern", "flower"]) if (props.heldBy("pip") === it) props.moveTo(it, "rack", { silent: true });
+  const at = pip.get("pelvis").clone();
+  pip.setVisible(false);
+  pip = players[id];
+  playerId = id;
+  pip.reset();
+  movePipTo(THREE.MathUtils.clamp(at.x, -0.34, 0.34), 0.03);
+  pip.setVisible(true);
+  pip.gravityScale = mode.id === "moon" ? 0.35 : 1;
+  pip.fragile = mode.id === "fragile";
+  // everyone who keeps an eye on "the player's puppet"
+  props.pip = pip; detector.p = pip; ai.partner = pip; mind.pip = pip; show.pip = pip; taskCtx.pip = pip;
+  for (const f of feet) if (!f.guest) f.pup = pip;
+  blobs[0].pup = pip;
+  pipRest.pos.copy(pip.main.position); pipRest.q.copy(pip.main.quaternion);
+  if (onRealDesk) pip.desk = marlo.desk;
+  confetti.burst("grace");
+  sfx.play("pop", null, { volume: 0.5 });
+  emotes.pop("pip", "✦", () => pip.get("head"), `You are ${playerName()}!`, 2);
+}
+const BEDS_CYCLE = ["story", "courtyard", "ship", "tower", "finale", "quiet"];
+let bedI = 0, freeNight = false;
+const playground = new Playground(stageRoot, (section, id) => {
+  unlockAudio();
+  if (section === "you") setPlayer(id);
+  else if (section === "costar") {
+    if (unbound.busy) return;
+    if (id === "solo") { marlo.setVisible(false); ai.suspended = true; toast("Solo show!"); return; }
+    ai.suspended = false;
+    if (flying) setFlight(false);
+    setGuest(id);
+    ai.react("wave", { force: true });
+    setTimeout(() => marloSay(GUESTS[id].talk?.hello || GUESTS.marlo.talk.hello, GUESTS[id].name), 400);
+  } else if (section === "stage") {
+    if (flying) setFlight(false);
+    curtains.call?.();
+    sfx.play("swish", null, { volume: 0.5 });
+    setTimeout(() => { applySet(id); if (freeNight) setNight(true); chapterBed = id; soundscape.set(id); curtains.open(); }, 700);
+  } else if (section === "toys") {
+    switch (id) {
+      case "fireworks": for (let i = 0; i < 5; i++) setTimeout(() => { confetti.burst(["grace", "slapstick", "drama"][i % 3]); sfx.play("pop", null, { volume: 0.55, rate: 0.6 + (i % 3) * 0.3 }); }, i * 420); break;
+      case "applause": sfx.play("applause", null, { volume: 0.8 }); setTimeout(() => sfx.play("cheer", null, { volume: 0.5 }), 800); ai.react("grandbow", { force: true }); break;
+      case "flowers": bloomForest(); break;
+      case "night": freeNight = !freeNight; setNight(freeNight); toast(freeNight ? "Night falls" : "Good morning"); break;
+      case "music": { bedI = (bedI + 1) % BEDS_CYCLE.length; const b = BEDS_CYCLE[bedI]; soundscape.set(b); toast(b === "quiet" ? "Music off" : "♪ New music"); break; }
+      case "moon": case "party": case "fragile": case "normal": applyMode(MODES.find((m) => m.id === id)); break;
+      case "fly":
+        if (playerId !== "knight" || guestId !== "marlo" || !marlo.group.visible) { toast("Flying needs Sir Pip and Marlo on stage"); break; }
+        setFlight(!flying); break;
+      case "free": if (!unbound.busy && marlo.group.visible && !ai.suspended) unbound.free(); break;
+      case "talk": startTalking(); break;
+    }
+  }
+});
+playground.group.position.set(-0.46, 0.5, 0.2); // beside the stage, near your left hand
+function startFreePlay() {
+  freePlay = true;
+  storyPending = false;
+  showStarted = true; preshow = false;
+  hints.hide();
+  narrator.hush();
+  curtains.open();
+  setNight(false);
+  soundscape.set("courtyard");
+  document.body.classList.add("free-play");
+  if ($("storybtn")) $("storybtn").textContent = "🎪 Playground";
+  playground.show(!!xrMode);
+  if (xrMode) faceViewer(playground.group);
+  narrator.coach("freePlay");
+}
+
 // the loading screen turns into the opening: one click raises the curtain
 // (and lets the browser play sound)
 if (loadingEl) {
@@ -1500,6 +1591,7 @@ if (loadingEl) {
     (resume
       ? `<button id="begin">Continue · ${where}</button><div class="more"><button id="newstory">Start a new story</button><button id="chapters">Play any chapter · all unlocked</button></div>`
       : `<button id="begin">Begin the story</button><div class="more"><button id="chapters">Play any chapter · all unlocked</button></div>`) +
+    `<div class="more"><button id="freeplay">Free play · no story, just fun</button></div>` +
     `<label class="lockopt"><input type="checkbox" id="pinchlock"> Pinch lock: no need to hold a pinch</label>` +
     `<small>Best with sound on · works with Quest hand tracking</small></div>`;
   loadingEl.classList.add("ready");
@@ -1527,6 +1619,7 @@ if (loadingEl) {
     music.play();
     openMap();
   };
+  if ($("freeplay")) $("freeplay").onclick = () => { enter(); startFreePlay(); };
   if (new URLSearchParams(location.search).has("autostart")) { loadingEl.classList.add("done"); raiseCurtain(); }
 }
 $("enter-vr").addEventListener("click", () => loadingEl?.classList.add("done"));
@@ -1642,7 +1735,7 @@ async function enterXR(mode) {
     placeStage = true;
     unlockAudio();
     // (the stage is placed on the first XR frame; open the book just after)
-    setTimeout(() => { if (!showStarted && !book.open && !intro.on && !preshow) { storyPending = true; startPreshow(); } }, 300);
+    setTimeout(() => { if (freePlay) { playground.show(true); faceViewer(playground.group); } else if (!showStarted && !book.open && !intro.on && !preshow) { storyPending = true; startPreshow(); } }, 300);
   }
   session.addEventListener("end", () => {
     xrMode = null;
@@ -1809,6 +1902,7 @@ function xrGestures(dt, hands, t) {
   if (storyMap.mesh.visible) for (const h of hands) if (h.present && storyMap.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (book.mesh.visible) for (const h of hands) if (h.present && book.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (phrases.group.visible) for (const h of hands) if (h.present && phrases.poke(stageRoot.localToWorld(h.tip.clone()))) break;
+  if (playground.group.visible) for (const h of hands) if (h.present && playground.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   for (const [name, knob] of Object.entries(knobs)) {
     const kp = knob.position.clone().add(new THREE.Vector3(0, 0.01, 0));
     if (!knob.visible) continue;
@@ -1933,6 +2027,8 @@ renderer.setAnimationLoop((time, frame) => {
   updateBloom(dt);
   updateWarmup(dt);
   phrases.update(dt);
+  playground.update(dt);
+  if (xrMode && playground.group.visible) faceViewer(playground.group); // always square to your eyes
   updateBlobs();
   updateHalos(elapsed);
   soundscape.update(dt, narrator.speaking || marloLines.length > 0 || book.open);
@@ -2014,4 +2110,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, setRealDesk, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, setRealDesk, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
