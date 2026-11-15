@@ -1,0 +1,788 @@
+import * as THREE from "three";
+import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { Marionette } from "./puppet.js";
+import { buildStage, buildRoom, STAGE } from "./stage.js";
+import { knightSkin, dragonSkin } from "./skins.js";
+import { Robot } from "./robot.js";
+import { loadAssets } from "./assets.js";
+import { mergeStatic } from "./perf.js";
+import { Sfx } from "./audio.js";
+import { Hints } from "./hints.js";
+import { Props } from "./props.js";
+import { Show, playbills } from "./show.js";
+import { Talk } from "./talk.js";
+import { XRHands, DesktopHands, SimHandMeshes } from "./input.js";
+import { ActionDetector, AIPerformer, localReaction, describe } from "./director.js";
+import { Narrator } from "./narrator.js";
+import { Recorder, Player, encodePerformance, decodePerformance, library } from "./recorder.js";
+import { makeDemo } from "./demo.js";
+
+// ---- optional: Meta's WebXR emulator (IWER) so the XR + hand-tracking path can
+// be tried in a desktop browser. Open with ?emulate — an emulated Quest 3 with
+// hand tracking; the mouse/keyboard simulator then drives its two tracked hands.
+let xrDevice = null;
+if (new URLSearchParams(location.search).has("emulate")) {
+  try {
+    const { XRDevice, metaQuest3 } = await import("https://cdn.jsdelivr.net/npm/iwer@2.7.0/+esm");
+    xrDevice = new XRDevice(metaQuest3);
+    xrDevice.installRuntime({ forceInstall: true });
+    xrDevice.primaryInputMode = "hand";
+    // look down at the desk, the way you would with a real headset
+    xrDevice.quaternion.set(Math.sin(-0.24), 0, 0, Math.cos(-0.24));
+    window.xrDevice = xrDevice;
+  } catch (e) {
+    console.warn("Couldn't load the IWER emulator", e);
+  }
+}
+
+// ---- renderer / scene -------------------------------------------------------
+const canvas = document.getElementById("view");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.85;
+renderer.xr.enabled = true;
+
+const loadingEl = document.getElementById("loading");
+const assets = await loadAssets(renderer, (p) => { if (loadingEl) loadingEl.style.setProperty("--p", p); });
+// (the loading screen becomes the "raise the curtain" prompt once the scene exists)
+
+const scene = new THREE.Scene();
+const bg = new THREE.Color(0x140d0a);
+scene.background = bg;
+scene.environment = assets.env;
+scene.environmentIntensity = 0.4;
+const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.01, 20);
+const DESK_TOP = 0.76;
+const STAGE_Y = DESK_TOP + STAGE.base;
+const desktopCam = { pos: new THREE.Vector3(0, STAGE_Y + 0.5, 1.5), look: new THREE.Vector3(0, STAGE_Y + 0.33, -0.15) };
+camera.position.copy(desktopCam.pos);
+camera.lookAt(desktopCam.look);
+
+const { room, desk } = buildRoom(assets, DESK_TOP);
+scene.add(room);
+desk.position.set(0, DESK_TOP, -0.05);
+
+const { root: stageRoot, knobs, shadowCatcher, curtains } = buildStage(assets);
+stageRoot.position.set(0, STAGE_Y, 0);
+scene.add(stageRoot);
+// batch static geometry into one mesh per material (Quest needs few draw calls)
+let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, shadowCatcher, curtains.group]);
+saved += mergeStatic(desk);
+saved += mergeStatic(room, [desk]);
+
+// lights: a warm key spot on the stage (the only shadow caster), soft fill
+const hemi = new THREE.HemisphereLight(0xffe2c0, 0x2a1810, 0.25);
+scene.add(hemi);
+const spot = new THREE.SpotLight(0xffe6c4, 5.5, 3.2, 0.5, 0.6, 1.3);
+spot.position.set(-0.35, 1.05, 0.85);
+spot.target.position.set(0, 0.08, 0);
+spot.castShadow = true;
+spot.shadow.mapSize.set(2048, 2048);
+spot.shadow.bias = -0.0004;
+spot.shadow.normalBias = 0.01;
+spot.shadow.camera.near = 0.3;
+spot.shadow.camera.far = 3;
+stageRoot.add(spot, spot.target);
+const rim = new THREE.DirectionalLight(0x9fc4ff, 0.35);
+rim.position.set(0.6, 1.2, -1.2);
+stageRoot.add(rim);
+
+// ---- the cast ------------------------------------------------------------------
+const PIP_ROOT = [-0.15, 0, 0.03];
+const pip = new Marionette({ root: PIP_ROOT, yaw: 0.35, skin: knightSkin(assets), stringColor: 0x9ff3ff });
+const marlo = new Marionette({ root: [0.17, 0, -0.02], yaw: -0.45, skin: dragonSkin(assets) });
+const ghost = new Marionette({ root: PIP_ROOT, yaw: 0.35, skin: knightSkin(assets, { ghost: true }), ghost: true, stringColor: 0x7fdcff });
+ghost.setVisible(false);
+stageRoot.add(pip.group, marlo.group, ghost.group);
+
+const robot = new Robot();
+// desktop: a tall robot standing behind the desk (like a puppeteer on a bridge);
+// XR: a desk-sized robot standing behind the stage, so it never looms over you
+saved += mergeStatic(robot.head, robot.eyes.concat([robot.mouth]));
+saved += mergeStatic(robot.neck, [robot.head]);
+saved += mergeStatic(robot.group, [robot.neck, ...robot.arms.flatMap((a) => [a.upper, a.elbow, a.lower, a.wrist, a.hand])]);
+saved += mergeStatic(robot.arms[0].hand) + mergeStatic(robot.arms[1].hand);
+console.info(`[perf] merged away ${saved} draw calls`);
+
+function layoutRobot(xr) {
+  if (xr) { robot.group.position.set(0.17, 0.17, -0.38); robot.group.scale.setScalar(1.0); }
+  else { robot.group.position.set(0.17, 0.0, -0.6); robot.group.scale.setScalar(1.6); }
+}
+layoutRobot(false);
+stageRoot.add(robot.group);
+
+// desktop-only bloom so the holographic bars and robot eyes glow (skipped in XR for frame rate)
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.45, 1.05);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+const ai = new AIPerformer(marlo, pip);
+const detector = new ActionDetector(pip, marlo);
+
+// ---- UI hooks ------------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const caption = $("caption");
+let captionTimer = 0;
+const showCaption = (text) => {
+  caption.textContent = text;
+  caption.classList.add("on");
+  captionTimer = 5 + text.length * 0.04;
+};
+const toast = (text) => {
+  const el = $("toast");
+  el.textContent = text;
+  el.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("on"), 2600);
+};
+const log = (text) => {
+  const li = document.createElement("li");
+  li.textContent = text;
+  $("log").prepend(li);
+  while ($("log").children.length > 6) $("log").lastChild.remove();
+};
+
+// ---- voice: spatial audio from the robot's head ----------------------------------
+const listener = new THREE.AudioListener();
+camera.add(listener);
+const voice = new THREE.PositionalAudio(listener);
+voice.setRefDistance(0.7);
+voice.setRolloffFactor(0.6);
+voice.setVolume(1.1);
+robot.head.add(voice);
+const marloMouth = new THREE.Object3D();
+stageRoot.add(marloMouth);
+const marloVoice = new THREE.PositionalAudio(listener);
+marloVoice.setRefDistance(0.6);
+marloVoice.setVolume(1.15);
+marloMouth.add(marloVoice);
+const clipCache = new Map();
+const audioLoader = new THREE.AudioLoader();
+const voicePlayer = {
+  async play(url, who = "narrator") {
+    if (listener.context.state !== "running") await listener.context.resume().catch(() => {});
+    if (!clipCache.has(url)) clipCache.set(url, audioLoader.loadAsync(url));
+    const buffer = await clipCache.get(url);
+    const src = who === "marlo" ? marloVoice : voice;
+    if (src.isPlaying) src.stop();
+    src.setBuffer(buffer);
+    src.play();
+    if (who !== "marlo") robot.talk = buffer.duration;
+    return buffer.duration;
+  },
+  stop() { for (const v of [voice, marloVoice]) if (v.isPlaying) v.stop(); },
+};
+// browsers only allow audio after a gesture
+const unlockAudio = () => listener.context.state !== "running" && listener.context.resume().catch(() => {});
+addEventListener("pointerdown", unlockAudio);
+addEventListener("keydown", unlockAudio);
+
+const narrator = new Narrator({
+  onLine: (line) => {
+    showCaption(line);
+    robot.talk = Math.max(robot.talk, 1.2 + line.length * 0.06);
+  },
+  onReaction: (r) => ai.react(r),
+  player: voicePlayer,
+});
+
+// ---- sound, hints, props, the show, talking ----------------------------------------
+const sfx = new Sfx(listener);
+const music = { play() { sfx.play("music", null, { volume: 0.45, rate: 1 }); } };
+ai.onReact = (name) => sfx.play(name === "dance" || name === "jump" ? "roar" : "chirp", marloMouth, { volume: 0.55 });
+
+const GRIP = { main: [0, 0.04, -0.03], hands: [0, 0.008, 0] };
+const props = new Props(stageRoot, pip, marlo, { sfx, assets, onEvent: (ev) => detector.emit(ev.type, { prop: ev.prop }, 0.5) });
+const hints = new Hints(stageRoot, (target) => {
+  if (target === "mainBar") return pip.main.worldPoint(GRIP.main, new THREE.Vector3());
+  if (target === "handsBar") return pip.hands.worldPoint(GRIP.hands, new THREE.Vector3());
+  if (target === "marlo") return marlo.get("head").clone().add(new THREE.Vector3(0, 0.03, 0));
+  if (target.startsWith("prop:")) return props.position(target.slice(5));
+  if (target.startsWith("knob:")) return knobs[target.slice(5)]?.position.clone();
+  return null;
+});
+
+let night = 0, nightTarget = 0;
+function setNight(on) { nightTarget = on ? 1 : 0; props.setNight(on); }
+
+const show = new Show({
+  narrator, hints, sfx, ai, pip, marlo, props, curtains, setNight, stageRoot,
+  onChange: (sh, entry) => {
+    updateShowHud();
+    if (entry) {
+      toast(`New playbill: ${entry.title} ${"★".repeat(entry.stars)}`);
+      if (!recorder.recording && !lastPerfLocal) recordHintPending = true;
+    }
+  },
+});
+let recordHintPending = false;
+
+const talk = new Talk({
+  narrator,
+  onHeard: (text) => showCaption(`You: “${text}”`),
+  onState: (on) => { $("talk")?.classList.toggle("live", on); knobs.talk.userData.cap.material.emissiveIntensity = on ? 1.2 : 0.35; },
+  onReply: async ({ line, reaction, audio }) => {
+    const clip = audio || (narrator.manifest[line] ? `voice/${narrator.manifest[line]}` : null);
+    setTimeout(() => showCaption(`Marlo: “${line}”`), 200);
+    if (reaction) ai.react(reaction);
+    if (clip && !narrator.muted) {
+      const secs = await voicePlayer.play(clip, "marlo").catch(() => 0);
+      narrator.speakingUntil = narrator.t + (secs || 2) + 0.4;
+    }
+    show.hear({ type: "talk" });
+  },
+});
+// no speech recognition (e.g. some headset browsers): hide the talk button and knob
+if (!talk.supported) { knobs.talk.visible = false; document.getElementById("talk").hidden = true; }
+function startTalking() {
+  unlockAudio();
+  if (!talk.supported) { toast("Voice input isn't available in this browser. Try Chrome on desktop."); return; }
+  talk.start();
+}
+
+// the curtain rises: music, swish, then the show begins
+let showStarted = false;
+function raiseCurtain() {
+  if (showStarted) return;
+  showStarted = true;
+  unlockAudio();
+  curtains.open();
+  setTimeout(() => { sfx.play("swish", null, { volume: 0.6 }); music.play(); }, 150);
+  setTimeout(() => show.start(), 2600);
+}
+
+// footsteps and armour clinks, played where the foot lands
+const feet = [[pip, "lF"], [pip, "rF"], [marlo, "lF"], [marlo, "rF"]].map(([pup, n]) => {
+  const o = new THREE.Object3D();
+  stageRoot.add(o);
+  return { pup, n, o, up: false };
+});
+function footsteps() {
+  for (const f of feet) {
+    const p = f.pup.get(f.n);
+    f.o.position.copy(p);
+    if (!f.up && p.y > 0.014) f.up = true;
+    else if (f.up && p.y < 0.008) {
+      f.up = false;
+      const isPip = f.pup === pip;
+      sfx.play("step", f.o, { volume: isPip ? 0.5 : 0.6, rate: isPip ? 1.15 : 0.8 });
+      if (isPip && Math.random() < 0.5) sfx.play("clink", f.o, { volume: 0.18 });
+    }
+  }
+}
+
+function updateShowHud() {
+  const el = $("show");
+  if (!el) return;
+  if (!show.scene) { el.classList.remove("on"); return; }
+  el.classList.add("on");
+  const act = show.state === "act" ? show.scene.acts[show.act] : null;
+  el.innerHTML = `<div class="title">Tonight: ${show.scene.title}</div><div class="stars">${"★".repeat(show.stars)}${"☆".repeat(3 - show.stars)}</div>` +
+    (act ? `<div class="goal">${act.goal.replace(/^Act \w+\.\s*/, "")}</div>` : show.state === "done" || show.state === "finale" ? `<div class="goal">Curtain call!</div>` : "");
+  $("bills").textContent = `Playbills (${playbills.list().length})`;
+}
+
+detector.on((ev) => {
+  show.hear(ev);
+  if (ev.type === "jump") sfx.play("clink", pip.group, { volume: 0.35 });
+  const r = localReaction(ev, ai);
+  ai.react(r);
+  narrator.hear(ev);
+  log(`${describe(ev)} → Marlo: ${r}`);
+});
+
+// ---- input -------------------------------------------------------------------
+const xrHands = new XRHands(renderer, scene);
+const sim = new DesktopHands(canvas, camera);
+const simMeshes = new SimHandMeshes(stageRoot);
+const handFactory = new XRHandModelFactory();
+for (const i of [0, 1]) {
+  const hand = renderer.xr.getHand(i);
+  const model = handFactory.createHandModel(hand, "spheres");
+  model.name = "handModel";
+  hand.add(model);
+}
+
+const grabs = new Map(); // HandState.id -> { bar, offset }
+const wasPinching = new Map();
+const barMatrix = (bar) => new THREE.Matrix4().compose(bar.position, bar.quaternion, new THREE.Vector3(1, 1, 1));
+
+function handleHands(hands, desktop) {
+  const bars = [pip.main, pip.hands];
+  const near = new Map(bars.map((b) => [b, 0]));
+  for (const h of hands) {
+    let g = grabs.get(h.id);
+    if (!h.present) {
+      if (g) { g.bar.held = false; grabs.delete(h.id); }
+      continue;
+    }
+    // props (headset): a fresh pinch near a prop picks it up instead of a bar
+    const fresh = h.pinch && !wasPinching.get(h.id);
+    wasPinching.set(h.id, h.pinch);
+    if (!desktop) {
+      if (props.holding(h.id)) {
+        if (h.pinch) { props.follow(h); continue; }
+        props.release(h.id);
+        continue;
+      }
+      if (fresh && !g && props.tryGrab(h)) continue;
+    }
+    if (h.pinch && !g) {
+      let bar = null;
+      if (desktop) bar = h === sim.main ? pip.main : pip.hands;
+      else {
+        let best = 0.09;
+        for (const b of bars) {
+          if ([...grabs.values()].some((x) => x.bar === b)) continue;
+          const d = b.worldPoint(GRIP[b.kind], new THREE.Vector3()).distanceTo(h.position);
+          if (d < best) { best = d; bar = b; }
+        }
+      }
+      if (bar && ![...grabs.values()].some((x) => x.bar === bar)) {
+        g = { bar, offset: h.matrix.clone().invert().multiply(barMatrix(bar)) };
+        grabs.set(h.id, g);
+        bar.held = true;
+      }
+    } else if (!h.pinch && g) {
+      g.bar.held = false;
+      grabs.delete(h.id);
+      g = null;
+    }
+    if (g) {
+      const m = h.matrix.clone().multiply(g.offset);
+      m.decompose(g.bar.position, g.bar.quaternion, new THREE.Vector3());
+      g.bar.position.y = THREE.MathUtils.clamp(g.bar.position.y, 0.22, 0.95);
+      near.set(g.bar, 0.9);
+    } else if (!desktop) {
+      for (const b of bars) {
+        const d = b.worldPoint(GRIP[b.kind], new THREE.Vector3()).distanceTo(h.position);
+        if (d < 0.09) near.set(b, Math.max(near.get(b), 0.35));
+      }
+    }
+  }
+  if (desktop && !pip.main.held) near.set(pip.main, 0.25 + 0.2 * Math.sin(performance.now() / 300));
+  for (const [b, a] of near) pip.setHighlight(b, a);
+}
+
+// ---- record / replay / share ----------------------------------------------------
+const recorder = new Recorder();
+const player = new Player();
+let lastPerf = null;
+let lastPerfLocal = null; // the take recorded in this session (vs. one from a link)
+
+function toggleRecord() {
+  if (recorder.recording) {
+    const perf = recorder.stop();
+    $("rec").classList.remove("live");
+    if (perf) {
+      lastPerf = perf;
+      lastPerfLocal = perf;
+      library.save({ at: Date.now(), seconds: Math.round(perf.frames.length / perf.rate) });
+      toast(`Saved a ${(perf.frames.length / perf.rate).toFixed(1)}s performance — press P to watch your shadow`);
+      narrator.coach("recordEnd");
+    }
+  } else {
+    if (player.playing) stopReplay();
+    recorder.start();
+    recordHintPending = false;
+    if (hints.current === "record") hints.hide();
+    narrator.coach("recordStart");
+    $("rec").classList.add("live");
+    toast("Recording — perform! Press R again to stop.");
+  }
+}
+function startReplay(perf = lastPerf) {
+  if (!perf) { toast("Record something first (R)"); return; }
+  ghost.reset();
+  player.play(perf);
+  ghost.setVisible(true);
+  $("play").classList.add("live");
+  toast("Your shadow is performing. Join in!");
+  narrator.coach(location.hash.startsWith("#perf=") && perf !== lastPerfLocal ? "shared" : "replay");
+}
+function stopReplay() {
+  player.stop();
+  ghost.setVisible(false);
+  $("play").classList.remove("live");
+}
+async function share() {
+  if (!lastPerf) { toast("Record something first (R)"); return; }
+  const code = await encodePerformance(lastPerf);
+  const url = `${location.origin}${location.pathname}#perf=${code}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    toast(`Link copied (${Math.round(url.length / 1024)} KB) — anyone who opens it sees your shadow`);
+  } catch {
+    prompt("Copy this link:", url);
+  }
+}
+function resetAll() {
+  for (const [, g] of grabs) g.bar.held = false;
+  grabs.clear();
+  pip.reset();
+  marlo.reset();
+  props.reset();
+  ai.base.copy(ai.home);
+  ai.yaw = marlo.yaw;
+  toast("Puppets reset");
+}
+
+const demo = makeDemo(sim);
+function runDemo() {
+  if (sim.autopilot) { sim.autopilot = null; toast("Demo stopped"); return; }
+  resetAll();
+  raiseCurtain();
+  sim.autopilot = demo();
+  toast("Demo: the autopilot is driving the simulated hands");
+}
+
+$("rec").onclick = toggleRecord;
+$("play").onclick = () => (player.playing ? stopReplay() : startReplay());
+$("share").onclick = share;
+$("demo").onclick = runDemo;
+$("reset").onclick = resetAll;
+$("mute").onclick = () => {
+  narrator.setMuted(!narrator.muted);
+  $("mute").textContent = narrator.muted ? "Voice: off" : "Voice: on";
+};
+$("help-toggle").onclick = () => $("help").classList.toggle("collapsed");
+$("talk").onclick = startTalking;
+$("bills").onclick = () => {
+  const panel = $("billpanel");
+  const list = playbills.list();
+  panel.innerHTML = `<h2>Your playbills</h2><p class="streak">${playbills.streak() > 1 ? `${playbills.streak()}-night streak` : "Come back tomorrow for a new show"}</p>` +
+    (list.length ? list.map((b) => `<div class="bill"><b>${b.title}</b><span>${"★".repeat(b.stars)}${"☆".repeat(3 - b.stars)}</span><i>${b.date}</i></div>`).join("") : "<p>Finish tonight's show to earn your first playbill.</p>") +
+    `<button id="billclose">Close</button>`;
+  panel.classList.add("on");
+  $("billclose").onclick = () => panel.classList.remove("on");
+};
+
+// desktop: clicking a prop (or Marlo) hands things over instead of grabbing the bar
+const clickRay = new THREE.Raycaster();
+addEventListener("pointerdown", (e) => {
+  if (e.target !== canvas || e.button !== 0 || xrMode) return;
+  const r = canvas.getBoundingClientRect();
+  clickRay.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+  if (props.click(clickRay)) sim.lmbBlocked = true;
+}, true);
+addEventListener("pointerup", () => (sim.lmbBlocked = false));
+// hold V to talk to Marlo
+addEventListener("keydown", (e) => { if (e.key.toLowerCase() === "v" && !e.repeat) startTalking(); });
+addEventListener("keyup", (e) => { if (e.key.toLowerCase() === "v") talk.stop(); });
+
+// the loading screen turns into the opening: one click raises the curtain
+// (and lets the browser play sound)
+if (loadingEl) {
+  loadingEl.innerHTML = `<div class="open"><h1>Strings</h1><p>a marionette theatre with an AI co-performer</p><button id="begin">Raise the curtain</button><small>Best with sound on</small></div>`;
+  loadingEl.classList.add("ready");
+  const begin = () => { loadingEl.classList.add("done"); raiseCurtain(); };
+  $("begin").onclick = begin;
+  if (new URLSearchParams(location.search).has("autostart")) begin();
+}
+$("enter-vr").addEventListener("click", () => loadingEl?.classList.add("done"));
+$("enter-ar").addEventListener("click", () => loadingEl?.classList.add("done"));
+window.addEventListener("keydown", (e) => {
+  if (e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (k === "r") toggleRecord();
+  else if (k === "p") player.playing ? stopReplay() : startReplay();
+  else if (k === "l") share();
+  else if (k === "m") $("mute").click();
+  else if (k === "c") caption.classList.toggle("hidden");
+  else if (k === "backspace") resetAll();
+  else if (k === "t") runDemo();
+});
+
+// shared performance in the URL?
+if (location.hash.startsWith("#perf=")) {
+  decodePerformance(location.hash.slice(6))
+    .then((perf) => {
+      lastPerf = perf;
+      startReplay(perf);
+      toast("Replaying a shared performance — perform alongside it");
+    })
+    .catch((e) => toast(`Couldn't read that link: ${e.message}`));
+}
+
+// Quest: a smaller shadow map, and only the marionettes cast shadows
+function setXRQuality(xr) {
+  spot.shadow.mapSize.set(xr ? 1024 : 2048, xr ? 1024 : 2048);
+  spot.shadow.map?.dispose();
+  spot.shadow.map = null;
+  robot.group.traverse((o) => { if (o.isMesh) o.castShadow = !xr; });
+}
+
+// ---- XR session ------------------------------------------------------------------
+// AR (passthrough): the stage is set down on YOUR real desk — a hit-test reticle
+// follows your gaze over real surfaces, and a pinch places it. VR: it appears in
+// front of you on the virtual desk.
+let xrMode = null;
+let placeStage = false;
+let placing = false;
+let hitSource = null;
+let placeTimer = 0;
+const reticle = new THREE.Mesh(
+  new THREE.RingGeometry(0.05, 0.065, 40).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0x7ff3ff, transparent: true, opacity: 0.85, toneMapped: false })
+);
+reticle.visible = false;
+scene.add(reticle);
+
+async function enterXR(mode) {
+  const session = await navigator.xr.requestSession(mode, {
+    optionalFeatures: ["local-floor", "hand-tracking", "hit-test", "plane-detection", "anchors"],
+  });
+  renderer.xr.setReferenceSpaceType("local-floor");
+  await renderer.xr.setSession(session);
+  xrMode = mode;
+  document.body.classList.add("in-xr");
+  layoutRobot(true);
+  setXRQuality(true);
+  if (mode === "immersive-ar") {
+    scene.background = null;
+    room.visible = false;
+    shadowCatcher.visible = true;
+    try {
+      const viewer = await session.requestReferenceSpace("viewer");
+      hitSource = await session.requestHitTestSource({ space: viewer });
+    } catch { hitSource = null; }
+    placing = true;
+    placeTimer = 0;
+    placeStageInFront(); // a sensible spot until a real surface is found
+    unlockAudio();
+    narrator.coach("placeAR");
+  } else {
+    placeStage = true;
+    unlockAudio();
+    narrator.coach("welcome");
+    raiseCurtain();
+  }
+  session.addEventListener("end", () => {
+    xrMode = null;
+    hitSource?.cancel?.();
+    hitSource = null;
+    placing = false;
+    reticle.visible = false;
+    scene.background = bg;
+    room.visible = true;
+    shadowCatcher.visible = false;
+    stageRoot.position.set(0, STAGE_Y, 0);
+    stageRoot.rotation.set(0, 0, 0);
+    desk.position.set(0, DESK_TOP, -0.05);
+    desk.rotation.set(0, 0, 0);
+    camera.position.copy(desktopCam.pos);
+    camera.lookAt(desktopCam.look);
+    document.body.classList.remove("in-xr");
+    layoutRobot(false);
+    setXRQuality(false);
+  });
+}
+if (navigator.xr) {
+  navigator.xr.isSessionSupported("immersive-ar").then((ok) => {
+    if (ok) { $("enter-ar").hidden = false; $("enter-ar").onclick = () => enterXR("immersive-ar").catch((e) => toast(e.message)); }
+  });
+  navigator.xr.isSessionSupported("immersive-vr").then((ok) => {
+    if (ok) { $("enter-vr").hidden = false; $("enter-vr").onclick = () => enterXR("immersive-vr").catch((e) => toast(e.message)); }
+    else $("xr-note").hidden = false;
+  });
+} else $("xr-note").hidden = false;
+
+function viewerFlatForward() {
+  const xrCam = renderer.xr.getCamera();
+  const head = new THREE.Vector3().setFromMatrixPosition(xrCam.matrixWorld);
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(new THREE.Quaternion().setFromRotationMatrix(xrCam.matrixWorld));
+  fwd.y = 0;
+  if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
+  return { head, fwd: fwd.normalize() };
+}
+
+function placeStageInFront() {
+  const { head, fwd } = viewerFlatForward();
+  const p = head.clone().addScaledVector(fwd, 0.5);
+  p.y = Math.max(0.45, head.y - 0.5);
+  setStagePose(p, fwd);
+}
+
+// p = where the stage's floorboards sit, facing the viewer
+function setStagePose(p, fwd) {
+  stageRoot.position.copy(p);
+  stageRoot.rotation.set(0, Math.atan2(-fwd.x, -fwd.z), 0);
+  desk.position.copy(p).add(new THREE.Vector3(0, -STAGE.base, 0));
+  desk.rotation.copy(stageRoot.rotation);
+  stageRoot.updateMatrixWorld(true);
+}
+
+const prevPinch = new Map();
+function updatePlacement(dt, frame, hands) {
+  placeTimer += dt;
+  let found = false;
+  if (frame && hitSource) {
+    const results = frame.getHitTestResults(hitSource);
+    for (const r of results) {
+      const pose = r.getPose(renderer.xr.getReferenceSpace());
+      if (!pose) continue;
+      const m = new THREE.Matrix4().fromArray(pose.transform.matrix);
+      const up = new THREE.Vector3(0, 1, 0).applyMatrix4(new THREE.Matrix4().extractRotation(m));
+      if (up.y < 0.85) continue; // tables and desks only, not walls
+      const pos = new THREE.Vector3().setFromMatrixPosition(m);
+      reticle.position.copy(pos);
+      reticle.visible = true;
+      const { fwd } = viewerFlatForward();
+      // the stage's base rests on the surface
+      setStagePose(pos.clone().add(new THREE.Vector3(0, STAGE.base, 0)), fwd);
+      found = true;
+      break;
+    }
+  }
+  if (!found) reticle.visible = false;
+  // a fresh pinch from either hand sets the stage down
+  let pinched = false;
+  for (const h of hands) {
+    const was = prevPinch.get(h.id) || false;
+    if (h.present && h.pinch && !was) pinched = true;
+    prevPinch.set(h.id, h.present && h.pinch);
+  }
+  if ((pinched && (found || placeTimer > 1.5)) || (!hitSource && placeTimer > 2) || placeTimer > 25) {
+    placing = false;
+    reticle.visible = false;
+    narrator.coach("placed");
+    raiseCurtain();
+  }
+}
+
+// poke the apron knobs with a fingertip (XR), and hold two empty pinches to re-place the stage
+const knobCool = { record: 0, replay: 0, talk: 0 };
+let recenterHold = 0;
+function xrGestures(dt, hands, t) {
+  for (const [name, knob] of Object.entries(knobs)) {
+    const kp = knob.position.clone().add(new THREE.Vector3(0, 0.01, 0));
+    const pressed = hands.some((h) => h.present && h.tip.distanceTo(kp) < 0.022);
+    knob.userData.cap.position.y = pressed ? 0.004 : 0.008;
+    if (pressed && t > knobCool[name]) {
+      knobCool[name] = t + 1.2;
+      if (name === "record") toggleRecord();
+      else if (name === "talk") startTalking();
+      else player.playing ? stopReplay() : startReplay();
+    }
+  }
+  const both = hands.filter((h) => h.present && h.pinch && !grabs.has(h.id)).length === 2;
+  recenterHold = both ? recenterHold + dt : 0;
+  if (recenterHold > 1.5) { placeStageInFront(); recenterHold = 0; toast("Stage moved"); }
+}
+
+// In ?emulate mode the desktop simulator steers IWER's tracked hands, so grabbing
+// goes through the real WebXR hand-joint code. Closed loop: nudge each emulated
+// hand until its measured pinch point sits where the simulated hand is.
+const emu = { offsets: [new THREE.Vector3(), new THREE.Vector3()] };
+function driveEmulatedHands(dt) {
+  sim.camera = renderer.xr.getCamera().cameras?.[0] || camera;
+  sim.update(dt, stageRoot);
+  const pairs = [[sim.main, "right"], [sim.other, "left"]];
+  pairs.forEach(([simHand, side], i) => {
+    const h = xrDevice.hands[side];
+    if (!h) return;
+    const target = stageRoot.localToWorld(simHand.position.clone());
+    const slot = xrHands.slots.findIndex((s) => s.source && s.source.handedness === side);
+    // learn the offset only with an open hand: closing the fingers moves the
+    // pinch point, and chasing that would drag a held bar around
+    if (slot >= 0 && xrHands.hands[slot].present && !simHand.pinch && !xrHands.hands[slot].pinch) {
+      const got = stageRoot.localToWorld(xrHands.hands[slot].position.clone());
+      emu.offsets[i].addScaledVector(target.clone().sub(got), Math.min(1, dt * 10));
+    }
+    const p = target.add(emu.offsets[i]);
+    h.position.set(p.x, p.y, p.z);
+    const q = stageRoot.getWorldQuaternion(new THREE.Quaternion()).multiply(simHand.quaternion);
+    h.quaternion.set(q.x, q.y, q.z, q.w);
+    h.updatePinchValue(simHand.pinch ? 1 : 0);
+  });
+}
+
+// ---- loop -------------------------------------------------------------------------
+const clock = new THREE.Clock();
+let elapsed = 0;
+renderer.setAnimationLoop((time, frame) => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  elapsed += dt;
+  stageRoot.updateMatrixWorld(true);
+
+  let hands;
+  if (xrMode) {
+    if (placeStage && renderer.xr.getCamera().matrixWorld) { placeStageInFront(); placeStage = false; }
+    if (xrDevice) driveEmulatedHands(dt);
+    hands = xrHands.update(stageRoot);
+    if (placing) updatePlacement(dt, frame, hands);
+    else {
+      handleHands(hands, false);
+      xrGestures(dt, hands, elapsed);
+    }
+    for (const i of [0, 1]) {
+      const m = renderer.xr.getHand(i).getObjectByName("handModel");
+      if (m) m.visible = xrMode === "immersive-vr";
+    }
+  } else {
+    hands = sim.update(dt, stageRoot);
+    handleHands(hands, true);
+  }
+  simMeshes.update(sim.hands, !xrMode);
+
+  recorder.capture(dt, pip);
+  if (player.playing) { player.apply(dt, ghost); ghost.update(dt); }
+
+  ai.update(dt);
+  pip.update(dt);
+  marlo.update(dt);
+  detector.update(dt);
+  show.update(dt, !!xrMode);
+  if (recordHintPending && show.state === "done" && !narrator.speaking) hints.show("record", !!xrMode);
+  hints.update(dt);
+  props.update(dt);
+  curtains.update(dt);
+  footsteps();
+  marloMouth.position.copy(marlo.get("head"));
+  night += (nightTarget - night) * Math.min(1, dt * 1.5);
+  spot.intensity = 5.5 - 4.3 * night;
+  hemi.intensity = 0.25 - 0.19 * night;
+  scene.environmentIntensity = 0.4 - 0.3 * night;
+  narrator.update(dt);
+
+  const [lg, rg] = ai.grips();
+  // the robot watches the knight, and looks out at you while it narrates
+  const viewCam = xrMode ? renderer.xr.getCamera() : camera;
+  const lookAt = robot.talk > 0
+    ? stageRoot.worldToLocal(new THREE.Vector3().setFromMatrixPosition(viewCam.matrixWorld))
+    : pip.get("head").clone();
+  robot.update(dt, lg, rg, lookAt);
+
+  if (captionTimer > 0 && (captionTimer -= dt) <= 0) caption.classList.remove("on");
+  if (Math.floor(elapsed * 4) !== Math.floor((elapsed - dt) * 4)) updateStatus();
+  if (xrMode) renderer.render(scene, camera);
+  else composer.render();
+});
+
+function updateStatus() {
+  $("st-narrator").textContent = narrator.source;
+  $("st-marlo").textContent = ai.current;
+  $("st-grip").textContent = pip.main.held ? (pip.hands.held ? "both bars" : "main bar") : pip.hands.held ? "arm bar" : "open hand";
+  $("st-rec").textContent = recorder.recording ? `● ${recorder.duration.toFixed(1)}s` : lastPerf ? `${(lastPerf.frames.length / lastPerf.rate).toFixed(1)}s take` : "—";
+  $("st-mode").textContent = sim.autopilot ? "demo autopilot" : xrMode ? xrMode.replace("immersive-", "").toUpperCase() : "desktop simulator";
+}
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// exposed for debugging / automated checks
+window.strings = { show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };
