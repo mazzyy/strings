@@ -27,8 +27,12 @@ export class Narrator {
     this.t = 0;
     this.manifest = {};
     fetch("voice/manifest.json").then((r) => (r.ok ? r.json() : null)).then((m) => { if (m) this.manifest = m.lines; }).catch(() => {});
+    // on static hosting (GitHub Pages) there is no server: stop asking after the first miss
     const poll = () =>
-      fetch("api/status").then((r) => (r.ok ? r.json() : null)).then((s) => { this.ai = !!s?.ai; this.aiName = s?.name || null; }).catch(() => { this.ai = false; });
+      fetch("api/status").then((r) => {
+        if (r.status === 404 || r.status === 405) { clearInterval(this._poll); return null; }
+        return r.ok ? r.json() : null;
+      }).then((s) => { this.ai = !!s?.ai; this.aiName = s?.name || null; }).catch(() => { this.ai = false; });
     poll();
     this._poll = setInterval(poll, 10000);
   }
