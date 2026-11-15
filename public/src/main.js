@@ -598,6 +598,7 @@ function updateShowHud() {
 
 let laughCool = 0;
 detector.on((ev) => {
+  if (storyLock()) return; // the story is being told: no reactions, no commentary
   show.hear(ev);
   if (ev.type === "fall" && show.state === "act" && elapsed > laughCool) { laughCool = elapsed + 9; setTimeout(() => sfx.play("laugh", null, { volume: 0.28 }), 350); }
   if (ev.type === "jump") sfx.play("clink", pip.group, { volume: 0.35 });
@@ -667,10 +668,33 @@ function setPinchLock(on, quiet = false) {
   if (!quiet) { narrator.coach(on ? "lockOn" : "lockOff"); sfx.play("chime", null, { volume: 0.35, rate: on ? 1.3 : 0.9 }); }
 }
 setTimeout(() => setPinchLock(pinchLock, true), 0); // reflect the saved setting on the knob
+// while the storyteller speaks and the book is open, the puppets rest: your hands let
+// go, Sir Pip is eased back to his spot, and nothing you do interrupts the story
+let _dtNow = 1 / 60;
+const pipRest = { pos: pip.main.position.clone(), q: pip.main.quaternion.clone() };
+const storyLock = () => intro.on || book.open;
+function parkPuppets(dt, hands) {
+  for (const [id, g] of grabs) { g.bar.held = false; grabs.delete(id); }
+  for (const h of hands) if (props.holding(h.id)) props.release(h.id);
+  if (cordHand) releaseCord();
+  pip.main.held = true;
+  pip.main.position.lerp(pipRest.pos, Math.min(1, dt * 3));
+  pip.main.quaternion.slerp(pipRest.q, Math.min(1, dt * 3));
+  pip.hands.held = false;
+  // the guest stands quietly too (no dancing over the story)
+  if (ai.clip && !["idle", "wave", "bow"].includes(ai.clip.name)) { ai.clip = null; ai.queue.length = 0; }
+}
 function handleHands(hands, desktop) {
   const bars = [pip.main, pip.hands];
   const near = new Map(bars.map((b) => [b, 0]));
   tetherN = 0;
+  if (storyLock()) {
+    parkPuppets(_dtNow, hands);
+    for (const h of hands) wasPinching.set(h.id, h.pinch); // a pinch held through the story isn't a fresh grab
+    tetherGeo.setDrawRange(0, 0);
+    for (const b of bars) pip.setHighlight(b, 0);
+    return;
+  }
   for (const h of hands) {
     let g = grabs.get(h.id);
     if (!h.present) {
@@ -1408,6 +1432,7 @@ const _rh = new THREE.Vector3();
 const robotHeadLocal = () => stageRoot.worldToLocal(robot.head.getWorldPosition(_rh).clone());
 function storytellerIntro(first, next) {
   intro.on = true; intro.t = 0; intro.next = next; intro.leaving = false;
+  narrator.pending.length = 0; marloLines.length = 0; // nothing left over to say before the story
   soundscape.set("story");
   hints.hide();
   nightTarget = 1;
@@ -1813,6 +1838,7 @@ const clock = new THREE.Clock();
 let elapsed = 0;
 renderer.setAnimationLoop((time, frame) => {
   const dt = Math.min(clock.getDelta(), 0.05);
+  _dtNow = dt;
   elapsed += dt;
   stageRoot.updateMatrixWorld(true);
 
@@ -1852,7 +1878,7 @@ renderer.setAnimationLoop((time, frame) => {
     if (preshowT > 1.2 && hints.current !== "cord" && !cord.held) hints.show("cord", !!xrMode);
     if (preshowT > 45) raiseCurtain(); // never leave anyone stuck in the dark
   }
-  mind.update(dt, { t: elapsed, act: show.state === "act" ? show.scene.acts[show.act] : null, actT: show.actT, busyVoice: narrator.speaking || marloLines.length > 0, showState: show.state });
+  if (!storyLock()) mind.update(dt, { t: elapsed, act: show.state === "act" ? show.scene.acts[show.act] : null, actT: show.actT, busyVoice: narrator.speaking || marloLines.length > 0, showState: show.state });
   updateMarloVoice();
   hints.update(dt);
   props.update(dt);
