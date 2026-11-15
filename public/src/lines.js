@@ -101,6 +101,11 @@ export const COACH = {
   pullCordDesk: "Welcome to our little theatre. Drag the golden cord down to raise the curtain.",
   copyIntro: "Marlo wants a turn. Copy what he does!",
   hintCollect: "Carry Sir Pip to the glowing lights to collect them.",
+  snapFree: "Snap! Snap! Marlo's strings have broken. He's flying free!",
+  holdHand: "Hold out your hand, and keep it very still.",
+  landed: "He landed on your hand!",
+  applause: "What wonderful applause! Thank you, thank you!",
+  clapForMarlo: "Give Marlo a round of applause! Clap your hands!",
   hintFly: "Move your hand up and down to steer Marlo through the rings.",
   hintFlyDodge: "Move up or down to dodge the gears as they fly at you.",
   hintChase: "Fly right up to Clank to catch him.",
@@ -262,7 +267,7 @@ export const MARLO_TALK = {
 export const GUESTS = {
   marlo: {
     name: "Marlo", title: "Marlo the dragon", says: MARLO_SAYS, talk: MARLO_TALK,
-    task: { gems: "The jewels! The music box can play again!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had.", mount: "Hold on tight, Sir Pip!", fly: "Woo-hoo! We're flying!", spot: "There he is! After him!", finale: "Best adventure ever!" },
+    task: { gems: "The jewels! The music box can play again!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had.", mount: "Hold on tight, Sir Pip!", fly: "Woo-hoo! We're flying!", spot: "There he is! After him!", finale: "Best adventure ever!", free: "I'm free! Wheeee!", warm: "Your hand is so warm!", home: "Back to my strings. See you at the next show!" },
     personality: { joy: 0.55, trust: 0.45, energy: 0.85, sword: "wary", sulkAfter: 40, patience: 9 },
   },
   wizard: {
