@@ -27,6 +27,8 @@ def main():
         "wizard": ("bm_george", 0.88),   # an unhurried old wizard
         "pirate": ("am_fenrir", 1.02),   # a boisterous captain
         "troll": ("am_onyx", 0.84),      # a slow, deep, grumpy troll
+        "clank": ("am_echo", 0.92),      # a clipped, menacing robot (still a human voice)
+        "princess": ("af_bella", 1.0),   # Princess Juniper
     }
     manifest = {}
     for i, item in enumerate(lines):

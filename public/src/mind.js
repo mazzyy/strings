@@ -73,6 +73,8 @@ export class MarloMind {
   // Every detected action. Returns the reaction Marlo performs.
   hear(ev, ctx = {}) {
     this.t = ctx.t ?? this.t;
+    // while a task (duel, riddle...) is running, the task directs the guest
+    if (this.taskBusy) { this.lastEvent = this.t; return null; }
     this.lastEvent = this.t;
     this.nextIdea = this.t + 8 + Math.random() * 5;
     const m = this.mem;
@@ -174,7 +176,7 @@ export class MarloMind {
       this.say("aww");
     }
 
-    if (!this.enabled || this.ai.busy || this.ai.sleeping || ctx.busyVoice) return;
+    if (!this.enabled || this.taskBusy || this.ai.busy || this.ai.sleeping || ctx.busyVoice) return;
     if (this.t < this.nextIdea) return;
     if (ctx.showState === "finale" || ctx.showState === "intro" || ctx.showState === "idle" || ctx.showState === "ending") return;
     this.nextIdea = this.t + 10 + Math.random() * 6;
@@ -195,6 +197,7 @@ export class MarloMind {
   }
 
   _demonstrate(act) {
+    if (!act.check) return;
     const [type, prop] = act.check.split(":");
     const d = DEMO[type];
     if (!d) return;

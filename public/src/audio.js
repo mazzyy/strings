@@ -138,6 +138,19 @@ function makeBuffers(ctx) {
     }
     normalize(d, 0.55);
   });
+  // the tower alarm: a two-tone siren
+  B.alarm = buffer(ctx, 1.1, (d, n) => {
+    let ph = 0;
+    for (let i = 0; i < n; i++) { const t = i / SR; ph += (2 * Math.PI * (Math.floor(t * 5) % 2 ? 660 : 880)) / SR; d[i] = (Math.sign(Math.sin(ph)) * 0.4 + Math.sin(ph) * 0.6) * Math.min(1, t * 30) * Math.exp(-t * 1.2); }
+    lowpass(d, 0.35);
+    normalize(d, 0.45);
+  });
+  // a crackling energy zap
+  B.zap = buffer(ctx, 0.5, (d, n) => {
+    let ph = 0;
+    for (let i = 0; i < n; i++) { const t = i / SR; ph += (2 * Math.PI * (1400 * Math.exp(-t * 5) + 200)) / SR; d[i] = (Math.sin(ph) * 0.6 + noise() * 0.4 * Math.exp(-t * 8)) * Math.exp(-t * 4); }
+    normalize(d, 0.5);
+  });
   return B;
 }
 

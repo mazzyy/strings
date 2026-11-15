@@ -6,7 +6,7 @@
 // Marlo, a friendly dragon worked by the robot puppeteer, who also narrates.
 
 // every guest Sir Pip can share the stage with (lines are recorded for each name)
-export const GUEST_NAMES = ["Marlo", "Bramble", "Captain Pegg", "Grumble"];
+export const GUEST_NAMES = ["Marlo", "Bramble", "Captain Pegg", "Grumble", "Clank"];
 export const placesFor = (name) => ["across the stage", `toward ${name}`, `away from ${name}`, "toward the audience", "upstage, toward the back"];
 export const towardFor = (name) => [name, "the audience", "away"];
 
@@ -100,6 +100,15 @@ export const COACH = {
   pullCord: "Welcome to our little theatre. Pinch the golden cord, and pull it down to raise the curtain.",
   pullCordDesk: "Welcome to our little theatre. Drag the golden cord down to raise the curtain.",
   copyIntro: "Marlo wants a turn. Copy what he does!",
+  hintCollect: "Carry Sir Pip to the glowing lights to collect them.",
+  hintSimon: "Watch the moves, then do the same moves, in the same order.",
+  hintDuck: "When he swings high, tip your wrist forward to duck. When he swings low, jump!",
+  hintStrike: "Now move Sir Pip quickly toward him to strike.",
+  hintStone: "Walk Sir Pip onto the stone with the right answer, and stay there a moment.",
+  hintSneak: "Move only while the searchlight is pointing away. Freeze when it comes back!",
+  hintKey: "Take the key from the pedestal, and hand it to Sir Pip.",
+  hintUnlock: "Now carry the key to the cage, and let go.",
+  hintDodge: "Watch the zap coming along the floor, and jump just before it reaches you.",
   synced: "In perfect step with your shadow!",
   snap: "Snap! One of the strings has broken. Gently does it.",
   modeNormal: "Back to the classic show.",
@@ -250,11 +259,13 @@ export const MARLO_TALK = {
 export const GUESTS = {
   marlo: {
     name: "Marlo", title: "Marlo the dragon", says: MARLO_SAYS, talk: MARLO_TALK,
+    task: { gems: "My gems! You found my gems!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had." },
     personality: { joy: 0.55, trust: 0.45, energy: 0.85, sword: "wary", sulkAfter: 40, patience: 9 },
   },
   wizard: {
     name: "Bramble", title: "Old Bramble the wizard",
     personality: { joy: 0.6, trust: 0.75, energy: 0.5, sword: "wary", sulkAfter: 70, patience: 6 },
+    task: { watch: "Watch my spell carefully.", yourTurn: "Now you. Repeat my spell.", wrong: "Not quite. Watch again, young knight.", spellDone: "Splendid! The spell works! You have the gift!", fireflies: "My fireflies! Bless you, young knight!" },
     says: {
       copyMe: "Copy me, young knight!", yourTurn: "Now you try. Just as I did.", yay: "Splendid! Truly splendid!", yay2: "Ho! A natural!",
       aww: "Never mind. Magic takes practice.", careful: "Steady with that blade, young one.", forMe: "For me? How very kind.",
@@ -273,6 +284,7 @@ export const GUESTS = {
   pirate: {
     name: "Captain Pegg", title: "Captain Pegg the pirate",
     personality: { joy: 0.65, trust: 0.5, energy: 0.95, sword: "duel", sulkAfter: 35, patience: 9 },
+    task: { enGarde: "En garde, little knight!", high: "High!", low: "Low!", hitMe: "Argh! Ye got me!", gotYou: "Ha har! Got ye!", surrender: "Arr! I surrender! Ye're the finest swordsman on the seven puddles!" },
     says: {
       copyMe: "Arr! Copy me, matey!", yourTurn: "Yer turn! Show me what ye've got!", yay: "Ha har! That's the spirit!", yay2: "Shiver me timbers, perfect!",
       aww: "Bah! Next time, matey.", careful: "A sword! Ha! En garde!", forMe: "For me? Ye've got a pirate's heart!",
@@ -291,6 +303,7 @@ export const GUESTS = {
   troll: {
     name: "Grumble", title: "Grumble the troll",
     personality: { joy: 0.2, trust: 0.15, energy: 0.6, sword: "angry", sulkAfter: 25, patience: 11 },
+    task: { right: "Hmph! Correct. Grumble is impressed.", wrongAns: "Wrong! Ha! Grumble asks again." },
     says: {
       copyMe: "Hmph. Copy Grumble. If you can.", yourTurn: "Your turn. Go on then.", yay: "Huh. Not bad. Not bad at all.", yay2: "Grumble likes that!",
       aww: "Hmph. Too slow.", careful: "Put that sword down! Grumble doesn't like swords.", forMe: "A flower? For Grumble? Nobody ever gives Grumble flowers.",
@@ -306,12 +319,44 @@ export const GUESTS = {
       fire: "No fire on Grumble's bridge!", unknown: "Huh? Grumble doesn't understand.",
     },
   },
+  clank: {
+    name: "Clank", title: "Clank the evil robot",
+    personality: { joy: 0.2, trust: 0.05, energy: 1, sword: "angry", sulkAfter: 999, patience: 99 },
+    says: {
+      copyMe: "Copy Clank. Beep.", yourTurn: "Your turn, intruder.", yay: "Impressive. For a human toy.", yay2: "Beep boop. Acceptable.",
+      aww: "Failure detected.", careful: "Sword detected. Shields up!", forMe: "A gift? Clank does not understand gifts.",
+      forMeAsk: "Is that a bribe?", forYou: "Take it. Then go away.", fetching: "Fetching. Stand still.",
+      hmph: "Clank is alone. As planned.", cheerUp: "You returned. Suspicious.", yawn: "Entering sleep mode.", wake: "Sleep mode cancelled!",
+      giggle: "Ha. Ha. Ha. You fell.", ohNo: "Small knight down.", overHere: "Over here, intruder.", likeThis: "Like this. Observe.",
+      lookThere: "Look there. By the edge.",
+    },
+    talk: {
+      hello: "Greetings, intruder. Please leave.", dance: "Dance mode activated. Do not tell anyone.", bow: "Clank bows. Politely. Menacingly.",
+      jump: "Jumping is inefficient. But fine.", come: "Approaching.", go: "Retreating to recharge.", friend: "Friend? Error. Does not compute.",
+      name: "I am Clank, keeper of the Clockwork Tower.", sorry: "Apology logged.", fire: "Clank does not breathe fire. Clank zaps.",
+      unknown: "Unknown command. Beep.",
+    },
+    task: { intruder: "Intruder detected!", seeYou: "I see you!", zap: "Zap!", overheat: "Overheating! Overheating!", defeated: "Clank needs a little sit down." },
+  },
+  princess: {
+    name: "Princess Juniper", title: "Princess Juniper",
+    says: {}, talk: {},
+    task: { help: "Help! Please, somebody help me!", key: "The key! Clank keeps it on the pedestal!", hero: "My hero! Thank you, Sir Pip!", lookOut: "Look out! He's charging his zapper!" },
+  },
 };
 
+// A chapter: a set, a guest, three storybook pages before the curtain rises,
+// and three acts. An act either waits for an action (`check`) or runs a
+// playable task (`task`, see tasks.js): a duel, a riddle, sneaking...
 export const CHAPTERS = [
   {
     id: "courtyard", set: "courtyard", guest: "marlo", title: "The Castle Courtyard", map: [270, 770],
     intro: "Chapter one: The Castle Courtyard. Our story begins with a knight, a dragon, and a very small stage.",
+    pages: [
+      "Once upon a time, in a kingdom no bigger than a desk, there lived a small knight called Sir Pip.",
+      "Sir Pip had shiny armour, a brave heart, and absolutely no idea what he was doing.",
+      "One morning, a dragon landed in the castle courtyard. And that is where our story begins.",
+    ],
     acts: [
       { goal: "Act one. Walk Sir Pip over to meet the dragon.", check: "approach", hint: "walk" },
       { goal: "Act two. Now bow to Marlo. Manners matter.", check: "bow", hint: "bow" },
@@ -320,41 +365,104 @@ export const CHAPTERS = [
   },
   {
     id: "forest", set: "forest", guest: "wizard", title: "The Whispering Forest", map: [570, 545],
-    intro: "Chapter two: The Whispering Forest. Deep among the trees lives an old wizard called Bramble.",
+    intro: "Chapter two: The Whispering Forest.",
+    pages: [
+      "Beyond the castle lay the Whispering Forest, where the trees tell secrets to the wind.",
+      "There lived Old Bramble, a wizard so old he had forgotten his own birthday. Twice.",
+      "But tonight his magic fireflies have escaped, and without them the forest is growing dark.",
+    ],
     acts: [
-      { goal: "Act one. Walk over and greet the wizard.", check: "approach", hint: "walk" },
-      { goal: "Act two. The forest is getting dark. Give Sir Pip the lantern.", check: "hold:lantern", hint: "takeLantern" },
-      { goal: "Act three. Bow to thank the wizard.", check: "bow", hint: "bow" },
+      { goal: "Act one. Bramble needs light. Give Sir Pip the lantern.", check: "hold:lantern", hint: "takeLantern" },
+      { goal: "Act two. Catch five fireflies with the lantern.", task: { type: "collect", count: 5, look: "firefly", needs: "lantern" }, hint: "collect" },
+      { goal: "Act three. Learn Bramble's spell. Watch his moves, then copy them in order.", task: { type: "simon", length: 3 }, hint: "simon" },
     ],
   },
   {
     id: "ship", set: "ship", guest: "pirate", title: "The Pirate Ship", map: [960, 790],
-    intro: "Chapter three: The Pirate Ship. Captain Pegg is looking for a brave knight to duel.",
+    intro: "Chapter three: The Pirate Ship.",
+    pages: [
+      "At the edge of the kingdom, a pirate ship rocked on the waves.",
+      "Its captain had one wooden leg, one noisy parrot, and one great wish: a worthy duel.",
+      "He had heard of a brave little knight. And he was waiting, sword in hand.",
+    ],
     acts: [
       { goal: "Act one. Arm Sir Pip with the sword.", check: "hold:sword", hint: "takeSword" },
-      { goal: "Act two. Duel! Jump to dodge the captain's swing.", check: "jump", hint: "jump" },
-      { goal: "Act three. Spin around to win the duel.", check: "turn", hint: "turn" },
+      { goal: "Act two. Duel! Duck the high swings, jump the low ones, then lunge to strike.", task: { type: "duel", hits: 3 }, hint: "duck" },
+      { goal: "Act three. The captain surrenders! Take a bow, champion.", check: "bow", hint: "bow" },
     ],
   },
   {
     id: "bridge", set: "bridge", guest: "troll", title: "The Troll Bridge", map: [1190, 450],
-    intro: "Chapter four: The Troll Bridge. By moonlight, a grumpy troll called Grumble guards the way.",
+    intro: "Chapter four: The Troll Bridge.",
+    pages: [
+      "By moonlight, the road crossed a river at an old stone bridge.",
+      "Under it lived Grumble, the grumpiest troll in all the land.",
+      "And nobody, nobody at all, crosses Grumble's bridge without answering his riddle.",
+    ],
     acts: [
       { goal: "Act one. Walk up to the troll. Carefully.", check: "approach", hint: "walk" },
-      { goal: "Act two. Grumble is grumpy. Give him the flower.", check: "give:flower", hint: "give" },
-      { goal: "Act three. Wave to your new friend.", check: "wave", hint: "wave" },
+      { goal: "Act two. Answer the riddle. Walk Sir Pip onto the right stone.", task: { type: "riddle" }, hint: "stone" },
+      { goal: "Act three. Grumble is still grumpy. Give him the flower.", check: "give:flower", hint: "give" },
+    ],
+  },
+  {
+    id: "tower", set: "tower", guest: "clank", title: "The Clockwork Tower", map: [1450, 560], princess: true,
+    intro: "Chapter five: The Clockwork Tower.",
+    pages: [
+      "Far away stood the Clockwork Tower, ticking and whirring all night long.",
+      "Inside, an evil robot called Clank had locked Princess Juniper in a cage.",
+      "Only a knight brave enough to sneak past Clank's searchlight could set her free.",
+    ],
+    acts: [
+      { goal: "Act one. Sneak to the key. Move only when the searchlight looks away.", task: { type: "sneak" }, hint: "sneak" },
+      { goal: "Act two. Take the key, and unlock the princess's cage.", task: { type: "unlock" }, hint: "takeKey" },
+      { goal: "Act three. Clank attacks! Jump over his zaps until he overheats.", task: { type: "dodge", count: 3 }, hint: "dodge" },
     ],
   },
   {
     id: "cave", set: "cave", guest: "marlo", title: "The Dragon's Cave", map: [1400, 225],
-    intro: "Chapter five: The Dragon's Cave. At the end of the road, a dragon waits in the dark.",
+    intro: "Chapter six: The Dragon's Cave.",
+    pages: [
+      "At last, the road wound up into the mountains, to a cave full of glittering crystals.",
+      "It was Marlo's home, and Marlo had a problem. His three treasure gems were missing.",
+      "Our hero had one adventure left. And then, the biggest bow of all.",
+    ],
     acts: [
       { goal: "Act one. It's dark in here. Give Sir Pip the lantern.", check: "hold:lantern", hint: "takeLantern" },
-      { goal: "Act two. Find Marlo in the cave.", check: "approach", hint: "walk" },
+      { goal: "Act two. Find Marlo's three lost gems.", task: { type: "collect", count: 3, look: "gem" }, hint: "collect" },
       { goal: "Act three. Take a final bow together.", check: "bow", hint: "bow" },
     ],
   },
 ];
+
+// what the narrator says while a task plays out
+export const TASK_LINES = {
+  caught: "Caught! Back to the shadows.",
+  gotKey: "The key! Now, to the cage.",
+  freed: "The cage swings open. The princess is free!",
+  duck: "Duck!",
+  jumpNow: "Jump!",
+  strike: "Strike now!",
+  hit: "A hit!",
+  ouch: "Ouch!",
+  again: "Shake it off. Again!",
+  correct: "Correct!",
+  wrong: "Wrong! Try again.",
+  collected: "All found. Wonderful!",
+  needLantern: "The fireflies only come to the lantern.",
+  watch: "Watch carefully.",
+  yourTurn: "Your turn. Same moves, same order.",
+  notQuite: "Not quite. Watch again.",
+  dodged: "Dodged!",
+  zapped: "Zapped! Keep jumping.",
+  overheat: "Clank is overheating!",
+};
+export const RIDDLES = [
+  { line: "Grumble's riddle. What gets wetter, the more it dries? A towel, a fish, or a rain cloud?", options: ["A towel", "A fish", "A rain cloud"], answer: 0 },
+  { line: "Grumble's riddle. What has to be broken before you can use it? A sword, an egg, or a bridge?", options: ["A sword", "An egg", "A bridge"], answer: 1 },
+  { line: "Grumble's riddle. What has keys, but can't open a single lock? A door, a troll, or a piano?", options: ["A door", "A troll", "A piano"], answer: 2 },
+];
+
 // the Grand Theatre: once the first chapter is done, a new show every night
 export const THEATRE = { id: "theatre", set: "courtyard", guest: "marlo", title: "The Grand Theatre", map: [330, 250] };
 export const STORY_LINES = {
@@ -387,9 +495,12 @@ export function allLines() {
   Object.values(MARLO_TALK).forEach((l) => say(l, "marlo"));
   Object.values(MARLO_SAYS).forEach((l) => say(l, "marlo"));
   Object.values(ENDINGS).forEach((e) => say(e.line));
-  for (const ch of CHAPTERS) { say(ch.intro); ch.acts.forEach((a) => say(a.goal)); }
+  for (const ch of CHAPTERS) { say(ch.intro); ch.acts.forEach((a) => say(a.goal)); ch.pages.forEach((l) => say(l)); }
+  Object.values(TASK_LINES).forEach((l) => say(l));
+  RIDDLES.forEach((r) => say(r.line, "troll"));
   Object.values(STORY_LINES).forEach((l) => say(l));
   for (const [key, g] of Object.entries(GUESTS)) {
+    Object.values(g.task || {}).forEach((l) => say(l, key));
     if (key === "marlo") continue;
     Object.values(g.says).forEach((l) => say(l, key));
     Object.values(g.talk).forEach((l) => say(l, key));

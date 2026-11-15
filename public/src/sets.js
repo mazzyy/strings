@@ -75,6 +75,21 @@ const PAINT = {
     g.fillStyle = "#121a35"; g.fillRect(0, 280, w, h - 280);
     g.fillStyle = "rgba(140,170,230,0.35)"; g.fillRect(0, 300, w, 12);
   },
+  tower(g, w, h) {
+    sky(g, w, h, "#2a2430", "#4a3a34");
+    // stone blocks
+    g.strokeStyle = "rgba(20,15,15,0.5)"; g.lineWidth = 3;
+    for (let y = 0; y < h; y += 34) for (let x = (y / 34) % 2 ? -40 : 0; x < w; x += 80) { g.fillStyle = `rgba(${90 + ((x * 7 + y) % 30)},${80 + ((x * 3 + y) % 20)},${78 + ((x + y * 3) % 20)},1)`; g.fillRect(x, y, 80, 34); g.strokeRect(x, y, 80, 34); }
+    // a tall arched window with a stormy sky and lightning
+    g.fillStyle = "#141a30"; g.beginPath(); g.moveTo(440, 300); g.lineTo(440, 120); g.arc(512, 120, 72, Math.PI, 0); g.lineTo(584, 300); g.fill();
+    g.strokeStyle = "#e8e0ff"; g.lineWidth = 4; g.beginPath(); g.moveTo(530, 70); g.lineTo(500, 140); g.lineTo(522, 140); g.lineTo(490, 230); g.stroke();
+    g.strokeStyle = "#3a2a20"; g.lineWidth = 8; g.beginPath(); g.moveTo(512, 48); g.lineTo(512, 300); g.moveTo(440, 170); g.lineTo(584, 170); g.stroke();
+    // brass gears on the wall
+    const gear = (cx, cy, r, teeth, col) => { g.fillStyle = col; g.beginPath(); for (let i = 0; i < teeth * 2; i++) { const a = (i / (teeth * 2)) * Math.PI * 2, rr = i % 2 ? r : r * 1.18; g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.fill(); g.fillStyle = "#3a2a20"; g.beginPath(); g.arc(cx, cy, r * 0.3, 0, Math.PI * 2); g.fill(); };
+    gear(150, 120, 60, 12, "#a07a38"); gear(250, 200, 40, 9, "#8a6a30"); gear(850, 110, 70, 14, "#a07a38"); gear(930, 240, 36, 8, "#8a6a30");
+    // pipes
+    g.strokeStyle = "#6a5a4a"; g.lineWidth = 14; g.beginPath(); g.moveTo(0, 300); g.lineTo(330, 300); g.lineTo(330, 40); g.moveTo(1024, 320); g.lineTo(700, 320); g.lineTo(700, 30); g.stroke();
+  },
   cave(g, w, h) {
     sky(g, w, h, "#120d1a", "#2a1f2e");
     const r = rnd(5);
@@ -188,6 +203,48 @@ const PIECES = {
   },
 };
 
+PIECES.tower = (g, anims) => {
+  const iron = std({ color: 0x3a3e46, metalness: 0.8, roughness: 0.4 }), brass = std({ color: 0xb8893a, metalness: 1, roughness: 0.35 }), stone = std({ color: 0x6a6460, roughness: 0.9 });
+  // the cage, with Princess Juniper inside (right, upstage)
+  const cage = new THREE.Vector3(0.3, 0, -0.12);
+  piece(g, new THREE.CylinderGeometry(0.06, 0.064, 0.012, 20), iron, cage.x, 0.006, cage.z);
+  piece(g, new THREE.CylinderGeometry(0.062, 0.062, 0.01, 20), iron, cage.x, 0.255, cage.z);
+  piece(g, new THREE.ConeGeometry(0.064, 0.03, 20), brass, cage.x, 0.275, cage.z);
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    if (Math.cos(a) > 0.55) continue; // the door's gap faces the audience-left
+    piece(g, new THREE.CylinderGeometry(0.0018, 0.0018, 0.245, 6), iron, cage.x + Math.sin(a) * 0.058, 0.13, cage.z + Math.cos(a) * 0.058).castShadow = false;
+  }
+  // the door: three bars on a hinge, swung open when unlocked
+  const door = new THREE.Group();
+  door.position.set(cage.x + Math.sin(-0.99) * 0.058, 0, cage.z + Math.cos(-0.99) * 0.058);
+  for (let i = 0; i < 5; i++) {
+    const a = -0.99 + (i + 1) * 0.33;
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.0019, 0.0019, 0.245, 6), brass);
+    bar.position.set(cage.x + Math.sin(a) * 0.058 - door.position.x, 0.13, cage.z + Math.cos(a) * 0.058 - door.position.z);
+    door.add(bar);
+  }
+  const lock = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.016, 0.008), brass);
+  lock.position.set(cage.x + Math.sin(0.82) * 0.06 - door.position.x, 0.12, cage.z + Math.cos(0.82) * 0.06 - door.position.z);
+  door.add(lock);
+  g.add(door);
+  // the key's pedestal (right, downstage) and a gear on the floor
+  const pedestal = new THREE.Vector3(0.34, 0, 0.03);
+  piece(g, new THREE.CylinderGeometry(0.016, 0.02, 0.03, 12), stone, pedestal.x, 0.015, pedestal.z);
+  piece(g, new THREE.CylinderGeometry(0.02, 0.02, 0.004, 12), brass, pedestal.x, 0.032, pedestal.z);
+  const gear = new THREE.Group();
+  gear.add(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.006, 16), brass));
+  for (let i = 0; i < 10; i++) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.006, 0.008), brass); const a = (i / 10) * Math.PI * 2; t.position.set(Math.cos(a) * 0.033, 0, Math.sin(a) * 0.033); t.rotation.y = -a; gear.add(t); }
+  gear.position.set(-0.36, 0.003, -0.1);
+  g.add(gear);
+  mergeStatic(gear);
+  anims.push((t) => { gear.rotation.y = t * 0.5; });
+  let open = 0, target = 0;
+  anims.push((t, dt) => { open += (target - open) * Math.min(1, (dt || 0.016) * 3); door.rotation.y = -open * 1.9; });
+  g.userData.refs = { cage, pedestal, openCage: () => { target = 1; }, closeCage: () => { target = 0; open = 0; door.rotation.y = 0; } };
+  return [door, gear];
+};
+
 // lighting for each set: spot colour and how dark it is (0 day .. 1 night)
 export const SET_LIGHT = {
   courtyard: { spot: 0xffe6c4, night: 0 },
@@ -195,6 +252,7 @@ export const SET_LIGHT = {
   ship: { spot: 0xfff2dc, night: 0 },
   bridge: { spot: 0xa8c0ff, night: 0.72 },
   cave: { spot: 0xc0b0ff, night: 0.82 },
+  tower: { spot: 0xffc8a0, night: 0.5 },
 };
 
 export class Sets {
@@ -219,10 +277,12 @@ export class Sets {
     mergeStatic(g, [back, ...animated]);
     g.visible = false;
     this.root.add(g);
-    const set = { group: g, anims };
+    const set = { group: g, anims, refs: g.userData.refs || null };
     this.sets.set(name, set);
     return set;
   }
+
+  refs(name) { return (this.sets.get(name) || this._build(name)).refs; }
 
   show(name) {
     if (!PAINT[name]) name = "courtyard";
@@ -236,6 +296,9 @@ export class Sets {
   update(dt) {
     this.t += dt;
     const s = this.sets.get(this.current);
-    if (s) for (const fn of s.anims) fn(this.t);
+    if (s) for (const fn of s.anims) fn(this.t, dt);
   }
 }
+
+// the storybook draws its illustrations from the same painted backdrops
+export function paintBackdrop(name, g, w, h) { (PAINT[name] || PAINT.courtyard)(g, w, h); }

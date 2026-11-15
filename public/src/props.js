@@ -69,11 +69,25 @@ function buildFlower() {
   return g;
 }
 
+function buildKey() {
+  const g = new THREE.Group();
+  const gold = new THREE.MeshStandardMaterial({ color: 0xe8c060, metalness: 1, roughness: 0.25, emissive: 0x553300, emissiveIntensity: 0.5 });
+  const bow = new THREE.Mesh(new THREE.TorusGeometry(0.008, 0.0022, 8, 18), gold);
+  bow.position.y = 0.03;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0016, 0.03, 8), gold);
+  shaft.position.y = 0.01;
+  const t1 = new THREE.Mesh(new THREE.BoxGeometry(0.007, 0.003, 0.002), gold); t1.position.set(0.004, -0.002, 0);
+  const t2 = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.003, 0.002), gold); t2.position.set(0.003, 0.004, 0);
+  g.add(bow, shaft, t1, t2);
+  return g;
+}
+
 // how each prop sits in a puppet's hand (relative to the hand + upper-body frame)
 const HOLD = {
   sword: { off: [0, -0.004, 0.006], rot: new THREE.Euler(-1.15, 0, 0) },
   lantern: { off: [0, -0.008, 0.004], upright: true },
   flower: { off: [0, -0.01, 0.006], rot: new THREE.Euler(-0.5, 0, 0) },
+  key: { off: [0, -0.012, 0.006], rot: new THREE.Euler(-0.3, 0, 0) },
 };
 
 export class Props {
@@ -114,13 +128,31 @@ export class Props {
       ["sword", make("sword", buildSword(), [-0.032, 0.009, 0], new THREE.Euler(0, 0.3, Math.PI / 2))],
       ["lantern", make("lantern", buildLantern(), [0.002, 0.034, 0])],
       ["flower", make("flower", buildFlower(), [0.034, 0.004, 0], new THREE.Euler(0, 0, -Math.PI / 2 + 0.15))],
+      ["key", make("key", buildKey(), [0, 0, 0])],
     ]);
+    // the key only exists in the Clockwork Tower; it rests on Clank's pedestal
+    this.setAvailable("key", false);
+    this.targets = []; // other things a prop can be used on: [{ name, pos, r }]
   }
 
   get(name) { return this.items.get(name); }
+  // show or hide a prop (and where it lives when it's put back)
+  setAvailable(name, on, home = null) {
+    const it = this.items.get(name);
+    if (!it) return;
+    it.off = !on;
+    it.mesh.visible = on;
+    if (home) { it.home.copy(home); }
+    if (on || home) { it.state = "rest"; it.hand = null; it.mesh.position.copy(it.home); it.mesh.quaternion.copy(it.homeQ); }
+  }
+  _target(p) { return this.targets.find((t) => p.distanceTo(t.pos) < t.r) || null; }
+  _use(it, target) {
+    this.onEvent({ type: "use", prop: it.name, target: target.name });
+    if (target.consume) { it.state = "rest"; it.off = true; it.mesh.visible = false; }
+  }
   position(name) { return this.items.get(name)?.mesh.position.clone(); }
-  heldBy(who) { for (const it of this.items.values()) if (it.state === who) return it.name; return null; }
-  meshes() { return [...this.items.values()].map((it) => it.mesh); }
+  heldBy(who) { for (const it of this.items.values()) if (it.state === who && !it.off) return it.name; return null; }
+  meshes() { return [...this.items.values()].filter((it) => !it.off).map((it) => it.mesh); }
 
   setNight(on) {
     const l = this.items.get("lantern").mesh.userData;
@@ -143,7 +175,7 @@ export class Props {
 
   // Marlo's fetch: a prop that's sitting on the rack
   restingItem() {
-    const free = [...this.items.values()].filter((it) => it.state === "rest");
+    const free = [...this.items.values()].filter((it) => it.state === "rest" && !it.off);
     return free.length ? free[Math.floor(Math.random() * free.length)].name : null;
   }
   // move a prop programmatically: to "pip", "marlo" or back to the "rack"
@@ -168,7 +200,7 @@ export class Props {
   tryGrab(hand) {
     let best = null, bestD = 0.085; // generous: closing the fingers shifts the pinch point
     for (const it of this.items.values()) {
-      if (it.state === "hand") continue;
+      if (it.state === "hand" || it.off) continue;
       const d = it.mesh.position.distanceTo(hand.position);
       if (d < bestD) { bestD = d; best = it; }
     }
@@ -191,6 +223,8 @@ export class Props {
     if (!it) return;
     const p = it.mesh.position;
     const near = (pt, r) => p.distanceTo(pt) < r;
+    const target = this._target(p);
+    if (target) { this._use(it, target); return; }
     if (near(this.pip.get("rW"), 0.07) || near(this.pip.get("lW"), 0.07)) this._give(it, "pip");
     else if (near(this.marlo.get("chest"), 0.1) || near(this.marlo.get("rW"), 0.07) || near(this.marlo.get("lW"), 0.07)) this._give(it, "marlo");
     else this._home(it);
@@ -199,14 +233,23 @@ export class Props {
   // ---- desktop -------------------------------------------------------------------
   // what's under the mouse: a prop, the guest (when Sir Pip has something to give), or nothing
   pickAt(raycaster) {
+    // holding something that can be used on a target (the key → the cage)? the target wins,
+    // even if a prop on the rack happens to sit in front of it
+    const held = this.heldBy("pip");
+    if (held && this.targets.length) {
+      const lr = raycaster.ray.clone().applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert());
+      for (const tg of this.targets) if (lr.distanceToPoint(tg.pos) < tg.r) return { target: tg };
+    }
     const hits = raycaster.intersectObjects(this.meshes(), true);
     if (hits.length) {
       const obj = hits[0].object;
       const it = [...this.items.values()].find((i) => { let o = obj; while (o) { if (o === i.mesh) return true; o = o.parent; } return false; });
       if (it && (it.state === "rest" || it.state === "return" || it.state === "pip")) return { prop: it };
     }
-    // the guest: anywhere near their body counts
     const local = raycaster.ray.clone().applyMatrix4(new THREE.Matrix4().copy(this.root.matrixWorld).invert());
+    // a use-target (the cage) when Sir Pip holds something
+    for (const tg of this.targets) if (local.distanceToPoint(tg.pos) < tg.r) return { target: tg };
+    // the guest: anywhere near their body counts
     const chest = this.marlo.get("chest");
     if (local.distanceToPoint(chest) < 0.06 || local.distanceToPoint(this.marlo.get("head")) < 0.05) return { guest: true };
     return null;
@@ -217,6 +260,12 @@ export class Props {
   click(raycaster) {
     const target = this.pickAt(raycaster);
     if (!target) return false;
+    if (target.target) {
+      const held = this.heldBy("pip");
+      if (!held) return false;
+      this._use(this.items.get(held), target.target);
+      return true;
+    }
     const it = target.prop;
     if (it) {
       if (it.state === "rest" || it.state === "return") this._give(it, "pip");

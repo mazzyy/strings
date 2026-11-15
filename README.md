@@ -5,16 +5,19 @@ A marionette theatre on your desk, with an AI co-performer. You pinch a glowing 
 In passthrough AR you set the stage down on your real desk.
 
 **What you can do**
-- **The Tale of Sir Pip (story mode):** a storybook map with five chapters, each on its own stage set with its own guest marionette.
-  - **Chapters:**
-    1. The Castle Courtyard, with Marlo the dragon.
-    2. The Whispering Forest, with Old Bramble the wizard.
-    3. The Pirate Ship, with Captain Pegg, his parrot and his peg leg.
-    4. The Troll Bridge by moonlight, with Grumble the troll.
-    5. The Dragon's Cave, back with Marlo.
-  - **Characters:** every guest has their own recorded voice, lines and personality. The wizard is a patient teacher, the pirate loves a duel, and the troll is grumpy until you give him a flower.
-  - **Travelling:** finishing a chapter unlocks the next. On the map, a shield token walks the road while the view pans; then the curtain falls, the set changes and the next guest takes the stage. The Grand Theatre has a new show every night.
-  - **On Quest:** the map floats beside the stage and you poke it.
+- **The Tale of Sir Pip (story mode):** six chapters on a storybook map, each on its own stage set, with its own guest and its own gameplay.
+  - **Before every chapter,** an illustrated storybook opens and the narrator reads three pages that set up the story.
+  - **The chapters:**
+    1. **The Castle Courtyard** (Marlo the dragon): the tutorial. Walk, bow, wave.
+    2. **The Whispering Forest** (Old Bramble the wizard): catch five escaped fireflies with the lantern, then learn his spell by repeating his moves in order.
+    3. **The Pirate Ship** (Captain Pegg): a sword fight. Duck his high swings, jump his low ones, then lunge to strike. Three hits wins.
+    4. **The Troll Bridge** (Grumble): answer his riddle by walking onto the right stone, then win him over with a flower.
+    5. **The Clockwork Tower** (Clank the evil robot, and Princess Juniper in a cage): sneak past the sweeping searchlight to the key, unlock her cage, then jump Clank's zaps until he overheats.
+    6. **The Dragon's Cave** (Marlo): find his three lost gems in the dark, then take the final bow.
+  - **Characters:** every character has their own recorded voice, lines and personality.
+  - **Travelling:** finishing a chapter unlocks the next. On the map, a shield token walks the road while the view pans, then the curtain falls and the set changes.
+  - **The Grand Theatre** has a new show every night.
+  - **On Quest:** the map and the storybook float beside the stage, and you poke them.
 - **Easy prop picking:** props have generous invisible hit areas. Hovering lifts the prop, shows a pointer, and a tooltip says what a click will do.
 - **A curtain you raise yourself:** the stage starts dark with a glowing gold cord. Pinch it and pull down, and the curtain opens. Your first action teaches the pinch-and-pull you'll use all show.
 - **Marlo has a mind of his own** (fully offline, so it works on the hosted link): his mood (joy, trust, energy) shifts with what you do, and he remembers it. A third fall earns a giggle instead of help. A sword he doesn't trust yet makes him back away. Leave him alone too long and he sulks until you come over. When the stage goes quiet he acts on his own: he challenges you to copy his moves, fetches a prop for the knight, or dozes off. If you're stuck in a scene, he shows you what to do. Emote bubbles (♥ ! ? ★ z) make his mood readable at a glance.
@@ -114,6 +117,8 @@ The narrator speaks with Kokoro, a natural neural voice (see [CREDITS.md](CREDIT
 - **`public/src/skins.js`, `robot.js`, `stage.js`**: everything visual, built procedurally. Physically based materials are lit by a CC0 HDRI. Static parts are merged into a few draw calls (`perf.js`) to hold Quest frame rates.
 - **`public/src/puppet.js`**: Pip is a Verlet ragdoll (16 particles, rigid sticks, a soft waist). The strings are rope constraints back to two control bars. Letting go pays the strings out, so Pip slumps. Two small "assists" make crude input read well: moving the bar sideways alternately shortens the knee strings (a gait), and tipping the bar forward lets out the head strings (a bow).
 - **`public/src/input.js`**: Quest hand tracking (pinch = thumb–index gap, with hysteresis; controllers work as a fallback) and the desktop simulator. Both produce the same hand pose + pinch, so the grab logic is shared.
+- **`public/src/tasks.js`**: the playable acts (collect, simon, duel, riddle, sneak, unlock, dodge). Each reads Sir Pip's body and directs the guest's moves, and the show awards the star when the task is won.
+- **`public/src/storybook.js`**: the illustrated, narrated pages before each chapter (the set paintings plus storybook versions of the cast), as an overlay on desktop and a pokeable book in the headset.
 - **`public/src/cast.js`, `sets.js`, `storymap.js`**: the guest characters (procedural skins on the shared rig), the five stage sets (painted backdrops plus merged set pieces, built on first use), and the storybook map (one canvas used as an HTML overlay on desktop and as a pokeable texture in the headset).
 - **`public/src/mind.js`**: Marlo's mood, memory and initiative (copy-me challenges, fetching, sulking, napping, demonstrating). It decides his reaction to every action, and works with or without a language model.
 - **`public/src/batch.js`**: each puppet's ~60 moving parts become bones of one skinned mesh per material, so the GPU poses them in a handful of draw calls.
