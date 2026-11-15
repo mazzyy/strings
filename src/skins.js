@@ -491,7 +491,8 @@ export function dragonSkin(assets) {
         });
 
         // tail chain
-        const back = tmpB.copy(f.facing).multiplyScalar(-1);
+        // the tail trails behind; in horizontal flight "behind" is along the spine, not the facing
+        const back = Math.abs(f.up.y) < 0.6 ? tmpB.copy(f.up).multiplyScalar(-1).setY(0).normalize() : tmpB.copy(f.facing).multiplyScalar(-1);
         const base = P("pelvis").clone().addScaledVector(back, 0.025).add(new THREE.Vector3(0, -0.004, 0));
         const segLen = 0.018;
         for (let i = 0; i < N; i++) {

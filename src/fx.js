@@ -66,3 +66,45 @@ export class Confetti {
     this.points.material.opacity = Math.min(1, (this.life - this.t) / 0.8);
   }
 }
+
+// Magic sparkles: a swirl of gold and cyan motes spiralling up from a point (the
+// storyteller's hands) toward another (where the storybook appears).
+export class Sparkles {
+  constructor(parent, count = 220) {
+    this.n = count;
+    const geo = new THREE.BufferGeometry();
+    this.pos = new Float32Array(count * 3);
+    this.col = new Float32Array(count * 3);
+    this.seed = Array.from({ length: count }, () => [Math.random(), Math.random() * Math.PI * 2, 0.6 + Math.random() * 0.8]);
+    geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(this.col, 3));
+    const pal = [new THREE.Color(0xffd34a), new THREE.Color(0x7ff3ff), new THREE.Color(0xfff2b0), new THREE.Color(0xb9a2ff)];
+    for (let i = 0; i < count; i++) { const c = pal[i % 4]; this.col.set([c.r * 1.6, c.g * 1.6, c.b * 1.6], i * 3); }
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.012, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending }));
+    this.points.frustumCulled = false;
+    this.points.visible = false;
+    parent.add(this.points);
+    this.t = 0; this.fade = 0;
+  }
+  start(from, to) { this.from = from; this.to = to; this.t = 0; this.fade = 1; this.stopping = false; this.points.visible = true; }
+  stop() { this.stopping = true; }
+  update(dt) {
+    if (!this.points.visible) return;
+    this.t += dt;
+    if (this.stopping) { this.fade -= dt * 1.2; if (this.fade <= 0) { this.points.visible = false; return; } }
+    const a = this.from(), b = this.to();
+    for (let i = 0; i < this.n; i++) {
+      const [ph, ang, sp] = this.seed[i];
+      // each mote travels a helix from a to b, then starts over
+      const k = (ph + this.t * 0.22 * sp) % 1;
+      const r = 0.06 + Math.sin(k * Math.PI) * 0.12;
+      const w = ang + this.t * 2.4 * sp + k * 9;
+      const x = a.x + (b.x - a.x) * k + Math.cos(w) * r;
+      const y = a.y + (b.y - a.y) * k + Math.sin(k * Math.PI) * 0.12 + Math.sin(w) * r * 0.4;
+      const z = a.z + (b.z - a.z) * k + Math.sin(w) * r;
+      this.pos.set([x, y, z], i * 3);
+    }
+    this.points.geometry.attributes.position.needsUpdate = true;
+    this.points.material.opacity = Math.max(0, this.fade) * (0.75 + 0.25 * Math.sin(this.t * 6));
+  }
+}

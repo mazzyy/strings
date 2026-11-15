@@ -150,7 +150,7 @@ export class Robot {
     if (this.blink < -3 - Math.random() * 3) this.blink = 0.12;
     const lid = this.blink > 0 ? 0.15 : 1;
     this.talk = Math.max(0, this.talk - dt);
-    const glow = this.talk > 0 ? 1.6 + Math.abs(Math.sin(this.t * 11)) * 0.8 : 1.4;
+    const glow = (this.talk > 0 ? 1.6 + Math.abs(Math.sin(this.t * 11)) * 0.8 : 1.4) * (1 + (this.excite || 0) * 0.9);
     this.eyeMat.color.setRGB(0.35 * glow, 0.95 * glow, 1.1 * glow);
     this.eyes.forEach((e) => (e.scale.y = 0.62 * lid));
     this.mouth.material = this.talk > 0 && Math.sin(this.t * 14) > 0 ? this.accentMat : this.mouthDark;

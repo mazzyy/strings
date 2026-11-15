@@ -56,6 +56,8 @@ const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 const tmpA = new THREE.Vector3();
 const tmpB = new THREE.Vector3();
 const tmpC = new THREE.Vector3();
+// flying: the body is posed (not simulated) — stretched out like a diving superhero
+const FLY = { q: new THREE.Quaternion(), e: new THREE.Euler(), v: new THREE.Vector3(), PIVOT: [0, 0.158, 0.014] };
 const FRAME_SCRATCH = { r: new THREE.Vector3(), u: new THREE.Vector3(), c: new THREE.Vector3(), a: new THREE.Vector3(), z: new THREE.Vector3(), m4: new THREE.Matrix4() };
 
 export class ControlBar {
@@ -145,6 +147,7 @@ export class Marionette {
       }
     }
 
+    this.flight = null;    // { center, yaw, pitch, roll }: posed in flight instead of hanging
     this.gravityScale = 1; // "moon gravity" mode
     this.fragile = false;  // "fragile strings" mode: a hard yank snaps a string
     this.onSnap = null;    // (stringName, position) => void
@@ -215,6 +218,7 @@ export class Marionette {
     }
     if (this._snapCool > 0) this._snapCool -= dt;
 
+    if (this.flight) { this._fly(dt); this._render(dt); return; }
     this.acc += dt;
     while (this.acc >= STEP) {
       this._step(STEP);
@@ -276,6 +280,25 @@ export class Marionette {
       this._collide();
     }
     this._kneesForward();
+  }
+
+  // horizontal flight: rest pose rotated about the chest (pitch tips the head forward),
+  // blended in so take-off and landing are smooth; legs and arms flutter a little
+  _fly(dt) {
+    this._flyT = (this._flyT || 0) + dt;
+    const F = this.flight, P = FLY.PIVOT, t = this._flyT;
+    FLY.q.setFromEuler(FLY.e.set(F.pitch ?? 1.3, F.yaw ?? 0, F.roll || 0, "YXZ"));
+    const k = Math.min(1, dt * 10);
+    this.names.forEach((n, i) => {
+      const r = REST[n];
+      FLY.v.set(r[0] - P[0], r[1] - P[1], r[2] - P[2]);
+      if (n === "lF" || n === "lK") FLY.v.z += Math.sin(t * 6) * 0.008;
+      if (n === "rF" || n === "rK") FLY.v.z += Math.sin(t * 6 + Math.PI) * 0.008;
+      if (n === "lW" || n === "rW") FLY.v.z += 0.012 + Math.sin(t * 5 + i) * 0.004;
+      FLY.v.applyQuaternion(FLY.q).add(F.center);
+      this.pos[i].lerp(FLY.v, k);
+      this.prev[i].copy(this.pos[i]);
+    });
   }
 
   _solveStick(s) {

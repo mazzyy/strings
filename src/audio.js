@@ -151,6 +151,17 @@ function makeBuffers(ctx) {
     for (let i = 0; i < n; i++) { const t = i / SR; ph += (2 * Math.PI * (1400 * Math.exp(-t * 5) + 200)) / SR; d[i] = (Math.sin(ph) * 0.6 + noise() * 0.4 * Math.exp(-t * 8)) * Math.exp(-t * 4); }
     normalize(d, 0.5);
   });
+  // a page turning: a soft paper swish with a little crackle at the end
+  B.page = buffer(ctx, 0.55, (d, n) => {
+    for (let i = 0; i < n; i++) {
+      const t = i / SR, k = t / 0.55;
+      const env = Math.min(1, t * 18) * Math.pow(1 - k, 1.6);
+      d[i] = noise() * env * (0.55 + 0.45 * Math.sin(k * Math.PI * 3)) + (k > 0.7 && Math.random() < 0.004 ? noise() * 0.8 : 0);
+    }
+    lowpass(d, 0.22);
+    highpass(d, 0.9);
+    normalize(d, 0.5);
+  });
   return B;
 }
 

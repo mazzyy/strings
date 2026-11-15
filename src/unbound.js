@@ -58,9 +58,14 @@ export class Unbound {
   }
 
   _steer(target, yaw, dt, k = 5) {
-    const bar = this.m.main;
+    const bar = this.m.main, m = this.m;
     bar.position.lerp(target, Math.min(1, dt * k));
     bar.quaternion.slerp(this._q.setFromEuler(this._e.set(0.1, yaw, Math.sin(this.t * 2) * 0.08, "YXZ")), Math.min(1, dt * 4));
+    // flying flat, superhero-style; standing up only once he's on your palm
+    if (this.state === "perch" && this.t > 0.6) { m.flight = null; return; }
+    const f = m.flight || (m.flight = { center: new THREE.Vector3() });
+    f.center.copy(bar.position); f.center.y -= BODY_BELOW_BAR;
+    f.yaw = yaw; f.pitch = 1.3; f.roll = Math.sin(this.t * 1.7) * 0.15;
   }
 
   // where to loop: around your head in a headset; in front of the stage on desktop
@@ -148,6 +153,7 @@ export class Unbound {
     m.main.position.copy(this.home);
     m.main.quaternion.copy(this.homeQ);
     m.bounds = this.savedBounds;
+    m.flight = null;
     m.stringLines.visible = true;
     if (m.skin.bars) m.skin.bars.visible = true;
     m.flapBoost = 0;
