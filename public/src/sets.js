@@ -156,6 +156,12 @@ const PIECES = {
       piece(g, new THREE.SphereGeometry(0.013 * s, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), cap, x, 0.02 * s, z);
       for (let k = 0; k < 4; k++) piece(g, new THREE.SphereGeometry(0.0022 * s, 6, 4), dot, x + Math.cos(k * 1.6) * 0.007 * s, 0.03 * s, z + Math.sin(k * 1.6) * 0.007 * s);
     }
+    // glowing toadstools: little pools of blue light in the dark wood
+    const glowCap = std({ color: 0x7ad8ff, emissive: 0x2a9cff, emissiveIntensity: 1.3, roughness: 0.5 }), glowStem = std({ color: 0xcfe8f0, emissive: 0x2a6a90, emissiveIntensity: 0.4, roughness: 0.8 });
+    for (const [x, z, s] of [[-0.4, 0.1, 0.8], [-0.36, 0.14, 0.55], [0.4, 0.12, 0.9], [0.31, 0.15, 0.6], [-0.22, -0.16, 0.7], [0.14, -0.17, 0.65], [0.05, -0.16, 0.5]]) {
+      piece(g, new THREE.CylinderGeometry(0.0035 * s, 0.0045 * s, 0.02 * s, 8), glowStem, x, 0.01 * s, z);
+      piece(g, new THREE.SphereGeometry(0.011 * s, 12, 7, 0, Math.PI * 2, 0, Math.PI / 2), glowCap, x, 0.019 * s, z);
+    }
     // fireflies drifting over the stage
     const n = 36, geo = new THREE.BufferGeometry(), pos = new Float32Array(n * 3), seeds = [];
     for (let i = 0; i < n; i++) seeds.push([Math.random() * 6, (Math.random() - 0.5) * 0.7, 0.05 + Math.random() * 0.2, (Math.random() - 0.5) * 0.3]);
@@ -284,7 +290,7 @@ PIECES.tower = (g, anims) => {
 // lighting for each set: spot colour and how dark it is (0 day .. 1 night)
 export const SET_LIGHT = {
   courtyard: { spot: 0xffe6c4, night: 0 },
-  forest: { spot: 0xd8ffd0, night: 0.35 },
+  forest: { spot: 0xc8e8ff, night: 0.72 }, // dark, until Bramble's spell makes it bloom
   ship: { spot: 0xfff2dc, night: 0 },
   bridge: { spot: 0xa8c0ff, night: 0.72 },
   cave: { spot: 0xc0b0ff, night: 0.82 },

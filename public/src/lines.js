@@ -113,6 +113,10 @@ export const COACH = {
   hintFlyDodge: "Move up or down to dodge the gears as they fly at you.",
   hintChase: "Fly right up to Clank to catch him.",
   hintSimon: "Watch the moves, then do the same moves, in the same order.",
+  hintGentle: "Walk Sir Pip toward Marlo slowly and gently. Rush, and he'll hide.",
+  hintHighFive: "Walk up to Marlo, and lift Sir Pip's arm to meet his paw.",
+  hintTogether: "When Marlo says jump, jump at the very same moment.",
+  hintOwl: "Listen for the owl's hoot, and walk Sir Pip under the owl that called.",
   hintDuck: "When he swings high, tip your wrist forward to duck. When he swings low, jump!",
   hintStrike: "Now move Sir Pip quickly toward him to strike.",
   hintStone: "Walk Sir Pip onto the stone with the right answer, and stay there a moment.",
@@ -270,13 +274,13 @@ export const MARLO_TALK = {
 export const GUESTS = {
   marlo: {
     name: "Marlo", title: "Marlo the dragon", says: MARLO_SAYS, talk: MARLO_TALK,
-    task: { gems: "The jewels! The music box can play again!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had.", mount: "Hold on tight, Sir Pip!", fly: "Woo-hoo! We're flying!", spot: "There he is! After him!", finale: "Best adventure ever!", free: "I'm free! Wheeee!", warm: "Your hand is so warm!", home: "Back to my strings. See you at the next show!" },
+    task: { showOff: "Watch this, Sir Pip! A loop the loop!", shy: "Oh! Um. Hello. I'm a little shy with new knights.", peek: "Is it safe? Come closer. But slowly.", notShy: "You're gentle. I like you!", highFive: "Give me a high five, Sir Pip!", highFived: "Ha! Best high fives in the whole kingdom!", together: "Let's jump together! On my count!", missJump: "Almost! Jump right when I say jump.", fireworks: "Fireworks! We did it together!", gems: "The jewels! The music box can play again!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had.", mount: "Hold on tight, Sir Pip!", fly: "Woo-hoo! We're flying!", spot: "There he is! After him!", finale: "Best adventure ever!", free: "I'm free! Wheeee!", warm: "Your hand is so warm!", home: "Back to my strings. See you at the next show!" },
     personality: { joy: 0.55, trust: 0.45, energy: 0.85, sword: "wary", sulkAfter: 40, patience: 9 },
   },
   wizard: {
     name: "Bramble", title: "Old Bramble the wizard",
     personality: { joy: 0.6, trust: 0.75, energy: 0.5, sword: "wary", sulkAfter: 70, patience: 6 },
-    task: { watch: "Watch my spell carefully.", yourTurn: "Now you. Repeat my spell.", wrong: "Not quite. Watch again, young knight.", spellDone: "Splendid! The spell works! You have the gift!", fireflies: "My fireflies! Bless you, young knight!", finale: "Splendid! Simply splendid!" },
+    task: { watch: "Watch my spell carefully.", yourTurn: "Now you. Repeat my spell.", wrong: "Not quite. Watch again, young knight.", spellDone: "Splendid! The spell works! You have the gift!", fireflies: "My fireflies! Bless you, young knight!", owl: "My owls know the way. Listen for their call.", owlDone: "The path to the tower! Clever knight.", bloomed: "Look! The whole forest is awake again!", finale: "Splendid! Simply splendid!" },
     says: {
       copyMe: "Copy me, young knight!", yourTurn: "Now you try. Just as I did.", yay: "Splendid! Truly splendid!", yay2: "Ho! A natural!",
       aww: "Never mind. Magic takes practice.", careful: "Steady with that blade, young one.", forMe: "For me? How very kind.",
@@ -393,12 +397,14 @@ export const CHAPTERS = [
     pages: [
       "Every hero needs a friend for the road, and Sir Pip's was waiting in the castle courtyard.",
       "Marlo was a young dragon who breathed only sparkles, and loved nothing more than an adventure.",
-      "But first, a proper introduction. A knight must always mind his manners.",
+      "But young dragons can be shy, and a knight must always mind his manners.",
     ],
     acts: [
-      { goal: "Act one. Walk Sir Pip over to meet the dragon.", check: "approach", hint: "walk" },
+      { goal: "Act one. Here comes Marlo! Then walk Sir Pip over to meet him, slowly.", task: { type: "shy" }, hint: "gentle" },
       { goal: "Act two. Now bow to Marlo. Manners matter.", check: "bow", hint: "bow" },
-      { goal: "Act three. Wave to the audience.", check: "wave", hint: "wave" },
+      { goal: "Act three. Friends give high fives. Meet his paw.", task: { type: "highfive", count: 2 }, hint: "highfive" },
+      { goal: "Act four. Jump together, right on Marlo's count.", task: { type: "together", count: 3 }, hint: "together" },
+      { goal: "Act five. Take a bow, and wave to the audience.", check: "wave", hint: "wave" },
     ],
   },
   {
@@ -410,9 +416,10 @@ export const CHAPTERS = [
       "But his magic fireflies had escaped, and without their light, even a wizard gets lost.",
     ],
     acts: [
-      { goal: "Act one. Bramble needs light. Give Sir Pip the lantern.", check: "hold:lantern", hint: "takeLantern" },
-      { goal: "Act two. Catch five fireflies with the lantern.", task: { type: "collect", count: 5, look: "firefly", needs: "lantern" }, hint: "collect" },
-      { goal: "Act three. Learn Bramble's spell. Watch his moves, then copy them in order.", task: { type: "simon", length: 3 }, hint: "simon" },
+      { goal: "Act one. The forest is dark. Give Sir Pip the lantern.", check: "hold:lantern", hint: "takeLantern" },
+      { goal: "Act two. Catch five fireflies with the lantern. Gently, or they fly away.", task: { type: "collect", count: 5, look: "firefly", needs: "lantern", shy: true }, hint: "collect" },
+      { goal: "Act three. Bramble's owls know the way. Follow their calls.", task: { type: "owls", count: 3 }, hint: "owl" },
+      { goal: "Act four. Learn Bramble's spell. Watch his moves, then copy them in order.", task: { type: "simon", length: 3, bloom: true }, hint: "simon" },
     ],
   },
   {
@@ -537,6 +544,12 @@ export const TASK_LINES = {
   gearHit: "Ouch! Watch out for the gears!",
   gotClank: "Got him!",
   kneel: "Kneel, and bow to the King.",
+  tooFast: "Too fast! You frightened him. Slowly, now.",
+  scatter: "Gently! Fireflies scare easily.",
+  owlListen: "Listen. Walk Sir Pip under the owl that calls.",
+  owlFound: "That's the way!",
+  notThatOwl: "Not that one. Listen again.",
+  bloom: "And the whole forest bursts into bloom!",
   finale: "Three cheers for the whole company!",
 };
 export const RIDDLES = [

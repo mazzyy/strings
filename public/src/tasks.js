@@ -101,20 +101,29 @@ function collect(spec, c, done) {
     group.add(o);
     items.push({ o, home: p.clone(), seed: Math.random() * 6, got: false });
   }
-  let got = 0, t = 0, toldLantern = -99;
+  let got = 0, t = 0, toldLantern = -99, toldScatter = -99, speed = 0;
+  const speedOf = speedometer(c);
   return {
     debug: () => ({ got, items: items.filter((i) => !i.got).map((i) => i.o.position.toArray().map((x) => +x.toFixed(3))) }),
     target() { const left = items.filter((i) => !i.got); return left.length ? left.reduce((a, b) => (flat(b.o.position, c.pip.get("pelvis")) < flat(a.o.position, c.pip.get("pelvis")) ? b : a)).o.position.clone() : null; },
     update(dt) {
       t += dt;
+      speed = speedOf(dt);
       const b = body(c);
       const lantern = spec.needs === "lantern" ? (c.props.heldBy("pip") === "lantern" ? c.props.position("lantern") : null) : null;
       for (const it of items) {
         if (it.got) continue;
         // fireflies drift lazily; gems glint
-        if (!gem) it.o.position.set(it.home.x + Math.sin(t * 0.5 + it.seed) * 0.03, it.home.y + Math.sin(t * 1.3 + it.seed * 2) * 0.012, it.home.z + Math.cos(t * 0.4 + it.seed) * 0.025);
+        if (!gem) it.o.position.lerp(v.set(it.home.x + Math.sin(t * 0.5 + it.seed) * 0.03, it.home.y + Math.sin(t * 1.3 + it.seed * 2) * 0.012, it.home.z + Math.cos(t * 0.4 + it.seed) * 0.025), Math.min(1, dt * 3));
         else it.o.rotation.y = t * 1.5 + it.seed;
         const near = flat(it.o.position, b.pelvis) < (gem ? 0.06 : 0.065);
+        // shy fireflies: rush at them and they flit away to somewhere else
+        if (spec.shy && !gem && speed > 0.3 && Math.min(flat(it.o.position, b.pelvis), lantern ? lantern.distanceTo(it.o.position) : 9) < 0.15) {
+          it.home.set(rand(-0.32, 0.34), rand(0.075, 0.115), rand(-0.04, 0.06));
+          c.sfx("swish", it.o, { volume: 0.25, rate: 1.25 });
+          if (t - toldScatter > 8) { toldScatter = t; c.coach(TASK_LINES.scatter); }
+          continue;
+        }
         const reached = gem ? near : lantern && lantern.distanceTo(it.o.position) < 0.07;
         if (reached) {
           it.got = true;
@@ -173,7 +182,11 @@ function simon(spec, c, done) {
         lastGood = t;
         c.sfx("chime", null, { volume: 0.3, rate: 1.2 + idx * 0.12 });
         c.emote("pip", "✦", () => c.pip.get("head"), `${idx} / ${seq.length}`, 1.4);
-        if (idx === seq.length) { phase = "won"; c.guestSay("spellDone"); c.confetti("grace"); setTimeout(done, 1200); }
+        if (idx === seq.length) {
+          phase = "won"; c.guestSay("spellDone"); c.confetti("grace");
+          if (spec.bloom) { setTimeout(() => { c.bloom?.(); c.coach(TASK_LINES.bloom); }, 1400); setTimeout(() => c.guestSay("bloomed"), 5200); setTimeout(done, 7600); }
+          else setTimeout(done, 1200);
+        }
       } else {
         // leftovers right after a good move (landing from a jump, settling from a spin), or a
         // repeat of the move just made, are forgiven; only a clearly different move is a mistake
@@ -228,6 +241,7 @@ function duel(spec, c, done) {
         // the captain winds up a swing: high (duck!) or low (jump!)
         kind = Math.random() < 0.5 ? "high" : "low";
         c.ai.react("slash", { kind, impact: 1.15, force: true });
+        setTimeout(() => c.sfx("sword", g.group, { volume: 0.55, rate: 0.9 }), 700);
         c.emote("marlo", "!", () => g.get("head"), kind === "high" ? "HIGH — duck!" : "LOW — jump!", 1.6);
         c.guestSay(kind);
         c.showHint(kind === "high" ? "duck" : "jump");
@@ -245,7 +259,8 @@ function duel(spec, c, done) {
           } else {
             me--;
             c.knockPip(toFoe.clone().negate(), 0.02);
-            c.sfx("clink", c.pip.group, { volume: 0.7, rate: 0.8 });
+            c.sfx("sword", c.pip.group, { volume: 0.8 });
+            c.sfx("thud", c.pip.group, { volume: 0.6 });
             c.guestSay("gotYou");
             if (me <= 0) { me = 3; c.coach(TASK_LINES.again); } else c.coach(TASK_LINES.ouch);
             hearts();
@@ -259,8 +274,8 @@ function duel(spec, c, done) {
           c.hideHint();
           c.knockGuest(toFoe, contact ? 0.03 : 0.02);
           c.ai.react(foe <= 0 ? "knockout" : "stagger", { force: true });
-          c.sfx("clink", g.group, { volume: 0.9, rate: 1.3 });
-          c.sfx("pop", g.group, { volume: 0.5 });
+          c.sfx("sword", g.group, { volume: 0.9, rate: 1.1 });
+          c.sfx("hit", g.group, { volume: 0.6 });
           c.coach(TASK_LINES.hit);
           c.emote("pip", "✦", () => c.pip.get("head"), "Hit!", 1.2);
           hearts();
@@ -724,7 +739,206 @@ function knight(spec, c, done) {
   };
 }
 
-const TASKS = { collect, simon, duel, riddle, sneak, unlock, dodge, mount, rings, gears, chase, kindness, knight };
+
+// ---------------------------------------------------------------------------
+// Stage 1. Marlo shows off, crash-lands, and is suddenly shy: walk up gently, or he hides.
+function speedometer(c) {
+  const last = c.pip.get("pelvis").clone();
+  let speed = 0;
+  return (dt) => {
+    const p = c.pip.get("pelvis");
+    speed += (flat(p, last) / Math.max(dt, 1e-3) - speed) * Math.min(1, dt * 6);
+    last.copy(p);
+    return speed;
+  };
+}
+function shy(spec, c, done) {
+  const g = c.guest(), speedOf = speedometer(c);
+  let t = 0, phase = "show", calm = 0, speed = 0, hides = 0, landed = false;
+  c.guestSay("showOff");
+  c.ai.react("crashland", { force: true });
+  return {
+    debug: () => ({ phase, calm: +calm.toFixed(2), speed: +speed.toFixed(3), hides }),
+    target() { return g.get("chest").clone(); },
+    hint() { return "gentle"; },
+    update(dt) {
+      t += dt;
+      speed = speedOf(dt);
+      if (phase === "show") {
+        if (t > 1.4 && !landed) { landed = true; c.sfx("thud", g.group, { volume: 0.9 }); c.sfx("laugh", null, { volume: 0.3 }); c.emote("marlo", "✶", () => g.get("head"), "Oof!", 1.4); }
+        if (t > 3.8) { phase = "shy"; t = 0; c.guestSay("shy"); c.emote("marlo", "…", () => g.get("head"), "So shy...", 2.6); c.showHint("gentle"); }
+        return;
+      }
+      if (phase === "hiding") { if (t > 3) { phase = "shy"; t = 0; c.guestSay("peek"); c.emote("marlo", "?", () => g.get("head"), "Is it safe?", 2); } return; }
+      if (phase !== "shy") return;
+      const d = flat(c.pip.get("pelvis"), g.get("chest"));
+      if (d < 0.3 && speed > 0.26 && t > 0.6) {
+        // rushed at him: he hides
+        phase = "hiding"; t = 0; hides++; calm = 0;
+        c.ai.react("hide", { force: true });
+        c.sfx("chirp", g.group, { volume: 0.5, rate: 1.5 });
+        c.coach(TASK_LINES.tooFast);
+        c.emote("marlo", "!", () => g.get("head"), "Too fast!", 1.6);
+        return;
+      }
+      calm = d < 0.17 && speed < 0.15 ? calm + dt : Math.max(0, calm - dt * 0.5);
+      if (calm > 0.8) {
+        phase = "won"; c.hideHint();
+        c.guestSay("notShy");
+        c.ai.react("wave", { force: true });
+        c.emote("marlo", "♥", () => g.get("head"), "Friends!", 2);
+        setTimeout(done, 1600);
+      }
+    },
+    end() {},
+  };
+}
+
+// Stage 1. Marlo holds up a paw: walk over and raise Sir Pip's arm to meet it.
+function highfive(spec, c, done) {
+  const g = c.guest(), need = spec.count || 2;
+  let t = 0, phase = "ask", got = 0, wait = 0, lowered = true;
+  const ask = () => { phase = "ask"; t = 0; c.ai.react("paw", { force: true, dur: 40 }); c.emote("marlo", "✋", () => g.get("head"), "High five!", 2.2); };
+  const near = () => flat(c.pip.get("pelvis"), g.get("chest")) < 0.19;
+  const slap = () => {
+    got++; phase = "wait"; wait = 2.6;
+    c.ai.react("cheer", { force: true });
+    c.sfx("clack", g.group, { volume: 1, rate: 1.2 });
+    c.sfx("chime", null, { volume: 0.4, rate: 1.2 + got * 0.15 });
+    c.confetti("grace");
+    c.emote("pip", "✦", () => c.pip.get("head"), `High five! ${got} / ${need}`, 1.6);
+    if (got >= need) { phase = "won"; c.hideHint(); setTimeout(() => c.guestSay("highFived"), 700); setTimeout(done, 2000); }
+  };
+  c.guestSay("highFive");
+  ask();
+  return {
+    debug: () => ({ phase, got }),
+    target() { return g.get("chest").clone(); },
+    hint() { return "highfive"; },
+    update(dt) {
+      t += dt;
+      if (phase === "wait") { wait -= dt; if (wait <= 0) ask(); return; }
+      if (phase !== "ask") return;
+      if (!c.ai.busy && t > 1) ask(); // keep the paw up
+      const b = body(c);
+      if (b.hand < b.head - 0.03) lowered = true; // arm back down: ready for the next one
+      if (near() && lowered && b.hand > b.head - 0.005 && t > 0.6) { lowered = false; slap(); }
+    },
+    hear(ev) { if (phase === "ask" && ev.type === "wave" && near() && lowered && t > 0.6) { lowered = false; slap(); } },
+    end() {},
+  };
+}
+
+// Stage 1. Marlo counts three, two, one... and you both jump at the same moment. Fireworks!
+function together(spec, c, done) {
+  const g = c.guest(), need = spec.count || 3;
+  let phase = "count", t = 0, got = 0, shown = 0, lastJump = -9, clock = 0;
+  const count = () => { phase = "count"; t = 0; shown = 0; };
+  const firework = (i) => { c.confetti(["grace", "slapstick", "drama"][i % 3]); c.sfx("pop", null, { volume: 0.6, rate: 0.6 + (i % 3) * 0.25 }); };
+  c.guestSay("together");
+  count();
+  return {
+    debug: () => ({ phase, got }),
+    target() { return g.get("head").clone(); },
+    hint() { return "together"; },
+    update(dt) {
+      t += dt; clock += dt;
+      if (phase === "count") {
+        const beats = ["3", "2", "1"];
+        if (shown < 3 && t > 2 + shown) { c.emote("marlo", beats[shown], () => g.get("head"), null, 0.9); c.sfx("chime", null, { volume: 0.3, rate: 0.9 + shown * 0.15 }); shown++; }
+        else if (shown === 3 && t > 5) {
+          phase = "window"; t = 0; shown = 4;
+          c.ai.react("jump", { force: true });
+          c.emote("marlo", "↑", () => g.get("head"), "JUMP!", 1.2);
+          c.sfx("chime", null, { volume: 0.45, rate: 1.5 });
+        }
+      } else if (phase === "window") {
+        // a jump a moment before the word, or up to 1.4 s after it, counts
+        if (clock - lastJump < t + 0.5) {
+          got++;
+          firework(got);
+          c.emote("pip", "✦", () => c.pip.get("head"), `Together! ${got} / ${need}`, 1.6);
+          if (got >= need) {
+            phase = "won"; c.hideHint();
+            for (let i = 1; i < 5; i++) setTimeout(() => firework(i), i * 450);
+            c.sfx("cheer", null, { volume: 0.5 });
+            setTimeout(() => c.guestSay("fireworks"), 600);
+            setTimeout(done, 2600);
+          } else { phase = "rest"; t = 0; }
+        } else if (t > 1.4) { phase = "rest"; t = -0.8; c.guestSay("missJump"); }
+      } else if (phase === "rest" && t > 1.6) count();
+    },
+    hear(ev) { if (ev.type === "jump") lastJump = clock; },
+    end() {},
+  };
+}
+
+// Stage 2. Bramble's owls know the way: one hoots (listen: the sound comes from her
+// perch, and her eyes glow); walk Sir Pip under the owl that called.
+function owlMesh() {
+  const o = new THREE.Group();
+  const brown = new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.9 });
+  const bark = new THREE.MeshStandardMaterial({ color: 0x4a3220, roughness: 0.9 });
+  const eyeM = new THREE.MeshStandardMaterial({ color: 0xffe070, emissive: 0xffc040, emissiveIntensity: 0.25, toneMapped: false });
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.009, 0.2, 8), bark); post.position.y = 0.1;
+  const bodyM = new THREE.Mesh(new THREE.SphereGeometry(0.018, 14, 10), brown); bodyM.scale.set(1, 1.25, 0.9); bodyM.position.y = 0.222;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.014, 14, 10), brown); head.position.y = 0.252;
+  o.add(post, bodyM, head);
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.0048, 10, 8), eyeM); eye.position.set(s * 0.0062, 0.254, 0.0115); o.add(eye);
+    const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.004, 0.012, 6), brown); tuft.position.set(s * 0.008, 0.268, 0); tuft.rotation.z = -s * 0.4; o.add(tuft);
+  }
+  o.userData.eyes = eyeM;
+  o.userData.head = head;
+  return o;
+}
+function owls(spec, c, done) {
+  const group = new THREE.Group();
+  c.root.add(group);
+  const xs = [-0.26, 0, 0.26], need = spec.count || 3;
+  const perches = xs.map((x) => { const m = owlMesh(); m.scale.setScalar(1.35); m.position.set(x, 0, -0.06); group.add(m); return { m, x }; });
+  let t = 0, phase = "listen", calling = -1, got = 0, hoots = 0, under = -1, underT = 0, toldWrong = -9, last = -1;
+  const call = () => {
+    let i; do { i = Math.floor(Math.random() * 3); } while (i === last);
+    calling = last = i; hoots = 0; t = 0; phase = "listen";
+  };
+  c.guestSay("owl");
+  setTimeout(() => c.coach(TASK_LINES.owlListen), 2600);
+  call();
+  return {
+    debug: () => ({ phase, calling, got, under }),
+    target() { return calling >= 0 ? perches[calling].m.position.clone().setY(0.1) : null; },
+    hint() { return "owl"; },
+    update(dt) {
+      t += dt;
+      perches.forEach((p, i) => {
+        const glow = i === calling && phase === "listen" ? Math.max(0, 1 - ((t - 0.6) % 4.2) * 0.9) : 0;
+        p.m.userData.eyes.emissiveIntensity = 0.25 + glow * 2.6;
+        p.m.userData.head.rotation.y = Math.sin(t * 0.7 + i * 2) * 0.5;
+      });
+      if (phase === "found") { if (t > 2) call(); return; }
+      if (phase !== "listen") return;
+      // the call repeats every few seconds, from that owl's perch (spatial in a headset)
+      if (t > 0.6 + hoots * 4.2) { hoots++; const perch = perches[calling].m; c.sfx("nightbird", perch, { volume: 0.9 }); c.emote("owl", "♪", () => perch.position.clone().setY(0.29), "Hoo!", 1.2); }
+      const p = c.pip.get("pelvis");
+      const i = perches.findIndex((q) => Math.abs(p.x - q.x) < 0.07 && Math.abs(p.z - q.m.position.z) < 0.14);
+      if (i !== under) { under = i; underT = 0; }
+      underT += dt;
+      if (i < 0 || underT < 0.6) return;
+      if (i === calling) {
+        got++;
+        phase = "found"; t = 0; calling = -1;
+        c.sfx("chime", null, { volume: 0.5, rate: 1.1 + got * 0.12 });
+        c.emote("pip", "✦", () => c.pip.get("head"), `This way! ${got} / ${need}`, 1.6);
+        c.coach(TASK_LINES.owlFound);
+        if (got >= need) { phase = "won"; c.hideHint(); setTimeout(() => c.guestSay("owlDone"), 1200); setTimeout(done, 2400); }
+      } else if (t - toldWrong > 6 && hoots > 0) { toldWrong = t; c.coach(TASK_LINES.notThatOwl); }
+    },
+    end() { c.clearEmote?.("owl"); dispose(group); },
+  };
+}
+
+const TASKS = { shy, highfive, together, owls, collect, simon, duel, riddle, sneak, unlock, dodge, mount, rings, gears, chase, kindness, knight };
 export function createTask(spec, c, done) {
   const make = TASKS[spec.type];
   if (!make) { setTimeout(done, 100); return { update() {}, end() {} }; }

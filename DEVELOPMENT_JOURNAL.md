@@ -169,6 +169,28 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
   - a cobbled road, a compass rose and a scale bar;
   - place names on ribbon banners with red wax-seal numbers.
 
+### Phase 12: real sound, and richer first chapters
+- **The opening close-up:** the camera now moves in on the robot's face only (eyes glowing, sparkles around his head) while he speaks, then pulls back, and the book opens once the camera is home. His hands stay on the puppet bars.
+- **Real recordings instead of synthesised sound (all CC0):**
+  - footsteps (ten variants, picked at random), cloth swishes for the curtain, leather for the bar clacks, sword draws and slices in the duel;
+  - a real crowd: applause, laughter when Sir Pip falls (at most once every 9 s), cheering when a chapter's last star lands;
+  - a soundscape per chapter that crossfades and loops music plus ambience:
+    - storytelling and map: *The Bard's Tale*;
+    - courtyard: *Minstrel Dance* with birdsong; forest: crickets, owl calls and frogs;
+    - ship: a sea-shanty loop, waves and creaking timber; bridge: night crickets; tower: *Mysterious Clock*; cave: dripping cave ambience;
+    - the knighting and finale: *King's Feast*.
+  - Music dips under every spoken line and swells for celebrations. Files load lazily per chapter; the synthesised sounds stay as a fallback.
+- **Chapter 1, the Castle Courtyard (now 5 acts):**
+  - Marlo shows off a loop-the-loop and crash-lands in a heap (thud, the audience giggles);
+  - then he's shy: walk up slowly, because rushing makes him hide and tremble;
+  - bow; a high five (raise Sir Pip's arm to meet his paw, twice); jump together on his "3, 2, 1, JUMP!" three times for fireworks; wave to the audience.
+- **Chapter 2, the Whispering Forest (now 4 acts):**
+  - the forest is genuinely dark, lit by the lantern and glowing blue toadstools;
+  - the fireflies are shy too, flitting away if you rush at them;
+  - new owl task: one of Bramble's three owls hoots (spatial sound from her perch, her eyes flare), and you walk Sir Pip under the one that called, three times;
+  - Bramble's spell now makes the forest burst into bloom: 44 glowing flowers grow outward from the wizard (two instanced draw calls), dawn light returns, birdsong.
+- 26 new voice lines (522 in total).
+
 ---
 
 ## 4. The story
@@ -177,8 +199,8 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
 
 | # | Chapter | Guest | What you do |
 |---|---|---|---|
-| 1 | The Castle Courtyard | Marlo the dragon | Tutorial: meet, bow, wave |
-| 2 | The Whispering Forest | Old Bramble | Lantern, catch 5 fireflies, copy his spell |
+| 1 | The Castle Courtyard | Marlo the dragon | Tutorial: his crash landing, approach gently (he's shy), bow, high fives, jump together, wave |
+| 2 | The Whispering Forest | Old Bramble | Lantern in the dark, catch 5 shy fireflies, follow the owls' calls, copy his spell (the forest blooms) |
 | 3 | The Pirate Ship | Captain Pegg | Take the sword, duel (duck/jump/strike, 3 hits, knockout), bow |
 | 4 | The Troll Bridge | Grumble | Approach, answer the riddle (stand on the right stone), give the flower |
 | 5 | The Clockwork Tower | Clank + Princess Juniper | Sneak past the searchlight, unlock the cage, jump the zaps until he overheats |

@@ -630,6 +630,54 @@ const CLIPS = {
     },
   }),
 
+  // the entrance: Marlo shows off a loop, misjudges it, and lands in a heap
+  crashland: (ai) => {
+    const end = ai.base.clone();
+    const side = end.x > 0 ? 1 : -1;
+    return {
+      run(t, pose) {
+        if (t < 0.7) { const k = ease(t / 0.7); pose.pos.y += 0.3 * k; pose.pos.x -= side * 0.08 * k; pose.pitch = -0.5 * k; }
+        else if (t < 1.35) { const k = (t - 0.7) / 0.65; pose.pos.y += 0.3 * (1 - k * k); pose.pos.x -= side * 0.08 * (1 - k); pose.pitch = -0.5 + 1.2 * k; pose.roll = Math.sin(t * 16) * 0.5; }
+        pose.held = !(t > 1.35 && t < 2.4); // in a heap on the floor
+        if (t > 2.4) { const s = 1 - ease((t - 2.8) / 0.5); pose.roll = Math.sin(t * 20) * 0.16 * s; } // shakes himself off
+        return t > 3.4;
+      },
+    };
+  },
+
+  // too shy: turns away, crouches small, wings over his face, trembling
+  hide: (ai, o = {}) => {
+    const away = ai._yawTo(ai.partner.center(new THREE.Vector3())) + Math.PI * 0.85;
+    const pc = ai.partner.center(new THREE.Vector3());
+    const step = Math.sign(ai.base.x - pc.x) || 1;
+    ai.base.x = THREE.MathUtils.clamp(ai.base.x + step * 0.05, -0.34, 0.34); // a little hop back
+    const dur = o.dur || 2.4;
+    return {
+      run(t, pose, dt) {
+        ai.yaw = lerpAngle(ai.yaw, away, Math.min(1, dt * 6));
+        pose.yaw = ai.yaw;
+        const k = ease(t / 0.3) * (1 - ease((t - dur) / 0.4));
+        pose.pos.y -= 0.03 * k;
+        pose.pitch = 0.45 * k;
+        pose.roll = Math.sin(t * 30) * 0.05 * k;
+        pose.hands = { pos: new THREE.Vector3(0, 0.05 * k, 0.04 * k), roll: 0 };
+        return t > dur + 0.4;
+      },
+    };
+  },
+
+  // a paw held up for a high five, turned toward Sir Pip
+  paw: (ai, o = {}) => ({
+    interruptible: true,
+    run(t, pose, dt) {
+      ai.yaw = lerpAngle(ai.yaw, ai._yawTo(ai.partner.center(AV.a)), Math.min(1, dt * 4));
+      pose.yaw = ai.yaw;
+      const up = ease(t / 0.5);
+      pose.hands = { pos: new THREE.Vector3(0, 0.1 * up, 0.045 * up), roll: 0.25 * up + Math.sin(t * 3) * 0.06 };
+      return t > (o.dur || 6);
+    },
+  }),
+
   turn: (ai) => {
     const start = ai.yaw;
     return {
