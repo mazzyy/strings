@@ -37,6 +37,7 @@ function humanoidSkin(assets, build) {
       group,
       bars: bars.group,
       setHighlight: bars.setHighlight,
+      extra: api.extra || {},
       update(f, dt) {
         t += dt;
         for (const [mesh, part, fr, off] of pins) pin(mesh, P(part), fr === "lower" ? f.qLower : fr === "yaw" ? f.yawQ : f.qUpper, off);
@@ -303,7 +304,20 @@ export function clankSkin(assets) {
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.022, 6), dark); mast.position.y = 0.026;
     const ball = new THREE.Mesh(new THREE.SphereGeometry(0.003, 8, 6), red); ball.position.y = 0.038;
     head.add(box, visor, eye, grille, ...bolts, mast, ball);
-    anim((t) => { dial.rotation.y = t * 2; red.emissiveIntensity = 1.8 + Math.sin(t * 6) * 0.6; });
+    // a little propeller on his antenna (he flies in the finale)
+    const prop = new THREE.Group();
+    for (const sx of [-1, 1]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.0015, 0.006), brass); b.position.x = sx * 0.015; prop.add(b); }
+    prop.position.y = 0.043;
+    head.add(prop);
+    api.headSkip = [prop];
+    let spin = 0.3;
+    anim((t, f, P, dt) => { dial.rotation.y = t * 2; prop.rotation.y = t * 12 * spin; red.emissiveIntensity = 1.8 + Math.sin(t * 6) * 0.6; });
+    api.extra = {
+      fly: (on) => { spin = on ? 3 : 0.3; },
+      // the change of heart: the red eye turns a kind blue
+      redeem: () => { red.color.set(0x8ad8ff); red.emissive.set(0x3aa0ff); },
+      reset: () => { red.color.set(0xff3020); red.emissive.set(0xff2010); spin = 0.3; },
+    };
   });
 }
 
@@ -341,5 +355,49 @@ export function princessSkin(assets) {
     const jewel = new THREE.Mesh(new THREE.OctahedronGeometry(0.0024, 0), gem); jewel.position.set(0, 0.002, 0.012); crown.add(jewel);
     crown.position.y = 0.018;
     head.add(face, hairBack, tail, ...eyes, smile, crown);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// The King: a red velvet robe with ermine trim, a beard and a crown, and a sword for the knighting
+export function kingSkin(assets) {
+  return humanoidSkin(assets, (api) => {
+    const { add, M, head, pin, at } = api;
+    const robe = M({ color: 0x8c1520, roughness: 0.75 });
+    const ermine = M({ color: 0xf4f0e8, roughness: 0.9 });
+    const gold = M({ color: 0xe8c060, metalness: 1, roughness: 0.25 });
+    const skin = M({ color: 0xe6bc98, roughness: 0.6 });
+    const beardM = M({ color: 0xd8d4cc, roughness: 0.9 });
+    const steel = M({ color: 0xd5d9e0, metalness: 1, roughness: 0.2 });
+    const chest = add(torsoLathe(0.026, 0.075, 0.012), robe); chest.scale.set(1.2, 1, 0.9);
+    pin(chest, "mid", "upper", [0, 0.004, 0]);
+    const cape = add(new THREE.CylinderGeometry(0.03, 0.052, 0.11, 22, 1, true), robe);
+    cape.material.side = THREE.DoubleSide;
+    pin(cape, "pelvis", "lower", [0, -0.04, 0]);
+    const collar = add(new THREE.TorusGeometry(0.02, 0.006, 8, 20), ermine); collar.rotation.x = Math.PI / 2;
+    const colG = new THREE.Group(); colG.add(collar); api.group.add(colG);
+    pin(colG, "neck", "upper", [0, -0.004, 0]);
+    const hem = add(new THREE.TorusGeometry(0.052, 0.004, 6, 26), ermine); hem.rotation.x = Math.PI / 2;
+    const hemG = new THREE.Group(); hemG.add(hem); api.group.add(hemG);
+    pin(hemG, "pelvis", "lower", [0, -0.095, 0]);
+    limbs(api, [[0.0085, 0.008], robe, [0.008, 0.0075], robe], [[0.007, 0.0065], robe, [0.0065, 0.006], robe]);
+    for (const n of ["lW", "rW"]) at(add(new THREE.SphereGeometry(0.0062, 10, 8), skin), n);
+    const face = new THREE.Mesh(new THREE.SphereGeometry(0.0175, 20, 16), skin); face.scale.set(0.95, 1.05, 1);
+    const beard = new THREE.Mesh(new THREE.SphereGeometry(0.016, 16, 10, 0, Math.PI * 2, Math.PI * 0.4, Math.PI * 0.6), beardM); beard.position.set(0, -0.006, 0.004); beard.scale.set(1.05, 1.3, 1.05);
+    const eyeM = M({ color: 0x1b1410, roughness: 0.3 });
+    const eyes = [-1, 1].map((sx) => { const e = new THREE.Mesh(new THREE.SphereGeometry(0.002, 8, 6), eyeM); e.position.set(sx * 0.0065, 0.004, 0.0165); return e; });
+    const crown = new THREE.Group();
+    crown.add(new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.0155, 0.009, 18, 1, true), gold));
+    for (let k = 0; k < 6; k++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(0.003, 0.011, 4), gold); const a = (k / 6) * Math.PI * 2; sp.position.set(Math.sin(a) * 0.0145, 0.009, Math.cos(a) * 0.0145); crown.add(sp); }
+    crown.position.y = 0.019;
+    head.add(face, beard, ...eyes, crown);
+    // the knighting sword, in his right hand
+    const sword = new THREE.Group();
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.08, 0.0016), steel); blade.position.y = 0.05;
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.0035, 0.004), gold); guard.position.y = 0.009;
+    sword.add(blade, guard);
+    api.group.add(sword);
+    mergeStatic(sword);
+    pin(sword, "rW", "upper", [0.002, -0.002, 0.006]);
   });
 }

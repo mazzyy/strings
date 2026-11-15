@@ -221,7 +221,7 @@ export class StoryBook {
     // right page: the words, with a decorated first letter
     const tx = W / 2 + 60, tw = W / 2 - 120;
     g.textAlign = "left"; g.fillStyle = "#7a1d22"; g.font = "600 24px Georgia, serif";
-    g.fillText(n === 0 ? (ch.id === "prologue" ? "Prologue" : "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six"][this._index()]) : "", tx, 110);
+    g.fillText(n === 0 ? (ch.id === "prologue" ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six", "Seven"][this._index()]) : "", tx, 110);
     const text = ch.pages[n];
     g.fillStyle = "#c9a14a"; g.font = "700 96px Georgia, serif"; g.fillText(text[0], tx, 240);
     g.fillStyle = "#2a1a10"; g.font = "32px Georgia, serif";
@@ -234,5 +234,5 @@ export class StoryBook {
     this.tex.needsUpdate = true;
   }
 
-  _index() { return Math.max(0, ["courtyard", "forest", "ship", "bridge", "tower", "cave"].indexOf(this.chapter.id)); }
+  _index() { return Math.max(0, ["courtyard", "forest", "ship", "bridge", "tower", "cave", "sky"].indexOf(this.chapter.id)); }
 }

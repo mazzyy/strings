@@ -75,6 +75,18 @@ const PAINT = {
     g.fillStyle = "#121a35"; g.fillRect(0, 280, w, h - 280);
     g.fillStyle = "rgba(140,170,230,0.35)"; g.fillRect(0, 300, w, 12);
   },
+  sky(g, w, h) {
+    sky(g, w, h, "#0b1438", "#3a4a8a");
+    const r = rnd(23);
+    for (let i = 0; i < 220; i++) { g.fillStyle = `rgba(255,255,240,${0.3 + r() * 0.7})`; g.fillRect(r() * w, r() * h * 0.8, 2, 2); }
+    const mg = g.createRadialGradient(780, 90, 10, 780, 90, 120); mg.addColorStop(0, "rgba(255,250,220,0.55)"); mg.addColorStop(1, "rgba(255,250,220,0)"); g.fillStyle = mg; g.fillRect(640, 0, 300, 240);
+    g.fillStyle = "#fbf4d8"; g.beginPath(); g.arc(780, 90, 46, 0, Math.PI * 2); g.fill();
+    // the kingdom far below: castle towers in silhouette, and a sea of clouds
+    g.fillStyle = "#1a2450";
+    for (const [x, tw, th] of [[160, 40, 120], [215, 60, 80], [290, 36, 140], [880, 44, 110], [930, 30, 150]]) { g.fillRect(x, h - 60 - th, tw, th + 60); g.beginPath(); g.moveTo(x - 6, h - 60 - th); g.lineTo(x + tw / 2, h - 100 - th); g.lineTo(x + tw + 6, h - 60 - th); g.fill(); }
+    for (let i = 0; i < 26; i++) { const x = (i / 26) * w + r() * 30, y = h - 40 + r() * 20; g.fillStyle = `rgba(220,226,255,${0.7 + r() * 0.3})`; g.beginPath(); g.arc(x, y, 34 + r() * 26, 0, Math.PI * 2); g.fill(); }
+    for (let i = 0; i < 5; i++) { const x = 100 + i * 200 + r() * 60, y = 120 + r() * 120; g.fillStyle = "rgba(200,210,255,0.35)"; g.beginPath(); for (let k = 0; k < 4; k++) g.arc(x + k * 24, y + (k % 2) * 6, 20, 0, Math.PI * 2); g.fill(); }
+  },
   tower(g, w, h) {
     sky(g, w, h, "#2a2430", "#4a3a34");
     // stone blocks
@@ -203,6 +215,30 @@ const PIECES = {
   },
 };
 
+PIECES.sky = (g, anims) => {
+  // a floor of soft clouds over the stage boards, and puffs drifting past (it feels like flying)
+  const cloud = new THREE.MeshStandardMaterial({ color: 0xe4e8ff, roughness: 1, emissive: 0x30365a, emissiveIntensity: 0.4 });
+  const r = Math.random;
+  for (let i = 0; i < 26; i++) {
+    const m = piece(g, new THREE.SphereGeometry(0.04 + r() * 0.03, 10, 8), cloud, -0.4 + (i / 25) * 0.8, 0.0, -0.18 + r() * 0.36);
+    m.scale.y = 0.35; m.castShadow = false;
+  }
+  const drift = new THREE.Group();
+  const puffs = [];
+  for (let i = 0; i < 6; i++) {
+    const p = new THREE.Group();
+    for (let k = 0; k < 4; k++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.022 + k % 2 * 0.008, 10, 8), cloud); b.position.set(k * 0.022, (k % 2) * 0.008, 0); p.add(b); }
+    p.position.set(-0.45 + i * 0.16, 0.12 + (i % 3) * 0.07, -0.14 + (i % 2) * 0.05);
+    mergeStatic(p);
+    drift.add(p);
+    puffs.push({ p, speed: 0.04 + (i % 3) * 0.015 });
+  }
+  g.add(drift);
+  anims.push((t, dt) => { for (const q of puffs) { q.p.position.x -= q.speed * (dt || 0.016) * (g.userData.flying ? 3 : 1); if (q.p.position.x < -0.5) q.p.position.x = 0.45; } });
+  g.userData.refs = { setFlying: (on) => { g.userData.flying = on; } };
+  return [drift];
+};
+
 PIECES.tower = (g, anims) => {
   const iron = std({ color: 0x3a3e46, metalness: 0.8, roughness: 0.4 }), brass = std({ color: 0xb8893a, metalness: 1, roughness: 0.35 }), stone = std({ color: 0x6a6460, roughness: 0.9 });
   // the cage, with Princess Juniper inside (right, upstage)
@@ -253,6 +289,7 @@ export const SET_LIGHT = {
   bridge: { spot: 0xa8c0ff, night: 0.72 },
   cave: { spot: 0xc0b0ff, night: 0.82 },
   tower: { spot: 0xffc8a0, night: 0.5 },
+  sky: { spot: 0xc8d8ff, night: 0.45 },
 };
 
 export class Sets {

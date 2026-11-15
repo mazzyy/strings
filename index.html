@@ -96,6 +96,18 @@
     #storymap canvas { display: block; width: 100%; height: auto; }
     #storymap .restart { position: absolute; bottom: 12px; left: 12px; background: rgba(58,36,20,0.75); color: #f3dfb0; border: 1px solid rgba(216,172,79,0.6); font-size: 12px; }
     #storymap .close { position: absolute; top: 12px; left: 12px; background: rgba(58,36,20,0.85); color: #f3dfb0; border: 1px solid #d8ac4f; }
+    /* the credits after the finale */
+    #credits { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, rgba(60,20,20,0.92), rgba(8,4,3,0.98)); opacity: 0; pointer-events: none; transition: opacity 1.2s; text-align: center; }
+    #credits.on { opacity: 1; pointer-events: auto; }
+    #credits h1 { font: 600 72px/1 ui-serif, Georgia, serif; color: #f3dfb0; margin: 0 0 6px; text-shadow: 0 4px 30px rgba(224,178,58,0.4); }
+    #credits .sub { font: italic 22px Georgia, serif; color: var(--muted); margin: 0 0 26px; }
+    #credits .cast { display: grid; grid-template-columns: auto auto; gap: 6px 18px; justify-content: center; font: 18px Georgia, serif; }
+    #credits .cast span { text-align: right; color: #f3dfb0; }
+    #credits .cast i { text-align: left; color: var(--muted); }
+    #credits .thanks { margin: 26px 0 18px; color: var(--muted); font: 14px ui-sans-serif, system-ui, sans-serif; }
+    #credits .more { display: flex; gap: 10px; justify-content: center; }
+    #credits.on .roll { animation: rise 2.4s ease-out; }
+    @keyframes rise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
     /* the storybook before each chapter */
     #storybook { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 45%, rgba(40,20,12,0.82), rgba(8,4,3,0.95)); opacity: 0; pointer-events: none; transition: opacity .5s; perspective: 1600px; }
     #storybook.on { opacity: 1; pointer-events: auto; }
@@ -182,6 +194,13 @@
   <div id="billpanel"></div>
   <div id="caption"></div>
   <div id="tip"></div>
+  <div id="credits"><div class="roll">
+    <h1>The End</h1>
+    <p class="sub">The Tale of Sir Pip</p>
+    <div class="cast"><span>Sir Pip the Brave</span><i>you</i><span>Marlo the dragon</span><i>himself</i><span>Old Bramble</span><i>the wizard</i><span>Captain Pegg</span><i>the pirate</i><span>Grumble</span><i>the troll</i><span>Clank</span><i>the clockwork robot</i><span>Princess Juniper</span><i>the princess</i><span>The King</span><i>the king</i><span>The Narrator</span><i>the robot puppeteer</i></div>
+    <p class="thanks">A marionette theatre for Meta Quest · thank you for playing</p>
+    <div class="more"><button id="credits-again">Play the story again</button><button id="credits-theatre">Visit the Grand Theatre</button></div>
+  </div></div>
   <div id="storybook"><div class="bookwrap"><button class="skip">Skip ›</button></div></div>
   <div id="storymap"><div class="mapwrap"><button class="close">Close</button><button class="restart">Start a new story</button></div></div>
   <div id="toast"></div>

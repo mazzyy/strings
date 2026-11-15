@@ -21,8 +21,8 @@ import { ActionDetector, AIPerformer, describe } from "./director.js";
 import { MarloMind } from "./mind.js";
 import { Emotes } from "./emote.js";
 import { Confetti } from "./fx.js";
-import { GUESTS, STORY_LINES, PROLOGUE, CHAPTERS as CHAPTER_LIST } from "./lines.js";
-import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin } from "./cast.js";
+import { GUESTS, STORY_LINES, PROLOGUE, EPILOGUE, TASK_LINES, CHAPTERS as CHAPTER_LIST } from "./lines.js";
+import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin, kingSkin } from "./cast.js";
 import { createTask } from "./tasks.js";
 import { StoryBook } from "./storybook.js";
 import { Sets, SET_LIGHT } from "./sets.js";
@@ -278,7 +278,7 @@ const show = new Show({
     updateShowHud();
     if (entry) {
       const prog = storyMap.complete(chapter.id, entry);
-      if (prog.finished && chapter.id === "cave") narrator.coach(STORY_LINES.theEnd);
+      if (chapter.finale) narrator.coach(STORY_LINES.theEnd);
       else if (prog.newChapter) narrator.coach(STORY_LINES.unlocked);
       toast(`New playbill: ${entry.title} ${"★".repeat(entry.stars)}`);
       if (!recorder.recording && !lastPerfLocal) recordHintPending = true;
@@ -480,7 +480,7 @@ function updateShowHud() {
   if (!show.scene) { el.classList.remove("on"); return; }
   el.classList.add("on");
   const act = show.state === "act" ? show.scene.acts[show.act] : null;
-  el.innerHTML = `<div class="title">Tonight: ${show.scene.title}</div><div class="stars">${"★".repeat(show.stars)}${"☆".repeat(3 - show.stars)}</div>` +
+  el.innerHTML = `<div class="title">Tonight: ${show.scene.title}</div><div class="stars">${"★".repeat(show.stars)}${"☆".repeat(Math.max(0, show.scene.acts.length - show.stars))}</div>` +
     (act ? `<div class="goal">${act.goal.replace(/^Act \w+\.\s*/, "")}</div>` : show.state === "done" || show.state === "finale" ? `<div class="goal">Curtain call!</div>` : "");
   $("bills").textContent = `Playbills (${playbills.list().length})`;
 }
@@ -719,8 +719,12 @@ function setGuest(id) {
 }
 // put a chapter's set and guest on stage (no curtain business)
 function stagePlace(place) {
+  hideExtras();
+  if (flying) setFlight(false);
   applySet(place.set);
   setGuest(place.guest);
+  // the finale: build everyone who'll appear now, while the storybook is open (no hitch later)
+  if (place.finale) { for (const id of ["clank", "king", "wizard", "pirate", "troll"]) extra(id); extra("clank").pup.skin.extra?.reset?.(); }
   // the Clockwork Tower: a princess in a cage, and a key on Clank's pedestal
   const T = place.princess ? sets.refs("tower") : null;
   princessOn(!!T);
@@ -778,6 +782,128 @@ function towerRefs() {
   return { cage: T.cage, pedestal: T.pedestal, openCage: () => { T.openCage(); setTimeout(() => { princessDrv.state = "free"; }, 700); } };
 }
 
+// ---- extras: puppets that join a scene without being the AI's guest ----------------------
+// (Clank flying in the finale, the King, and the whole company at the curtain call)
+const extras = new Map();
+const _xq = new THREE.Quaternion(), _xe = new THREE.Euler(), _xv = new THREE.Vector3(), _xh = new THREE.Vector3(), Y_AXIS = new THREE.Vector3(0, 1, 0);
+function extra(id) {
+  let e = extras.get(id);
+  if (!e) {
+    let pup;
+    if (id === "king") {
+      pup = new Marionette({ root: [0.02, 0, -0.07], yaw: 0, skin: kingSkin(assets) });
+      pup.setVisible(false);
+      stageRoot.add(pup.group);
+    } else pup = guestPuppet(id);
+    e = {
+      id, pup, target: pup.main.position.clone(), yaw: 0, mode: "idle", t: Math.random() * 6, phase: 0, modeT: 0, lastMode: "idle", on: false,
+      show(on = true) {
+        this.on = on;
+        pup.setVisible(on);
+        if (on) { pup.reset(); pup.main.held = true; this.target.copy(pup.main.position); }
+        if (id === "clank") pup.skin.extra?.fly?.(on && this.mode === "fly");
+      },
+    };
+    extras.set(id, e);
+  }
+  return e;
+}
+function hideExtras() { for (const e of extras.values()) if (e.on && e.pup !== marlo) e.show(false); }
+const easeX = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+function updateExtras(dt) {
+  for (const e of extras.values()) {
+    if (!e.on || e.pup === marlo) continue;
+    if (e.mode !== e.lastMode) { e.lastMode = e.mode; e.modeT = 0; if (e.id === "clank") e.pup.skin.extra?.fly?.(e.mode === "fly"); }
+    e.t += dt; e.modeT += dt;
+    const m = e.pup.main, h = e.pup.hands, k = e.modeT;
+    m.held = true;
+    let pitch = 0, roll = Math.sin(e.t * 1.3) * 0.04, bob = Math.sin(e.t * 2) * 0.003, hands = null;
+    if (e.mode === "fly") { bob = Math.sin(e.t * 2.4) * 0.012; roll = Math.sin(e.t * 1.7) * 0.12; }
+    else if (e.mode === "sad") { pitch = 0.32; bob = -0.012; roll = Math.sin(e.t * 0.8) * 0.05; }
+    else if (e.mode === "dance") { roll = Math.sin(e.t * 5 + e.phase) * 0.3; bob = Math.abs(Math.sin(e.t * 5 + e.phase)) * 0.016; hands = [0, 0.07 + Math.sin(e.t * 5) * 0.01, 0.02, Math.sin(e.t * 5 + e.phase) * 0.5]; }
+    else if (e.mode === "knight") {
+      // raise the sword, then a tap on each shoulder
+      const up = easeX(k / 0.8), tap = Math.max(0, Math.sin(Math.min(1, Math.max(0, (k - 1.3) / 0.4)) * Math.PI)) + Math.max(0, Math.sin(Math.min(1, Math.max(0, (k - 2.1) / 0.4)) * Math.PI));
+      hands = [0.03, 0.06 * up - 0.05 * tap, 0.05 * up + 0.03 * tap, -0.8 * up];
+      pitch = 0.08;
+    } else if (e.mode === "proud") { hands = [0, 0.09, 0.02, Math.sin(e.t * 6) * 0.3]; bob = Math.abs(Math.sin(e.t * 4)) * 0.01; }
+    _xv.copy(e.target); _xv.y += bob;
+    m.position.lerp(_xv, Math.min(1, dt * 5));
+    m.quaternion.slerp(_xq.setFromEuler(_xe.set(pitch, e.yaw, -roll, "YXZ")), Math.min(1, dt * 6));
+    if (hands) {
+      h.held = true;
+      _xh.set(hands[0], hands[1], hands[2]).applyAxisAngle(Y_AXIS, e.yaw).add(m.position);
+      h.position.lerp(_xh, Math.min(1, dt * 8));
+      h.quaternion.slerp(_xq.setFromEuler(_xe.set(0, e.yaw, -hands[3], "YXZ")), Math.min(1, dt * 8));
+    } else h.held = false;
+    e.pup.update(dt);
+  }
+}
+const yawToward = (from, to) => Math.atan2(to.x - from.x, to.z - from.z);
+
+// ---- flying on Marlo: he flies under Sir Pip, and the player steers -----------------------
+let flying = false;
+const _fv = new THREE.Vector3(), _fo = new THREE.Vector3(0, -0.105, -0.004), _fe = new THREE.Euler();
+function setFlight(on) {
+  if (on === flying) return;
+  flying = on;
+  if (sets.current === "sky") sets.refs("sky")?.setFlying?.(on);
+  if (on) {
+    sfx.play("swish", null, { volume: 0.5, rate: 1.3 });
+    ai.react("carry", {
+      force: true,
+      target: () => _fv.copy(pip.main.position).add(_fo),
+      yaw: () => _fe.setFromQuaternion(pip.main.quaternion, "YXZ").y,
+      stop: () => !flying,
+    });
+  } else {
+    ai.base.copy(ai.home); // Marlo glides home
+  }
+}
+
+// the knighting: a quick curtain dip, and the castle courtyard with the King waiting
+function stageKnighting() {
+  curtains.call();
+  sfx.play("swish", null, { volume: 0.5 });
+  setTimeout(() => {
+    setFlight(false);
+    applySet("courtyard");
+    const K = extra("king"); K.show(true); K.mode = "idle"; K.target.set(0.04, 0.5, -0.07); K.yaw = yawToward(K.target, pip.get("pelvis"));
+    const C = extra("clank"); C.show(true); C.mode = "dance"; C.phase = 1; C.target.set(0.33, 0.5, -0.12); C.yaw = -0.6;
+    princessOn(true); princessDrv.state = "happy"; princessDrv.pos.set(0.24, 0.5, 0.07);
+    ai.base.set(-0.33, ai.home.y, -0.08);
+    music.play();
+  }, 750);
+}
+
+// the grand finale: the whole company on stage, fireworks, the music box
+function grandFinale() {
+  const cast = [["wizard", -0.33, -0.12], ["pirate", -0.17, -0.14], ["king", 0.0, -0.14], ["troll", 0.17, -0.13], ["clank", 0.33, -0.12]];
+  cast.forEach(([id, x, z], i) => { const e = extra(id); if (!e.on) e.show(true); e.mode = "dance"; e.phase = i * 0.9; e.target.set(x, 0.5, z); e.yaw = 0; });
+  princessOn(true); princessDrv.state = "happy"; princessDrv.pos.set(0.2, 0.5, 0.08);
+  ai.base.set(0.34, ai.home.y, 0.07);
+  const dance = () => { if (show.state === "ending" || show.state === "finale") { ai.react("dance", { force: true }); setTimeout(dance, 3400); } };
+  dance();
+  narrator.coach(TASK_LINES.finale);
+  [["princess", "finale"], ["pirate", "finale"], ["wizard", "finale"], ["troll", "finale"], ["clank", "finale"], ["marlo", "finale"]]
+    .forEach(([who, k], i) => setTimeout(() => sayAs(who, k), 1800 + i * 2200));
+  for (let i = 0; i < 8; i++) setTimeout(() => { confetti.burst(["grace", "slapstick", "grace", "drama"][i % 4]); sfx.play("pop", null, { volume: 0.5, rate: 0.6 + (i % 3) * 0.3 }); }, i * 1900);
+  sfx.play("applause", null, { volume: 0.9 });
+  music.play();
+  setTimeout(() => music.play(), 8200);
+}
+show.onGrandFinale = grandFinale;
+function sayAs(who, key) { const l = GUESTS[who]?.task?.[key]; if (l) marloSay(l, GUESTS[who].name); }
+
+// after the finale: the epilogue, then the credits
+$("credits-again")?.addEventListener("click", () => { storyMap.resetStory(); location.reload(); });
+$("credits-theatre")?.addEventListener("click", () => { $("credits").classList.remove("on"); openMap(); });
+function showCredits() {
+  const el = $("credits");
+  if (!el || xrMode) { openMap(); return; }
+  el.classList.add("on");
+}
+
 // ---- tasks: duels, riddles, sneaking... (see tasks.js) -----------------------------------
 let currentTask = null;
 // teleport Sir Pip (and the bars your hand holds) so his pelvis lands at x, z
@@ -813,6 +939,12 @@ const taskCtx = {
   },
   confetti: (k) => confetti.burst(k),
   tower: () => towerRefs(),
+  setFlight, flying: () => flying,
+  clank: () => extra("clank"),
+  king: () => extra("king"),
+  sayAs,
+  music: () => music.play(),
+  stageKnighting,
 };
 show.makeTask = (spec, done) => {
   mind.taskBusy = true;
@@ -913,7 +1045,11 @@ function changeScene(place) {
     });
   }, 1700);
 }
-show.onDone = () => setTimeout(() => { if (show.state === "done" && !changing) openMap(); }, 2500);
+show.onDone = () => setTimeout(() => {
+  if (show.state !== "done" || changing) return;
+  if (chapter.finale) playBook(EPILOGUE, showCredits);
+  else openMap();
+}, 2500);
 
 const demo = makeDemo(sim);
 function runDemo() {
@@ -942,7 +1078,7 @@ $("bills").onclick = () => {
   const panel = $("billpanel");
   const list = playbills.list();
   panel.innerHTML = `<h2>Your playbills</h2><p class="streak">${playbills.streak() > 1 ? `${playbills.streak()}-night streak` : "Come back tomorrow for a new show"}</p>` +
-    (list.length ? list.map((b) => `<div class="bill"><b>${b.title}</b><span>${"★".repeat(b.stars)}${"☆".repeat(3 - b.stars)}</span><i>${b.date}${b.guest ? ` · with ${b.guest}` : ""}${b.ending ? ` · ${b.ending}` : ""}</i></div>`).join("") : "<p>Finish tonight's show to earn your first playbill.</p>") +
+    (list.length ? list.map((b) => `<div class="bill"><b>${b.title}</b><span>${"★".repeat(b.stars)}${"☆".repeat(Math.max(0, (b.total || 3) - b.stars))}</span><i>${b.date}${b.guest ? ` · with ${b.guest}` : ""}${b.ending ? ` · ${b.ending}` : ""}</i></div>`).join("") : "<p>Finish tonight's show to earn your first playbill.</p>") +
     `<button id="billclose">Close</button>`;
   panel.classList.add("on");
   $("billclose").onclick = () => panel.classList.remove("on");
@@ -1370,6 +1506,7 @@ renderer.setAnimationLoop((time, frame) => {
   storyMap.update(dt);
   book.update(dt);
   updatePrincess(dt);
+  updateExtras(dt);
   if (mode.id === "party") {
     spot.color.setHSL((elapsed * 0.12) % 1, 0.75, 0.7);
     if (!ai.busy && Math.floor(elapsed) % 9 === 0 && Math.floor(elapsed - dt) % 9 !== 0) ai.react("dance");
@@ -1452,4 +1589,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };
+window.strings = { extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };

@@ -53,6 +53,13 @@ function icon(g, kind, x, y, locked) {
     g.beginPath(); g.moveTo(0, -34); g.lineTo(0, -42); g.moveTo(0, -34); g.lineTo(6, -32); g.stroke();
     g.beginPath(); g.rect(-7, 4, 14, 18); fill("#3a2a20");
     g.beginPath(); g.arc(0, -88, 4, 0, Math.PI * 2); g.fillStyle = "#ff3020"; g.fill();
+  } else if (kind === "sky") {
+    // a crescent moon with a little dragon flying across it
+    g.beginPath(); g.arc(0, -20, 34, 0, Math.PI * 2); fill("#f6f0d0");
+    g.beginPath(); g.arc(14, -28, 30, 0, Math.PI * 2); g.fillStyle = "#ead7a8"; g.fill();
+    g.fillStyle = "#3d6e3a"; g.beginPath(); g.ellipse(-6, -10, 18, 7, -0.2, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(-8, -14); g.lineTo(-24, -40); g.lineTo(4, -16); g.closePath(); g.fillStyle = "#c8743a"; g.fill(); g.stroke();
+    g.beginPath(); g.arc(14, -16, 6, 0, Math.PI * 2); g.fillStyle = "#3d6e3a"; g.fill(); g.stroke();
   } else if (kind === "theatre") {
     g.beginPath(); g.rect(-40, -30, 80, 52); fill("#7a1d22");
     g.beginPath(); g.moveTo(-40, -30); g.quadraticCurveTo(0, -50, 40, -30); g.closePath(); fill("#c9a14a");

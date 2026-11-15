@@ -67,7 +67,7 @@ function playbillTexture(scene, stars, streak, entry = {}) {
   g.font = "22px Georgia, serif"; g.fillStyle = "#4a3020";
   g.fillText(`starring Sir Pip & ${entry.guest || "Marlo"}`, 180, y + 56);
   g.font = "40px Georgia, serif"; g.fillStyle = "#c9a14a";
-  g.fillText("★".repeat(stars) + "☆".repeat(3 - stars), 180, y + 104);
+  g.fillText("★".repeat(stars) + "☆".repeat(Math.max(0, (entry.total || 3) - stars)), 180, y + 104);
   if (entry.ending) {
     g.font = "600 19px Georgia, serif"; g.fillStyle = "#7a1d22";
     g.fillText(`Ending: ${entry.ending}`, 180, y + 140);
@@ -115,9 +115,9 @@ export class Show {
     const dim = new THREE.MeshStandardMaterial({ color: 0x5a5048, metalness: 0.6, roughness: 0.6, transparent: true, opacity: 0.5 });
     this.starMats = { gold, dim };
     this.starGroup = new THREE.Group();
-    this.starMeshes = [-1, 0, 1].map((i) => {
+    // one star per act (up to six, for the finale)
+    this.starMeshes = [0, 1, 2, 3, 4, 5].map(() => {
       const m = new THREE.Mesh(starShape(), dim);
-      m.position.set(i * 0.035, 0, 0);
       this.starGroup.add(m);
       return m;
     });
@@ -151,7 +151,8 @@ export class Show {
     this.stars = 0;
     this.wait = 0;
     this.style = { grace: 0, slapstick: 0, drama: 0 };
-    this.starMeshes.forEach((m) => (m.material = this.starMats.dim));
+    const n = this.scene.acts.length;
+    this.starMeshes.forEach((m, i) => { m.material = this.starMats.dim; m.visible = i < n; m.position.set((i - (n - 1) / 2) * 0.035, 0, 0); });
     this.starGroup.visible = true;
     this.bill.visible = false;
     this.setNight(!!this.scene.night);
@@ -217,6 +218,15 @@ export class Show {
     const st = this.style;
     const type = st.slapstick > st.grace && st.slapstick >= st.drama ? "slapstick" : st.drama > st.grace ? "drama" : "grace";
     this.endingType = type;
+    // the last chapter ends with the whole company on stage instead
+    if (this.scene.finale && this.onGrandFinale) {
+      this.state = "ending";
+      this.wait = 17;
+      this.hints.hide();
+      this.onGrandFinale(this);
+      this.onChange?.(this);
+      return;
+    }
     const e = ENDINGS[type];
     this.state = "ending";
     this.wait = 9;
@@ -244,7 +254,7 @@ export class Show {
     const e = ENDINGS[this.endingType || "grace"];
     const before = playbills.list().length;
     const entry = {
-      id: this.scene.id, title: this.scene.title, date: today(), stars: this.stars,
+      id: this.scene.id, title: this.scene.title, date: today(), stars: this.stars, total: this.scene.acts.length,
       ending: e.title, endingType: this.endingType || "grace", scores: scoreStyle(this.style), guest: this.guestName || "Marlo",
       critic: e.critics[Math.floor(Math.random() * e.critics.length)],
     };
