@@ -29,6 +29,7 @@ def main():
         "troll": ("am_onyx", 0.84),      # a slow, deep, grumpy troll
         "clank": ("am_echo", 0.92),      # a clipped, menacing robot (still a human voice)
         "princess": ("af_bella", 1.0),   # Princess Juniper
+        "king": ("bm_lewis", 0.9),       # the King, warm and stately
     }
     manifest = {}
     for i, item in enumerate(lines):

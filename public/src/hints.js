@@ -25,6 +25,9 @@ export const HINTS = {
   takeKey:     { target: "prop:key", motion: "pinch",    desk: [["Click the key"], "Hand it to Sir Pip"], xr: "Pinch the key, bring it to the knight", voice: "hintKey" },
   unlock:      { target: "task",     motion: "down",     desk: [["Click the cage"], "Unlock the cage with the key"], xr: "Carry the key to the cage and let go", voice: "hintUnlock" },
   dodge:       { target: "mainBar",  motion: "up",       desk: [["Space"], "Jump when the zap arrives"], xr: "Flick up to jump the zap", voice: "hintDodge" },
+  fly:         { target: "mainBar",  motion: "up",       desk: [["Move mouse ↑ ↓"], "Steer through the rings"], xr: "Move your hand up and down to steer", voice: "hintFly" },
+  flyDodge:    { target: "mainBar",  motion: "up",       desk: [["Move mouse ↑ ↓"], "Dodge the flying gears"], xr: "Move up or down to dodge the gears", voice: "hintFlyDodge" },
+  chase:       { target: "task",     motion: "sideways", desk: [["Move mouse"], "Fly right up to Clank"], xr: "Fly right up to Clank", voice: "hintChase" },
   record:      { target: "knob:record", motion: "poke",  desk: [["R"], "Record your scene"], xr: "Poke the red button", voice: ["hintRecordDesk", "hintRecord"] },
   talk:        { target: "marlo",    motion: "none",     desk: [["Hold V"], "Talk to Marlo"], xr: "Poke the blue button and speak", voice: "talk" },
 };

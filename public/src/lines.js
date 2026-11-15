@@ -101,6 +101,9 @@ export const COACH = {
   pullCordDesk: "Welcome to our little theatre. Drag the golden cord down to raise the curtain.",
   copyIntro: "Marlo wants a turn. Copy what he does!",
   hintCollect: "Carry Sir Pip to the glowing lights to collect them.",
+  hintFly: "Move your hand up and down to steer Marlo through the rings.",
+  hintFlyDodge: "Move up or down to dodge the gears as they fly at you.",
+  hintChase: "Fly right up to Clank to catch him.",
   hintSimon: "Watch the moves, then do the same moves, in the same order.",
   hintDuck: "When he swings high, tip your wrist forward to duck. When he swings low, jump!",
   hintStrike: "Now move Sir Pip quickly toward him to strike.",
@@ -233,7 +236,7 @@ export const SCENES = [
 ];
 export const SHOW_LINES = {
   bravo: ["Bravo!", "Wonderful!", "Marvellous!", "The crowd goes wild!"],
-  finale: "And that's our show! Three stars, and a playbill for your collection.",
+  finale: "And that's our show! A playbill for your collection.",
   tomorrow: "Come back tomorrow for a brand new show.",
   encore: "Encore! Pinch the bar to start another show.",
 };
@@ -259,13 +262,13 @@ export const MARLO_TALK = {
 export const GUESTS = {
   marlo: {
     name: "Marlo", title: "Marlo the dragon", says: MARLO_SAYS, talk: MARLO_TALK,
-    task: { gems: "The jewels! The music box can play again!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had." },
+    task: { gems: "The jewels! The music box can play again!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had.", mount: "Hold on tight, Sir Pip!", fly: "Woo-hoo! We're flying!", spot: "There he is! After him!", finale: "Best adventure ever!" },
     personality: { joy: 0.55, trust: 0.45, energy: 0.85, sword: "wary", sulkAfter: 40, patience: 9 },
   },
   wizard: {
     name: "Bramble", title: "Old Bramble the wizard",
     personality: { joy: 0.6, trust: 0.75, energy: 0.5, sword: "wary", sulkAfter: 70, patience: 6 },
-    task: { watch: "Watch my spell carefully.", yourTurn: "Now you. Repeat my spell.", wrong: "Not quite. Watch again, young knight.", spellDone: "Splendid! The spell works! You have the gift!", fireflies: "My fireflies! Bless you, young knight!" },
+    task: { watch: "Watch my spell carefully.", yourTurn: "Now you. Repeat my spell.", wrong: "Not quite. Watch again, young knight.", spellDone: "Splendid! The spell works! You have the gift!", fireflies: "My fireflies! Bless you, young knight!", finale: "Splendid! Simply splendid!" },
     says: {
       copyMe: "Copy me, young knight!", yourTurn: "Now you try. Just as I did.", yay: "Splendid! Truly splendid!", yay2: "Ho! A natural!",
       aww: "Never mind. Magic takes practice.", careful: "Steady with that blade, young one.", forMe: "For me? How very kind.",
@@ -284,7 +287,7 @@ export const GUESTS = {
   pirate: {
     name: "Captain Pegg", title: "Captain Pegg the pirate",
     personality: { joy: 0.65, trust: 0.5, energy: 0.95, sword: "duel", sulkAfter: 35, patience: 9 },
-    task: { enGarde: "En garde, little knight!", high: "High!", low: "Low!", hitMe: "Argh! Ye got me!", gotYou: "Ha har! Got ye!", surrender: "Arr! I surrender! Ye're the finest swordsman on the seven puddles!" },
+    task: { enGarde: "En garde, little knight!", high: "High!", low: "Low!", hitMe: "Argh! Ye got me!", gotYou: "Ha har! Got ye!", surrender: "Arr! I surrender! Ye're the finest swordsman on the seven puddles!", finale: "Three cheers for Sir Pip! Hip hip, hooray!" },
     says: {
       copyMe: "Arr! Copy me, matey!", yourTurn: "Yer turn! Show me what ye've got!", yay: "Ha har! That's the spirit!", yay2: "Shiver me timbers, perfect!",
       aww: "Bah! Next time, matey.", careful: "A sword! Ha! En garde!", forMe: "For me? Ye've got a pirate's heart!",
@@ -303,7 +306,7 @@ export const GUESTS = {
   troll: {
     name: "Grumble", title: "Grumble the troll",
     personality: { joy: 0.2, trust: 0.15, energy: 0.6, sword: "angry", sulkAfter: 25, patience: 11 },
-    task: { right: "Hmph! Correct. Grumble is impressed.", wrongAns: "Wrong! Ha! Grumble asks again." },
+    task: { right: "Hmph! Correct. Grumble is impressed.", wrongAns: "Wrong! Ha! Grumble asks again.", finale: "Grumble is happy. Don't tell anyone." },
     says: {
       copyMe: "Hmph. Copy Grumble. If you can.", yourTurn: "Your turn. Go on then.", yay: "Huh. Not bad. Not bad at all.", yay2: "Grumble likes that!",
       aww: "Hmph. Too slow.", careful: "Put that sword down! Grumble doesn't like swords.", forMe: "A flower? For Grumble? Nobody ever gives Grumble flowers.",
@@ -336,12 +339,17 @@ export const GUESTS = {
       name: "I am Clank, keeper of the Clockwork Tower.", sorry: "Apology logged.", fire: "Clank does not breathe fire. Clank zaps.",
       unknown: "Unknown command. Beep.",
     },
-    task: { intruder: "Intruder detected!", seeYou: "I see you!", zap: "Zap!", overheat: "Overheating! Overheating!", defeated: "Clank needs a little sit down." },
+    task: { intruder: "Intruder detected!", seeYou: "I see you!", zap: "Zap!", overheat: "Overheating! Overheating!", defeated: "Clank needs a little sit down.", steal: "Catch me if you can!", gears: "Gear bombs away!", caught: "No! You caught me!", sad: "I only wanted to hear the music too. Nobody ever played music for Clank.", thanks: "Thank you. Friend.", finale: "Clank is happy. Beep! Very, very happy!" },
+  },
+  king: {
+    name: "The King", title: "The King",
+    says: {}, talk: {},
+    task: { kneel: "Kneel, brave knight.", words: "For courage, for kindness, and for very good manners.", name: "I name you Sir Pip the Brave, Knight of the Music Box!", play: "Let the music play!" },
   },
   princess: {
     name: "Princess Juniper", title: "Princess Juniper",
     says: {}, talk: {},
-    task: { help: "Help! Please, somebody help me!", key: "The key! Clank keeps it on the pedestal!", hero: "My hero! Thank you, Sir Pip!", lookOut: "Look out! He's charging his zapper!" },
+    task: { help: "Help! Please, somebody help me!", key: "The key! Clank keeps it on the pedestal!", hero: "My hero! Thank you, Sir Pip!", lookOut: "Look out! He's charging his zapper!", finale: "Hooray for Sir Pip!" },
   },
 };
 
@@ -455,7 +463,44 @@ export const CHAPTERS = [
       { goal: "Act three. Take a final bow together.", check: "bow", hint: "bow" },
     ],
   },
+  {
+    id: "sky", set: "sky", guest: "marlo", title: "The Night Sky", map: [820, 150], finale: true,
+    intro: "Chapter seven: The Night Sky. The final adventure.",
+    pages: [
+      "Back at the castle, the jewels were set into the music box, and the whole kingdom gathered to hear it play.",
+      "But Clank had one last trick. With a whir of clockwork wings, he snatched the music box and flew off into the night.",
+      "There was only one way to catch him. Sir Pip climbed onto Marlo's back, and up, up, up they flew.",
+    ],
+    art: [
+      { set: "courtyard", night: true, cast: [["princess", 0.25], ["musicbox", 0.5], ["king", 0.76, true]] },
+      { set: "sky", cast: [["clank", 0.6], ["musicbox", 0.8]] },
+      { set: "sky", cast: [["marlo", 0.45], ["pip", 0.5]] },
+    ],
+    acts: [
+      { goal: "Act one. Climb aboard! Bring Sir Pip to Marlo.", task: { type: "mount" }, hint: "walk" },
+      { goal: "Act two. Fly! Steer up and down through five glowing rings.", task: { type: "rings", count: 5 }, hint: "fly" },
+      { goal: "Act three. Clank is throwing gears! Dodge four of them.", task: { type: "gears", count: 4 }, hint: "flyDodge" },
+      { goal: "Act four. Catch Clank! Fly right up to him.", task: { type: "chase" }, hint: "chase" },
+      { goal: "Act five. Clank is lonely, not wicked. Show him kindness: bow to him.", task: { type: "kindness" }, hint: "bow" },
+      { goal: "Act six. The King awaits. Kneel before him, and bow.", task: { type: "knight" }, hint: "bow" },
+    ],
+  },
 ];
+
+// read after the grand finale
+export const EPILOGUE = {
+  id: "epilogue", set: "courtyard", title: "The End",
+  pages: [
+    "From that night on, the music box played every evening. And Clank, who had never had a friend, wound its tiny key himself.",
+    "Old Bramble remembered his birthday. Captain Pegg found a new crew. And Grumble let everyone cross his bridge, as long as they said hello.",
+    "And Sir Pip the Brave? He still had no idea what he was doing. But he had friends, and that was more than enough. The end.",
+  ],
+  art: [
+    { set: "courtyard", night: true, cast: [["clank", 0.35], ["musicbox", 0.65]] },
+    { set: "forest", cast: [["wizard", 0.22], ["pirate", 0.5], ["troll", 0.8, true]] },
+    { set: "courtyard", cast: [["pip", 0.3], ["princess", 0.52], ["marlo", 0.76, true]] },
+  ],
+};
 
 // what the narrator says while a task plays out
 export const TASK_LINES = {
@@ -478,6 +523,13 @@ export const TASK_LINES = {
   dodged: "Dodged!",
   zapped: "Zapped! Keep jumping.",
   overheat: "Clank is overheating!",
+  flying: "Up, up, and away!",
+  ring: "Through the ring!",
+  missRing: "Missed! Here comes another.",
+  gearHit: "Ouch! Watch out for the gears!",
+  gotClank: "Got him!",
+  kneel: "Kneel, and bow to the King.",
+  finale: "Three cheers for the whole company!",
 };
 export const RIDDLES = [
   { line: "Grumble's riddle. What gets wetter, the more it dries? A towel, a fish, or a rain cloud?", options: ["A towel", "A fish", "A rain cloud"], answer: 0, q: "What gets wetter, the more it dries?" },
@@ -519,6 +571,7 @@ export function allLines() {
   Object.values(ENDINGS).forEach((e) => say(e.line));
   for (const ch of CHAPTERS) { say(ch.intro); ch.acts.forEach((a) => say(a.goal)); ch.pages.forEach((l) => say(l)); }
   PROLOGUE.pages.forEach((l) => say(l));
+  EPILOGUE.pages.forEach((l) => say(l));
   Object.values(TASK_LINES).forEach((l) => say(l));
   RIDDLES.forEach((r) => say(r.line, "troll"));
   Object.values(STORY_LINES).forEach((l) => say(l));

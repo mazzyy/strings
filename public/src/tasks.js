@@ -486,7 +486,230 @@ function dodge(spec, c, done) {
   };
 }
 
-const TASKS = { collect, simon, duel, riddle, sneak, unlock, dodge };
+// ---------------------------------------------------------------------------
+// The finale: flying on Marlo, Clank's last trick, his change of heart, the knighting
+
+// is Sir Pip leaning forward (a bow)? works even mid-air, where feet never touch the floor
+function leaning(c) {
+  const p = c.pip;
+  const up = v.subVectors(p.get("neck"), p.get("pelvis")).normalize();
+  const hr = new THREE.Vector3().subVectors(p.get("rH"), p.get("lH"));
+  const hf = new THREE.Vector3(-hr.z, 0, hr.x).normalize();
+  return up.x * hf.x + up.z * hf.z;
+}
+
+function mount(spec, c, done) {
+  let on = false;
+  return {
+    target() { return c.guest().get("head").clone(); },
+    update() {
+      if (on || flat(c.pip.get("pelvis"), c.guest().get("pelvis")) > 0.12) return;
+      on = true;
+      c.guestSay("mount");
+      c.setFlight(true);
+      c.coach(TASK_LINES.flying);
+      c.emote("marlo", "♥", () => c.guest().get("head"), "Hold on!", 1.8);
+      setTimeout(() => c.guestSay("fly"), 2200);
+      setTimeout(done, 3400);
+    },
+    end() {},
+  };
+}
+
+function rings(spec, c, done) {
+  if (!c.flying()) c.setFlight(true);
+  const group = new THREE.Group();
+  c.root.add(group);
+  const list = [];
+  let passed = 0, t = 0, next = 0.6, finished = false, toldMiss = false;
+  const spawn = () => {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.006, 8, 28), new THREE.MeshBasicMaterial({ color: 0xffd34a, transparent: true, opacity: 0.9, toneMapped: false }));
+    m.rotation.y = Math.PI / 2; // the hole faces the way they fly
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.014, 8, 28), new THREE.MeshBasicMaterial({ color: 0xffe080, transparent: true, opacity: 0.2, toneMapped: false, depthWrite: false }));
+    m.add(halo);
+    m.position.set(0.44, rand(0.12, 0.3), c.pip.get("pelvis").z);
+    group.add(m);
+    list.push({ m, prevX: 0.44, judged: false });
+  };
+  return {
+    target() { const r = list.find((x) => !x.judged); return r ? r.m.position.clone() : null; },
+    update(dt) {
+      t += dt;
+      if (!finished && t > next && list.filter((r) => !r.judged).length < 2) { spawn(); next = t + 2.3; }
+      const p = c.pip.get("pelvis");
+      const bodyY = p.y + 0.03;
+      for (const r of list) {
+        r.m.position.x -= dt * 0.1;
+        r.m.scale.setScalar(1 + Math.sin(t * 5) * 0.05);
+        if (!r.judged && r.prevX > p.x && r.m.position.x <= p.x) {
+          r.judged = true;
+          if (Math.abs(r.m.position.y - bodyY) < 0.055 && Math.abs(r.m.position.z - p.z) < 0.09) {
+            passed++;
+            r.m.material.color.set(0x8cff7a);
+            c.sfx("chime", null, { volume: 0.35, rate: 1.2 + passed * 0.1 });
+            c.emote("pip", "✦", () => c.pip.get("head"), `${passed} / ${spec.count}`, 1.3);
+            if (passed === 1) c.coach(TASK_LINES.ring);
+            if (passed >= spec.count) { finished = true; setTimeout(done, 900); }
+          } else {
+            r.m.material.color.set(0xff6a5a);
+            if (!toldMiss) { toldMiss = true; c.coach(TASK_LINES.missRing); c.showHint("fly"); }
+          }
+        }
+        r.prevX = r.m.position.x;
+      }
+      for (let i = list.length - 1; i >= 0; i--) if (list[i].m.position.x < -0.5) { dispose(list[i].m); list.splice(i, 1); }
+    },
+    end() { dispose(group); },
+  };
+}
+
+function gearMesh() {
+  const g = new THREE.Group();
+  const brass = new THREE.MeshStandardMaterial({ color: 0xc89a40, metalness: 0.9, roughness: 0.35, emissive: 0x3a2400 });
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.005, 14), brass));
+  for (let i = 0; i < 8; i++) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.005, 0.005), brass); const a = (i / 8) * Math.PI * 2; t.position.set(Math.cos(a) * 0.016, 0, Math.sin(a) * 0.016); t.rotation.y = -a; g.add(t); }
+  g.rotation.x = Math.PI / 2;
+  return g;
+}
+function gears(spec, c, done) {
+  if (!c.flying()) c.setFlight(true);
+  const K = c.clank();
+  K.show(true); K.mode = "fly"; K.target.set(0.33, 0.64, -0.05); K.yaw = -Math.PI / 2;
+  c.sayAs("clank", "gears");
+  const list = [];
+  let dodged = 0, t = 0, next = 1.8, finished = false, toldHit = -9;
+  return {
+    target() { return K.pup.get("head").clone(); },
+    update(dt) {
+      t += dt;
+      K.target.y = 0.64 + Math.sin(t * 1.2) * 0.06;
+      if (!finished && t > next) {
+        next = t + 2.1;
+        const from = K.pup.get("chest").clone();
+        const to = c.pip.get("pelvis").clone().add(v.set(0, 0.04, 0));
+        const m = gearMesh();
+        m.position.copy(from);
+        c.root.add(m);
+        list.push({ m, dir: to.sub(from).normalize(), went: 0 });
+        c.sfx("pop", K.pup.group, { volume: 0.5, rate: 0.7 });
+      }
+      const p = c.pip.get("pelvis"), head = c.pip.get("head");
+      for (let i = list.length - 1; i >= 0; i--) {
+        const gr = list[i];
+        gr.m.position.addScaledVector(gr.dir, dt * 0.2);
+        gr.went += dt * 0.2;
+        gr.m.rotation.z += dt * 8;
+        if (gr.m.position.distanceTo(p) < 0.05 || gr.m.position.distanceTo(head) < 0.04) {
+          c.knockPip(gr.dir, 0.02);
+          c.sfx("clink", c.pip.group, { volume: 0.6, rate: 0.8 });
+          if (t - toldHit > 6) { toldHit = t; c.coach(TASK_LINES.gearHit); c.showHint("flyDodge"); }
+          dispose(gr.m); list.splice(i, 1);
+        } else if (gr.m.position.x < p.x - 0.1 || gr.went > 0.8) {
+          dispose(gr.m); list.splice(i, 1);
+          if (!finished) {
+            dodged++;
+            c.emote("pip", "✦", () => c.pip.get("head"), `${dodged} / ${spec.count}`, 1.2);
+            if (dodged >= spec.count) { finished = true; c.sayAs("clank", "steal"); setTimeout(done, 1500); }
+          }
+        }
+      }
+    },
+    end() { for (const gr of list) dispose(gr.m); },
+  };
+}
+
+function chase(spec, c, done) {
+  if (!c.flying()) c.setFlight(true);
+  const K = c.clank();
+  K.show(true); K.mode = "fly";
+  c.guestSay("spot");
+  let t = 0, caught = false;
+  return {
+    target() { return K.pup.get("head").clone(); },
+    update(dt) {
+      t += dt;
+      if (caught) return;
+      // he darts about the right half of the sky
+      K.target.set(0.17 + Math.sin(t * 0.55) * 0.15, 0.62 + Math.sin(t * 0.9) * 0.09, -0.04 + Math.sin(t * 0.43) * 0.06);
+      K.yaw = Math.atan2(Math.cos(t * 0.55), 0.3) - Math.PI / 2;
+      if (c.pip.get("pelvis").distanceTo(K.pup.get("pelvis")) < 0.1) {
+        caught = true;
+        c.coach(TASK_LINES.gotClank);
+        c.sfx("chime", null, { volume: 0.5 });
+        c.sayAs("clank", "caught");
+        K.mode = "sad";
+        // they glide down onto a cloud together
+        K.target.set(c.pip.get("pelvis").x + 0.13, 0.5, 0.02);
+        K.yaw = -Math.PI / 2;
+        setTimeout(() => c.setFlight(false), 1500);
+        setTimeout(done, 3200);
+      }
+    },
+    end() {},
+  };
+}
+
+function kindness(spec, c, done) {
+  const K = c.clank();
+  K.show(true); K.mode = "sad";
+  c.sayAs("clank", "sad");
+  c.emote("marlo2", "…", () => K.pup.get("head"), null, 3);
+  let lean = 0, kind = false;
+  const redeem = () => {
+    if (kind) return;
+    kind = true;
+    c.hideHint();
+    K.pup.skin.extra?.redeem?.();
+    c.emote("marlo2", "♥", () => K.pup.get("head"), null, 2.5);
+    c.sfx("chime", null, { volume: 0.6 });
+    setTimeout(() => { c.sayAs("clank", "thanks"); c.music(); K.mode = "dance"; c.confetti("grace"); }, 900);
+    setTimeout(done, 5200);
+  };
+  return {
+    target() { return K.pup.get("head").clone(); },
+    update(dt) {
+      // stay facing Sir Pip, just in front of him
+      const p = c.pip.get("pelvis");
+      if (!kind) { K.target.set(THREE.MathUtils.clamp(p.x + 0.14, -0.32, 0.34), 0.5, THREE.MathUtils.clamp(p.z, -0.1, 0.1)); K.yaw = -Math.PI / 2; }
+      lean = leaning(c) > 0.32 ? lean + dt : 0;
+      if (lean > 0.35) redeem();
+    },
+    hear(ev) { if (ev.type === "bow") redeem(); },
+    end() {},
+  };
+}
+
+function knight(spec, c, done) {
+  let phase = "dip", t = 0, lean = 0;
+  c.stageKnighting();
+  return {
+    target() { return c.king().pup.get("head").clone(); },
+    update(dt) {
+      t += dt;
+      if (phase === "dip" && t > 2.4) { phase = "wait"; c.sayAs("king", "kneel"); c.coach(TASK_LINES.kneel); }
+      if (phase === "wait") {
+        lean = leaning(c) > 0.32 ? lean + dt : 0;
+        if (lean > 0.35) this.go();
+      }
+    },
+    hear(ev) { if (ev.type === "bow" && phase === "wait") this.go(); },
+    go() {
+      phase = "knighting";
+      c.hideHint();
+      const K = c.king();
+      K.mode = "knight";
+      c.sayAs("king", "words");
+      setTimeout(() => { c.sfx("clink", K.pup.group, { volume: 0.5, rate: 1.4 }); }, 1500);
+      setTimeout(() => { c.sfx("clink", K.pup.group, { volume: 0.5, rate: 1.5 }); }, 2300);
+      setTimeout(() => { c.sayAs("king", "name"); K.mode = "proud"; }, 3600);
+      setTimeout(() => { c.sfx("applause", null, { volume: 0.7 }); c.confetti("grace"); }, 7200);
+      setTimeout(done, 8200);
+    },
+    end() {},
+  };
+}
+
+const TASKS = { collect, simon, duel, riddle, sneak, unlock, dodge, mount, rings, gears, chase, kindness, knight };
 export function createTask(spec, c, done) {
   const make = TASKS[spec.type];
   if (!make) { setTimeout(done, 100); return { update() {}, end() {} }; }

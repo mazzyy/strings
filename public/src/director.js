@@ -554,6 +554,27 @@ const CLIPS = {
       },
     };
   },
+  // flying: Marlo stays under Sir Pip (the player steers), banking as they go
+  carry: (ai, o = {}) => {
+    const last = new THREE.Vector3();
+    let bank = 0;
+    return {
+      run(t, pose, dt) {
+        const target = o.target();
+        if (t > 0) bank += ((target.x - last.x) / Math.max(dt, 1e-3) * -0.8 - bank) * Math.min(1, dt * 4);
+        last.copy(target);
+        // glide into place at the start, then stick close
+        ai.base.lerp(target, Math.min(1, dt * (t < 1 ? 4 : 14)));
+        pose.pos.copy(ai.base);
+        ai.yaw = lerpAngle(ai.yaw, o.yaw(), Math.min(1, dt * 5));
+        pose.yaw = ai.yaw;
+        pose.roll = THREE.MathUtils.clamp(bank, -0.5, 0.5) + Math.sin(t * 3) * 0.04;
+        pose.pitch = Math.sin(t * 2) * 0.05;
+        return o.stop?.() || false;
+      },
+    };
+  },
+
   // knocked flat: the strings go slack, then the puppeteer hauls him back up
   knockout: () => ({
     run(t, pose) {
