@@ -58,7 +58,7 @@ export class Player {
   get length() { return this.perf ? this.perf.frames.length / this.perf.rate : 0; }
 
   // drive a (ghost) puppet's bars from the recording
-  apply(dt, puppet) {
+  apply(dt, puppet, offset = null) {
     if (!this.playing) return false;
     this.t += dt;
     const { frames, rate } = this.perf;
@@ -73,11 +73,14 @@ export class Player {
     const lerp3 = (o) => new THREE.Vector3(a[o], a[o + 1], a[o + 2]).lerp(new THREE.Vector3(b[o], b[o + 1], b[o + 2]), k);
     const slerp4 = (o) => new THREE.Quaternion(a[o], a[o + 1], a[o + 2], a[o + 3]).slerp(new THREE.Quaternion(b[o], b[o + 1], b[o + 2], b[o + 3]), k);
     puppet.main.position.copy(lerp3(0));
+    if (offset) puppet.main.position.add(offset);
     puppet.main.quaternion.copy(slerp4(3));
     puppet.main.held = a[7] > 0.5;
+    puppet.main.parked = false;
     puppet.hands.held = a[15] > 0.5;
     if (puppet.hands.held) {
       puppet.hands.position.copy(lerp3(8));
+      if (offset) puppet.hands.position.add(offset);
       puppet.hands.quaternion.copy(slerp4(11));
     }
     return true;

@@ -121,6 +121,7 @@
       <button id="demo" title="T">Demo</button>
       <button id="talk" title="Hold V">🎙 Talk to Marlo</button>
       <button id="bills">Playbills (0)</button>
+      <button id="mode" title="N" hidden>Mode: Classic</button>
       <button id="rec" title="R">● Record</button>
       <button id="play" title="P">▶ Replay</button>
       <button id="share" title="L">Share link</button>
@@ -129,10 +130,11 @@
     </div>
   </div>
 
-  <div id="help" class="hud card">
-    <div class="head"><strong>Hand simulator</strong><button id="help-toggle">hide</button></div>
+  <div id="help" class="hud card collapsed">
+    <div class="head"><strong>Hand simulator</strong><button id="help-toggle">show</button></div>
     <div class="body">
       <table>
+        <tr><td>drag the gold cord</td><td>raise the curtain</td></tr>
         <tr><td>hold left click</td><td>pinch the bar (G = sticky pinch)</td></tr>
         <tr><td>move mouse</td><td>move your hand — raise, carry, walk</td></tr>
         <tr><td>wheel</td><td>hand nearer / further</td></tr>
@@ -145,13 +147,13 @@
         <tr><td>hold V</td><td>talk to Marlo</td></tr>
         <tr><td>release</td><td>open hand — the puppet slumps</td></tr>
         <tr><td>R · P · L</td><td>record · replay shadow · copy share link</td></tr>
-        <tr><td>T · M · C</td><td>demo · voice · captions</td></tr>
+        <tr><td>T · M · C · N</td><td>demo · voice · captions · fun mode</td></tr>
       </table>
-      <p>On Quest: pinch a bar to hold it, pinch a prop to carry it. Poke the red knob to record, green to replay, blue to talk to Marlo. Pinch both hands in the air for 1.5 s to move the stage.</p>
+      <p>On Quest: pull the gold cord to raise the curtain. Pinch near a bar to hold it (from below is fine, so you can play seated with your arms low). Pinch a prop to carry it. Poke the red knob to record, green to replay your shadow, blue to talk to Marlo, gold for fun modes. Pinch both hands in the air for 1.5 s to move the stage.</p>
     </div>
   </div>
 
-  <div id="logwrap" class="hud card"><ul id="log"><li>Pinch the glowing bar to wake Sir Pip.</li></ul></div>
+  <div id="logwrap" class="hud card"><ul id="log"><li>Pull the gold cord to raise the curtain.</li></ul></div>
   <div id="show"></div>
   <div id="hint"></div>
   <div id="billpanel"></div>

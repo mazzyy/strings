@@ -89,6 +89,9 @@ function makeBars(m, style, assets) {
       }
     }
     group.add(g);
+    // the bar's pieces never move relative to each other: one draw call per material
+    // (the glow loop below still works: it animates the shared materials)
+    mergeStatic(g);
     return { g, glow };
   };
   const main = mk("main");
@@ -233,6 +236,7 @@ export function knightSkin(assets, { ghost = false } = {}) {
     const tmpA = new THREE.Vector3();
     return {
       group,
+      bars: bars.group,
       setHighlight: bars.setHighlight,
       update(f, dt) {
         t += dt;
@@ -452,6 +456,7 @@ export function dragonSkin(assets) {
     let lastY = 0, flap = 0;
     return {
       group,
+      bars: bars.group,
       update(f, dt) {
         t += dt;
         const P = (n) => m.get(n);

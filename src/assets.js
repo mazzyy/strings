@@ -43,7 +43,7 @@ export async function loadAssets(renderer, onProgress = () => {}) {
   const loader = new THREE.TextureLoader();
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envP = new Promise((resolve) => {
-    new RGBELoader().load(`${BASE}hdri/reading_room_1k.hdr`, (hdr) => {
+    new RGBELoader().load(`${BASE}hdri/reading_room_256.hdr`, (hdr) => {
       const env = pmrem.fromEquirectangular(hdr).texture;
       hdr.dispose();
       resolve(env);

@@ -47,7 +47,7 @@ export class Narrator {
     const line = COACH[key] || key;
     if (this.queue.includes(line)) return;
     this.queue.push(line);
-    if (this.queue.length > 2) this.queue.shift();
+    if (this.queue.length > 3) this.queue.shift();
   }
 
   update(dt) {

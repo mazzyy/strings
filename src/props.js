@@ -4,6 +4,7 @@
 //            it. Carry it to Marlo and let go — it's a gift.
 //   Desktop: click a prop to hand it to Sir Pip; click Marlo to give it to him.
 import * as THREE from "three";
+import { mergeStatic } from "./perf.js";
 
 const tv = new THREE.Vector3();
 
@@ -38,6 +39,7 @@ function buildLantern() {
   const handle = new THREE.Mesh(new THREE.TorusGeometry(0.005, 0.0012, 6, 16), brass);
   handle.position.y = 0.003;
   const light = new THREE.PointLight(0xffb060, 0, 0.7, 1.5);
+  light.visible = false;
   light.position.y = -0.016;
   g.add(body, cap, base, handle, light);
   g.userData = { glass, light };
@@ -93,6 +95,7 @@ export class Props {
 
     const make = (name, mesh, local, rot) => {
       mesh.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      mergeStatic(mesh); // one draw call per material, not one per petal
       stageRoot.add(mesh);
       const home = rack.position.clone().add(new THREE.Vector3(...local));
       const homeQ = new THREE.Quaternion().setFromEuler(rot || new THREE.Euler());
@@ -114,18 +117,34 @@ export class Props {
 
   setNight(on) {
     const l = this.items.get("lantern").mesh.userData;
+    // the lantern's light only exists at night (an unlit light still costs GPU time)
+    l.light.visible = on;
     l.light.intensity = on ? 0.9 : 0;
     l.glass.emissiveIntensity = on ? 2.2 : 0.4;
   }
 
-  _give(it, who) {
+  _give(it, who, { silent = false, from = null } = {}) {
     // only one prop per puppet: whatever they held goes back to the rack
     for (const other of this.items.values()) if (other !== it && other.state === who) this._home(other, false);
     it.state = who;
     it.hand = null;
     this.sfx?.play("pop", it.mesh, { volume: 0.7 });
-    if (who === "pip") this.onEvent({ type: "hold", prop: it.name });
+    if (silent) return;
+    if (who === "pip") this.onEvent({ type: "hold", prop: it.name, from });
     if (who === "marlo") { this.onEvent({ type: "give", prop: it.name }); this.sfx?.play("chirp", it.mesh, { volume: 0.8 }); }
+  }
+
+  // Marlo's fetch: a prop that's sitting on the rack
+  restingItem() {
+    const free = [...this.items.values()].filter((it) => it.state === "rest");
+    return free.length ? free[Math.floor(Math.random() * free.length)].name : null;
+  }
+  // move a prop programmatically: to "pip", "marlo" or back to the "rack"
+  moveTo(name, who, opts = {}) {
+    const it = this.items.get(name);
+    if (!it) return;
+    if (who === "rack") this._home(it, !opts.silent);
+    else this._give(it, who, opts);
   }
 
   _home(it, announce = true) {

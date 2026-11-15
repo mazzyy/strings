@@ -10,20 +10,58 @@ const tmpM = new THREE.Matrix4();
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
 
+const ONE = new THREE.Vector3(1, 1, 1);
+
 export class HandState {
   constructor(id) {
     this.id = id;
     this.present = false;
     this.pinch = false;
     this.matrix = new THREE.Matrix4();
-    this.position = new THREE.Vector3();
+    this.position = new THREE.Vector3();   // pinch point (thumb + index tips)
     this.quaternion = new THREE.Quaternion();
+    this.anchor = new THREE.Vector3();     // a point that stays put while the fingers close
     this.tip = new THREE.Vector3();
   }
-  setPose(pos, quat) {
+  setPose(pos, quat, anchor = pos) {
     this.position.copy(pos);
     this.quaternion.copy(quat);
-    this.matrix.compose(pos, quat, new THREE.Vector3(1, 1, 1));
+    this.anchor.copy(anchor);
+    this.matrix.compose(pos, quat, ONE);
+  }
+}
+
+// One-Euro filter (Casiez et al.): smooths jitter when the hand is still, but
+// follows fast moves without lag. Used on tracked hand positions + rotations.
+const alpha = (cutoff, dt) => { const tau = 1 / (2 * Math.PI * cutoff); return 1 / (1 + tau / dt); };
+export class OneEuroVec3 {
+  constructor(minCutoff = 1.4, beta = 18, dCutoff = 1.2) {
+    Object.assign(this, { minCutoff, beta, dCutoff });
+    this.x = null; this.dx = new THREE.Vector3();
+    this._d = new THREE.Vector3();
+  }
+  reset() { this.x = null; this.dx.set(0, 0, 0); }
+  filter(v, dt) {
+    if (!this.x || dt <= 0) { this.x = v.clone(); return this.x; }
+    this._d.subVectors(v, this.x).divideScalar(dt);
+    this.dx.lerp(this._d, alpha(this.dCutoff, dt));
+    const cutoff = this.minCutoff + this.beta * this.dx.length();
+    this.x.lerp(v, alpha(cutoff, dt));
+    return this.x;
+  }
+}
+export class OneEuroQuat {
+  constructor(minCutoff = 1.4, beta = 1.2) {
+    Object.assign(this, { minCutoff, beta });
+    this.q = null; this.speed = 0;
+  }
+  reset() { this.q = null; this.speed = 0; }
+  filter(q, dt) {
+    if (!this.q || dt <= 0) { this.q = q.clone(); return this.q; }
+    const ang = this.q.angleTo(q) / dt;
+    this.speed += (ang - this.speed) * alpha(1.2, dt);
+    this.q.slerp(q, alpha(this.minCutoff + this.beta * this.speed, dt));
+    return this.q;
   }
 }
 
@@ -49,34 +87,48 @@ export class XRHands {
       return slot;
     });
     this._pinch = [false, false];
+    this.filters = [0, 1].map(() => ({ mid: new OneEuroVec3(), anchor: new OneEuroVec3(), rot: new OneEuroQuat() }));
+    this.lost = [0, 0]; // seconds since the hand was last tracked
+    this._tw = new THREE.Vector3(); this._iw = new THREE.Vector3(); this._kw = new THREE.Vector3();
+    this._q = new THREE.Quaternion(); this._sq = new THREE.Quaternion();
   }
 
   // stageRoot: Object3D whose local space is stage space
-  update(stageRoot) {
+  update(stageRoot, dt = 1 / 72) {
     const inv = tmpM.copy(stageRoot.matrixWorld).invert();
+    this._sq.setFromRotationMatrix(stageRoot.matrixWorld).invert();
     for (let i = 0; i < 2; i++) {
       const slot = this.slots[i];
       const hs = this.hands[i];
-      hs.present = false;
-      if (!slot.source) continue;
+      const F = this.filters[i];
+      if (!slot.source) { hs.present = false; continue; }
 
       if (slot.source.hand) {
         const j = slot.hand.joints;
         const wrist = j["wrist"], thumb = j["thumb-tip"], index = j["index-finger-tip"];
-        if (!wrist || !thumb || !index || !wrist.visible) continue;
-        const tw = thumb.getWorldPosition(new THREE.Vector3());
-        const iw = index.getWorldPosition(new THREE.Vector3());
+        const knuckle = j["index-finger-metacarpal"] || wrist;
+        if (!wrist || !thumb || !index || !wrist.visible) {
+          // tracking hiccup (hand behind the other hand, fast motion): hold the
+          // last pose briefly instead of dropping the puppet
+          this.lost[i] += dt;
+          if (this.lost[i] > 0.3) { hs.present = false; hs.pinch = false; this._pinch[i] = false; F.mid.reset(); F.anchor.reset(); F.rot.reset(); }
+          continue;
+        }
+        this.lost[i] = 0;
+        const tw = thumb.getWorldPosition(this._tw);
+        const iw = index.getWorldPosition(this._iw);
         const gap = tw.distanceTo(iw);
         // hysteresis so the grip doesn't flicker at the threshold
         this._pinch[i] = this._pinch[i] ? gap < 0.035 : gap < 0.018;
-        const mid = tw.add(iw).multiplyScalar(0.5).applyMatrix4(inv);
-        const q = wrist.getWorldQuaternion(new THREE.Quaternion());
-        const stageQ = new THREE.Quaternion().setFromRotationMatrix(stageRoot.matrixWorld).invert().multiply(q);
-        hs.setPose(mid, stageQ);
         hs.tip.copy(iw).applyMatrix4(inv);
+        const mid = F.mid.filter(tmpV.addVectors(tw, iw).multiplyScalar(0.5).applyMatrix4(inv), dt);
+        const anchor = F.anchor.filter(knuckle.getWorldPosition(this._kw).applyMatrix4(inv), dt);
+        const q = F.rot.filter(this._q.copy(this._sq).multiply(wrist.getWorldQuaternion(tmpQ)), dt);
+        hs.setPose(mid, q, anchor);
         hs.pinch = this._pinch[i];
         hs.present = true;
       } else {
+        hs.present = false;
         const g = slot.grip;
         if (!g.visible) continue;
         const p = g.getWorldPosition(new THREE.Vector3()).applyMatrix4(inv);

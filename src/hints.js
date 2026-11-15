@@ -5,7 +5,8 @@
 import * as THREE from "three";
 
 export const HINTS = {
-  grab:        { target: "mainBar",  motion: "pinch",    desk: [["Left click"], "Click and hold the glowing bar"], xr: "Pinch the glowing bar", voice: ["grabDesk", "grab"] },
+  cord:        { target: "cord",     motion: "down",     desk: [["Drag ↓"], "Pull the gold cord to raise the curtain"], xr: "Pinch the gold tassel, pull it down", voice: ["pullCordDesk", "pullCord"] },
+  grab:        { target: "mainBar",  motion: "pinch",    desk: [["Left click"], "Click and hold the glowing bar"], xr: "Pinch near the glowing bar (from below works too)", voice: ["grabDesk", "grab"] },
   walk:        { target: "mainBar",  motion: "sideways", desk: [["Hold click", "Move mouse ←  →"], "Carry Sir Pip across the stage"], xr: "Keep pinching and move your hand sideways", voice: "hintWalk" },
   bow:         { target: "mainBar",  motion: "tip",      desk: [["W"], "Tip forward to bow"], xr: "Tip your wrist forward", voice: "hintBow" },
   wave:        { target: "handsBar", motion: "up",       desk: [["Shift", "Move mouse ↑"], "Lift the small arm bar to wave"], xr: "Pinch the small bar with your other hand, then lift", voice: "hintWave" },
