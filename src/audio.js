@@ -192,20 +192,47 @@ function musicBox(ctx) {
   });
 }
 
+// Real recordings (CC0, see CREDITS.md) for the everyday sounds; each name can have
+// variants, picked at random. Anything not loaded (yet) falls back to the synthesised one.
+const BASE = new URL("../audio/", import.meta.url).href;
+const FILES = {
+  step: ["step0", "step1", "step2", "step3", "step4", "step5", "step6", "step7", "step8", "step9"],
+  clink: ["metalClick", "metalLatch"],
+  applause: ["applause"],
+  laugh: ["laugh"],
+  cheer: ["cheer"],
+  swish: ["cloth1", "cloth3"],
+  clack: ["handleSmallLeather", "beltHandle1"],
+  sword: ["drawKnife1", "drawKnife2", "knifeSlice", "knifeSlice2"],
+  hit: ["chop"],
+  creak: ["creak1", "creak2", "creak3"],
+  bird: ["bird"],
+  nightbird: ["bird_night"],
+  frog: ["frog"],
+  thud: ["dropLeather"],
+};
+
 export class Sfx {
   constructor(listener) {
     this.listener = listener;
     this.ctx = listener.context;
     this.B = makeBuffers(this.ctx);
     this.B.music = musicBox(this.ctx);
+    this.F = {};
     this.pool = [];
     this.enabled = true;
+    const loader = new THREE.AudioLoader();
+    for (const [name, list] of Object.entries(FILES)) {
+      this.F[name] = [];
+      for (const f of list) loader.load(`${BASE}${f}.mp3`, (buf) => this.F[name].push(buf), undefined, () => {});
+    }
   }
 
   // play a named effect at a THREE.Object3D (spatial) or non-spatially if none
   play(name, at = null, { volume = 1, rate = 1 } = {}) {
     if (!this.enabled || this.ctx.state !== "running") return;
-    const buf = this.B[name];
+    const real = this.F[name];
+    const buf = real && real.length ? real[Math.floor(Math.random() * real.length)] : this.B[name];
     if (!buf) return;
     let src;
     if (at) {
@@ -223,7 +250,83 @@ export class Sfx {
     }
     src.setBuffer(buf);
     src.setVolume(volume);
-    src.setPlaybackRate(rate * (0.94 + Math.random() * 0.12));
+    src.setPlaybackRate((real && real.length ? Math.min(1.25, Math.max(0.8, rate)) : rate) * (0.94 + Math.random() * 0.12));
     src.play();
+  }
+}
+
+// The soundscape: each chapter's music and ambience, looping and crossfading, ducked
+// under speech. Files load the first time a chapter needs them.
+const BEDS = {
+  story:     { music: ["music_story", 0.16] },
+  courtyard: { music: ["music_courtyard", 0.12], amb: ["amb_birds", 0.2] },
+  theatre:   { music: ["music_courtyard", 0.12], amb: ["amb_birds", 0.15] },
+  forest:    { music: ["music_story", 0.08], amb: ["amb_crickets", 0.3], extras: [["nightbird", 7, 13], ["frog", 9, 16]] },
+  ship:      { music: ["music_ship", 0.14], amb: ["amb_sea", 0.32], extras: [["creak", 5, 9]] },
+  bridge:    { music: ["music_story", 0.06], amb: ["amb_crickets", 0.26], extras: [["frog", 6, 12]] },
+  tower:     { music: ["music_tower", 0.13], amb: ["amb_cave", 0.12] },
+  cave:      { amb: ["amb_cave", 0.38] },
+  sky:       { music: ["music_story", 0.1], amb: ["amb_birds", 0.12] },
+  finale:    { music: ["music_finale", 0.22] },
+};
+export class Soundscape {
+  constructor(listener, sfx) {
+    this.listener = listener;
+    this.sfx = sfx;
+    this.loader = new THREE.AudioLoader();
+    this.cache = new Map();
+    this.tracks = []; // { audio, target, vol }
+    this.extraT = 0;
+    this.duck = 1;
+    this.enabled = true;
+  }
+  _buffer(name) {
+    if (!this.cache.has(name)) this.cache.set(name, this.loader.loadAsync(`${BASE}${name}.mp3`).catch(() => null));
+    return this.cache.get(name);
+  }
+  set(bed) {
+    if (this.bed === bed) return;
+    this.bed = bed;
+    const B = BEDS[bed] || {};
+    for (const t of this.tracks) t.target = 0; // fade the old ones out
+    for (const key of ["music", "amb"]) {
+      if (!B[key]) continue;
+      const [name, vol] = B[key];
+      const existing = this.tracks.find((t) => t.name === name);
+      if (existing) { existing.target = vol; continue; }
+      const track = { name, vol: 0, target: vol, audio: null };
+      this.tracks.push(track);
+      this._buffer(name).then((buf) => {
+        if (!buf || track.target === 0) return;
+        const a = new THREE.Audio(this.listener);
+        a.setBuffer(buf); a.setLoop(true); a.setVolume(0);
+        if (this.listener.context.state === "running") a.play();
+        track.audio = a;
+      });
+    }
+    this.extras = B.extras || [];
+    this.nextExtra = this.extras.map(([, a, b]) => a + Math.random() * (b - a));
+  }
+  // a moment of celebration: the music comes up for a few seconds
+  swell(secs = 6) { this.swellT = secs; }
+  update(dt, speaking) {
+    // music dips while someone is talking, and rises for a swell
+    this.swellT = Math.max(0, (this.swellT || 0) - dt);
+    this.duck += ((speaking ? 0.55 : this.swellT > 0 ? 1.7 : 1) - this.duck) * Math.min(1, dt * 3);
+    for (let i = this.tracks.length - 1; i >= 0; i--) {
+      const t = this.tracks[i];
+      t.vol += (t.target - t.vol) * Math.min(1, dt * 0.8);
+      if (t.audio) {
+        if (!t.audio.isPlaying && this.listener.context.state === "running" && t.target > 0) t.audio.play();
+        t.audio.setVolume(this.enabled ? t.vol * (t.name.startsWith("music") ? this.duck : 1) : 0);
+      }
+      if (t.target === 0 && t.vol < 0.003) { if (t.audio?.isPlaying) t.audio.stop(); this.tracks.splice(i, 1); }
+    }
+    // the odd owl call, frog or creaking timber
+    if (!this.extras?.length) return;
+    this.extraT += dt;
+    this.extras.forEach(([name, a, b], i) => {
+      if (this.extraT > this.nextExtra[i]) { this.nextExtra[i] = this.extraT + a + Math.random() * (b - a); this.sfx.play(name, null, { volume: 0.25 + Math.random() * 0.15 }); }
+    });
   }
 }

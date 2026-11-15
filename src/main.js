@@ -11,7 +11,7 @@ import { Robot } from "./robot.js";
 import { loadAssets } from "./assets.js";
 import { mergeStatic } from "./perf.js";
 import { batchParts } from "./batch.js";
-import { Sfx } from "./audio.js";
+import { Sfx, Soundscape } from "./audio.js";
 import { Hints } from "./hints.js";
 import { Props } from "./props.js";
 import { Show, playbills } from "./show.js";
@@ -234,7 +234,12 @@ const narrator = new Narrator({
 
 // ---- sound, hints, props, the show, talking ----------------------------------------
 const sfx = new Sfx(listener);
-const music = { play() { sfx.play("music", null, { volume: 0.45, rate: 1 }); } };
+// real music and ambience per chapter (see audio.js); "music.play()" is now a cue:
+// the chapter's soundscape comes in (or swells) when the curtain opens
+const soundscape = new Soundscape(listener, sfx);
+let chapterBed = "courtyard";
+soundscape.set("story");
+const music = { play() { soundscape.set(chapterBed); soundscape.swell(); } };
 // each guest has their own little sound when they react
 const GUEST_SFX = {
   marlo: (big) => (big ? ["roar", 0.55, 1] : ["chirp", 0.55, 1]),
@@ -266,8 +271,10 @@ const hints = new Hints(stageRoot, (target) => {
 const sets = new Sets(stageRoot);
 let setLight = SET_LIGHT.courtyard;
 let night = 0, nightTarget = 0;
+let flowers = null; // Bramble's blooming spell (see bloomForest)
 function setNight(on) { nightTarget = on ? 1 : setLight.night; props.setNight(nightTarget > 0.5); }
 function applySet(name) {
+  clearBloom();
   setLight = sets.show(name);
   if (mode?.id !== "party") spot.color.set(setLight.spot);
   if (!preshow) setNight(false);
@@ -490,8 +497,10 @@ function updateShowHud() {
   $("bills").textContent = `Playbills (${playbills.list().length})`;
 }
 
+let laughCool = 0;
 detector.on((ev) => {
   show.hear(ev);
+  if (ev.type === "fall" && show.state === "act" && elapsed > laughCool) { laughCool = elapsed + 9; setTimeout(() => sfx.play("laugh", null, { volume: 0.28 }), 350); }
   if (ev.type === "jump") sfx.play("clink", pip.group, { volume: 0.35 });
   if (["jump", "approach", "fall", "give", "wave"].includes(ev.type)) mind.wakeIfNapping();
   const r = mind.hear(ev, { t: elapsed });
@@ -725,6 +734,7 @@ function setGuest(id) {
 // put a chapter's set and guest on stage (no curtain business)
 function stagePlace(place) {
   hideExtras();
+  chapterBed = place.finale ? "sky" : place.id === "theatre" ? "theatre" : place.set;
   if (flying) setFlight(false);
   applySet(place.set);
   setGuest(place.guest);
@@ -896,7 +906,7 @@ function stageKnighting() {
     const C = extra("clank"); C.show(true); C.mode = "dance"; C.phase = 1; C.target.set(0.33, 0.5, -0.12); C.yaw = -0.6;
     princessOn(true); princessDrv.state = "happy"; princessDrv.pos.set(0.24, 0.5, 0.07);
     ai.base.set(-0.33, ai.home.y, -0.08);
-    music.play();
+    chapterBed = "finale"; music.play();
   }, 750);
 }
 
@@ -913,8 +923,8 @@ function grandFinale() {
     .forEach(([who, k], i) => setTimeout(() => sayAs(who, k), 1800 + i * 2200));
   for (let i = 0; i < 8; i++) setTimeout(() => { confetti.burst(["grace", "slapstick", "grace", "drama"][i % 4]); sfx.play("pop", null, { volume: 0.5, rate: 0.6 + (i % 3) * 0.3 }); }, i * 1900);
   sfx.play("applause", null, { volume: 0.9 });
-  music.play();
-  setTimeout(() => music.play(), 8200);
+  setTimeout(() => sfx.play("cheer", null, { volume: 0.6 }), 2500);
+  chapterBed = "finale"; music.play();
 }
 show.onGrandFinale = grandFinale;
 function sayAs(who, key) { const l = GUESTS[who]?.task?.[key]; if (l) marloSay(l, GUESTS[who].name, true); }
@@ -943,6 +953,49 @@ function showCredits() {
   const el = $("credits");
   if (!el || xrMode) { openMap(); return; }
   el.classList.add("on");
+}
+
+// ---- Bramble's spell: the dark forest bursts into bloom ---------------------------------
+// glowing flowers spring up across the stage, spreading out from the wizard, and dawn comes.
+// (two instanced meshes: two draw calls for all of them)
+function bloomForest() {
+  clearBloom();
+  const n = 44, cols = [0xff7ab8, 0xffd04a, 0x8ae8ff, 0xc89aff, 0xff9a5a];
+  const stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0014, 0.002, 1, 5).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0x3f8a3a, roughness: 0.8 }), n);
+  const heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.0068, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.5 }), n);
+  const from = marlo.get("pelvis");
+  const items = [];
+  for (let i = 0; i < n; i++) {
+    const x = -0.38 + Math.random() * 0.76, z = -0.17 + Math.random() * 0.32;
+    items.push({ x, z, h: 0.018 + Math.random() * 0.03, s: 0.7 + Math.random() * 0.7, delay: Math.hypot(x - from.x, z - from.z) * 3 + Math.random() * 0.3 });
+    heads.setColorAt(i, new THREE.Color(cols[i % cols.length]));
+  }
+  for (const m of [stems, heads]) { m.frustumCulled = false; stageRoot.add(m); }
+  flowers = { stems, heads, items, t: 0 };
+  updateBloom(0);
+  setLight = { ...setLight, night: 0.1 };
+  setNight(false);
+  confetti.burst("drama");
+  sfx.play("chime", null, { volume: 0.6, rate: 0.8 });
+  setTimeout(() => sfx.play("bird", null, { volume: 0.5 }), 1800);
+  soundscape.swell(9);
+}
+const _bm = new THREE.Matrix4(), _bq = new THREE.Quaternion(), _bs = new THREE.Vector3(), _bp = new THREE.Vector3();
+function updateBloom(dt) {
+  if (!flowers || flowers.t > 5) return;
+  flowers.t += dt;
+  flowers.items.forEach((f, i) => {
+    const k = easeX((flowers.t - f.delay) / 0.7);
+    const g = Math.max(k, 0.0001);
+    flowers.stems.setMatrixAt(i, _bm.compose(_bp.set(f.x, 0, f.z), _bq.identity(), _bs.set(1, f.h * g, 1)));
+    flowers.heads.setMatrixAt(i, _bm.compose(_bp.set(f.x, f.h * g, f.z), _bq.identity(), _bs.setScalar(f.s * g * (1 + 0.25 * Math.sin(Math.min(1, Math.max(0, (flowers.t - f.delay) / 0.7)) * Math.PI)))));
+  });
+  flowers.stems.instanceMatrix.needsUpdate = flowers.heads.instanceMatrix.needsUpdate = true;
+}
+function clearBloom() {
+  if (!flowers) return;
+  for (const m of [flowers.stems, flowers.heads]) { stageRoot.remove(m); m.geometry.dispose(); m.material.dispose(); m.dispose(); }
+  flowers = null;
 }
 
 // ---- tasks: duels, riddles, sneaking... (see tasks.js) -----------------------------------
@@ -988,6 +1041,7 @@ const taskCtx = {
   sayAs,
   music: () => music.play(),
   stageKnighting,
+  bloom: bloomForest,
 };
 show.makeTask = (spec, done) => {
   mind.taskBusy = true;
@@ -1039,12 +1093,13 @@ function openMap() {
   $("tip")?.classList.remove("on");
   props.setHover(null);
   storyMap.show(!!xrMode);
+  soundscape.set("story");
   // headset: the parchment floats beside the stage, turned to face you
   if (xrMode) faceViewer(storyMap.mesh); // turned square to your eyes, never rolled
   narrator.coach(STORY_LINES.mapOpen);
   if (hints.current) hints.hide();
 }
-function toggleMap() { storyMap.open ? storyMap.hide() : openMap(); }
+function toggleMap() { if (storyMap.open) { storyMap.hide(); if (showStarted) soundscape.set(chapterBed); } else openMap(); }
 // back to chapter one (the prologue plays again; playbills and modes are kept)
 function newStory() {
   storyMap.resetStory();
@@ -1216,8 +1271,8 @@ ghost.setVisible(false); confetti.points.visible = false;
 const intro = { on: false, t: 0, next: null };
 const camTween = { on: false, t: 0, dur: 2.6, fromPos: new THREE.Vector3(), fromLook: new THREE.Vector3(), toPos: new THREE.Vector3(), toLook: new THREE.Vector3() };
 const camLook = desktopCam.look.clone();
-function tweenCam(pos, look, dur = 2.6) {
-  camTween.on = true; camTween.t = 0; camTween.dur = dur;
+function tweenCam(pos, look, dur = 2.6, onDone = null) {
+  camTween.on = true; camTween.t = 0; camTween.dur = dur; camTween.onDone = onDone;
   camTween.fromPos.copy(camera.position); camTween.fromLook.copy(camLook);
   camTween.toPos.copy(pos); camTween.toLook.copy(look);
 }
@@ -1228,20 +1283,23 @@ function updateCam(dt) {
   camera.position.lerpVectors(camTween.fromPos, camTween.toPos, e);
   camLook.lerpVectors(camTween.fromLook, camTween.toLook, e);
   camera.lookAt(camLook);
-  if (k >= 1) camTween.on = false;
+  if (k >= 1) { camTween.on = false; const cb = camTween.onDone; camTween.onDone = null; cb?.(); }
 }
 const _rh = new THREE.Vector3();
 const robotHeadLocal = () => stageRoot.worldToLocal(robot.head.getWorldPosition(_rh).clone());
 function storytellerIntro(first, next) {
-  intro.on = true; intro.t = 0; intro.next = next;
+  intro.on = true; intro.t = 0; intro.next = next; intro.leaving = false;
+  soundscape.set("story");
   hints.hide();
   nightTarget = 1;
   robot.excite = 1;
   const sc = robot.group.scale.x;
-  sparkles.start(introSparkSource, () => new THREE.Vector3(0, 0.42, xrMode ? 0.14 : 0.32));
+  // sparkles drift up around his face as he speaks
+  sparkles.start(() => robotHeadLocal().add(new THREE.Vector3(0, -0.14 * sc, 0.1 * sc)), () => robotHeadLocal().add(new THREE.Vector3(0, 0.14 * sc, 0.16 * sc)));
   if (!xrMode) {
+    // a close-up on his face (his hands stay on the puppet bars, out of shot)
     const hw = robot.head.getWorldPosition(new THREE.Vector3());
-    tweenCam(hw.clone().add(new THREE.Vector3(-0.12, -0.16, 1.3)), hw.clone().add(new THREE.Vector3(0, -0.2, 0)));
+    tweenCam(hw.clone().add(new THREE.Vector3(0.02, 0.04, 0.82)), hw.clone().add(new THREE.Vector3(0, 0.03, 0)), 2.4);
   }
   narrator.queue.length = 0;
   narrator.coach(first ? "storyIntro" : "welcomeBack");
@@ -1251,33 +1309,16 @@ function storytellerIntro(first, next) {
 function updateIntro(dt) {
   if (!intro.on) return;
   intro.t += dt;
-  if (intro.t > 3.5 && !narrator.speaking && !narrator.queue.length) {
-    intro.on = false;
+  if (intro.t > 3.5 && !narrator.speaking && !narrator.queue.length && !intro.leaving) {
+    // the story is about to begin: pull back to the whole theatre, then open the book
+    intro.leaving = true;
     robot.excite = 0;
     sparkles.stop();
     const next = intro.next; intro.next = null;
-    next?.();
+    const done = () => { intro.on = false; intro.leaving = false; next?.(); };
+    if (xrMode) done();
+    else tweenCam(desktopCam.pos, desktopCam.look, 1.8, done); // the book opens once the camera is back
   }
-}
-// while he tells it: a storyteller conjuring the tale between his hands. Both hands
-// held out in front at chest height, weaving slowly (his fingers point down, so a raised
-// wave would look wrong); one hand lifts briefly in greeting at the start.
-// (robot-local targets, comfortably inside his reach, converted to stage space)
-const _ig = [new THREE.Vector3(), new THREE.Vector3()];
-function introGrips() {
-  const t = intro.t, g = robot.group;
-  g.updateMatrix();
-  return [-1, 1].map((side, i) => {
-    const weave = Math.sin(t * 1.3 + i * Math.PI) * 0.025;
-    const greet = i === 1 ? Math.max(0, Math.sin(Math.min(1, t / 1.8) * Math.PI)) : 0; // a little "hello"
-    _ig[i].set(side * (0.12 + weave + greet * 0.04), 0.24 + Math.sin(t * 1.7 + i) * 0.015 + greet * 0.08, 0.24 + greet * 0.02);
-    return _ig[i].clone().applyMatrix4(g.matrix);
-  });
-}
-// the sparkles rise from between his hands
-function introSparkSource() {
-  const [a, b] = introGrips();
-  return a.add(b).multiplyScalar(0.5).add(new THREE.Vector3(0, 0.02 * robot.group.scale.x, 0));
 }
 const gripL = new THREE.Vector3(), gripR = new THREE.Vector3();
 let gripInit = false;
@@ -1299,7 +1340,7 @@ if (loadingEl) {
   const first = !storyMap.hasProgress();
   const begin = () => {
     enter();
-    storytellerIntro(first && chapter.id === "courtyard", () => openingBook(() => { if (!xrMode) tweenCam(desktopCam.pos, desktopCam.look, 2); startPreshow(); }));
+    storytellerIntro(first && chapter.id === "courtyard", () => openingBook(startPreshow));
   };
   $("begin").onclick = begin;
   if ($("newstory")) $("newstory").onclick = () => {
@@ -1651,9 +1692,11 @@ renderer.setAnimationLoop((time, frame) => {
   hemi.intensity = 0.25 - 0.19 * night;
   scene.environmentIntensity = 0.4 - 0.3 * night;
   narrator.update(dt);
+  updateBloom(dt);
+  soundscape.update(dt, narrator.speaking || marloLines.length > 0 || book.open);
 
   let [lg, rg] = unbound.busy ? unbound.frozenGrips : ai.grips();
-  if (intro.on) [lg, rg] = introGrips();
+
   // the arms ease between targets (no snapping when he starts or stops gesturing)
   if (!gripInit) { gripL.copy(lg); gripR.copy(rg); gripInit = true; }
   gripL.lerp(lg, Math.min(1, dt * (intro.on ? 5 : 12)));

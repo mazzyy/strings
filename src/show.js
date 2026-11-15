@@ -204,6 +204,7 @@ export class Show {
     this.starMeshes[this.stars - 1].material = this.starMats.gold;
     this.sfx?.play("chime", null, { volume: 0.5 });
     this.sfx?.play("applause", null, { volume: 0.35 });
+    if (this.stars === this.scene.acts.length) setTimeout(() => this.sfx?.play("cheer", null, { volume: 0.5 }), 600);
     if (this.scene.sleepy && this.scene.acts[this.act].check === "jump") this.ai.sleep(false);
     const bravo = SHOW_LINES.bravo[Math.floor(Math.random() * SHOW_LINES.bravo.length)];
     this.narrator.coach(bravo);
