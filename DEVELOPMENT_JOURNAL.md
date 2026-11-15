@@ -157,7 +157,8 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
 
 ### Phase 11: presentation polish
 - **The robot storyteller opening:** the camera glides up to the robot puppeteer, the stage dims, his eyes brighten, he waves, magic sparkles spiral from his hands, and he says *"Ah, there you are! … let me tell you a story."* Then the book opens. Returning players get *"Welcome back! Now, where were we?"*
-- **Real paper page turns:** the old page lifts, curls over the spine in slices and becomes the new left page, with shading, a cast shadow and a paper sound.
+- **The storyteller's gesture:** both hands held out at chest height, slowly weaving as if conjuring the tale (the sparkles rise from between them), with a brief lift of one hand in greeting. This replaced a raised-hand wave that bent his arm unnaturally, since his fingers always point down.
+- **Real paper page turns:** the old page lifts, curls over the spine in slices and becomes the new left page, with shading and a cast shadow. The page sound was removed at the player's request.
 - **Superman-style flight:** while flying, Marlo is posed flat (head forward, belly down, legs and tail trailing), banks into turns and faces the direction of travel, with Sir Pip riding on his back. The free flight in the experiment uses the same pose.
 - **Clank fires six zaps,** each a little faster.
 - **The redrawn map:**

@@ -999,7 +999,7 @@ show.makeTask = (spec, done) => {
 };
 
 // ---- the storybook: three illustrated, narrated pages before each chapter -------------------
-const book = new StoryBook({ narrator, onFlip: () => sfx.play("page", null, { volume: 0.55, rate: 0.9 + Math.random() * 0.2 }) });
+const book = new StoryBook({ narrator });
 book.mesh.position.set(0, 0.42, 0.14);
 book.mesh.scale.setScalar(1.25);
 stageRoot.add(book.mesh);
@@ -1238,7 +1238,7 @@ function storytellerIntro(first, next) {
   nightTarget = 1;
   robot.excite = 1;
   const sc = robot.group.scale.x;
-  sparkles.start(() => robotHeadLocal().add(new THREE.Vector3(0, -0.26 * sc, 0.12 * sc)), () => new THREE.Vector3(0, 0.42, xrMode ? 0.14 : 0.32));
+  sparkles.start(introSparkSource, () => new THREE.Vector3(0, 0.42, xrMode ? 0.14 : 0.32));
   if (!xrMode) {
     const hw = robot.head.getWorldPosition(new THREE.Vector3());
     tweenCam(hw.clone().add(new THREE.Vector3(-0.12, -0.16, 1.3)), hw.clone().add(new THREE.Vector3(0, -0.2, 0)));
@@ -1259,12 +1259,25 @@ function updateIntro(dt) {
     next?.();
   }
 }
-// while he tells it: the right hand waves, the left opens toward you
+// while he tells it: a storyteller conjuring the tale between his hands. Both hands
+// held out in front at chest height, weaving slowly (his fingers point down, so a raised
+// wave would look wrong); one hand lifts briefly in greeting at the start.
+// (robot-local targets, comfortably inside his reach, converted to stage space)
+const _ig = [new THREE.Vector3(), new THREE.Vector3()];
 function introGrips() {
-  const hp = robotHeadLocal(), sc = robot.group.scale.x, t = intro.t;
-  const wave = new THREE.Vector3(0.15 * sc + Math.sin(t * 6) * 0.035 * sc, -0.03 * sc + Math.abs(Math.sin(t * 6)) * 0.02 * sc, 0.1 * sc).add(hp);
-  const offer = new THREE.Vector3(-0.13 * sc, -0.22 * sc + Math.sin(t * 1.5) * 0.01 * sc, 0.17 * sc).add(hp);
-  return [offer, wave];
+  const t = intro.t, g = robot.group;
+  g.updateMatrix();
+  return [-1, 1].map((side, i) => {
+    const weave = Math.sin(t * 1.3 + i * Math.PI) * 0.025;
+    const greet = i === 1 ? Math.max(0, Math.sin(Math.min(1, t / 1.8) * Math.PI)) : 0; // a little "hello"
+    _ig[i].set(side * (0.12 + weave + greet * 0.04), 0.24 + Math.sin(t * 1.7 + i) * 0.015 + greet * 0.08, 0.24 + greet * 0.02);
+    return _ig[i].clone().applyMatrix4(g.matrix);
+  });
+}
+// the sparkles rise from between his hands
+function introSparkSource() {
+  const [a, b] = introGrips();
+  return a.add(b).multiplyScalar(0.5).add(new THREE.Vector3(0, 0.02 * robot.group.scale.x, 0));
 }
 const gripL = new THREE.Vector3(), gripR = new THREE.Vector3();
 let gripInit = false;
