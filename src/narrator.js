@@ -117,6 +117,13 @@ export class Narrator {
     }
   }
 
+  // cut the current line short (the player has already moved on)
+  hush() {
+    this.queue.length = 0;
+    this.speakingUntil = this.t;
+    if (this.player?.stopNarrator) this.player.stopNarrator(); else this.player?.stop?.();
+  }
+
   setMuted(m) {
     this.muted = m;
     if (m) this.player?.stop?.();

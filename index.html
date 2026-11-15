@@ -87,6 +87,17 @@
     #xr-note { color: var(--muted); font: 12px ui-sans-serif, system-ui, sans-serif; align-self: center; }
     /* the riddle, written large on the left */
     #riddlecard { position: fixed; left: 16px; top: 50%; transform: translate(-20px, -50%); width: min(300px, 32vw); padding: 18px 20px; border-radius: 14px; background: #efe0bc; color: #2a1a10; border: 5px double #7a5a32; box-shadow: 0 16px 50px rgba(0,0,0,0.5); opacity: 0; transition: opacity .4s, transform .4s; pointer-events: none; z-index: 4; }
+    .lockopt { display: block; margin: 14px auto 4px; font: 14px Georgia, serif; color: #e8d8b8; cursor: pointer; }
+    .lockopt input { vertical-align: -2px; margin-right: 6px; }
+    #mindcard { position: fixed; left: 16px; top: 50%; transform: translate(-20px, -50%); width: min(240px, 26vw); opacity: 0; pointer-events: none; transition: opacity .5s, transform .5s; z-index: 4; }
+    #mindcard.on { opacity: 1; transform: translate(0, -50%); }
+    #mindcard canvas { width: 100%; height: auto; border-radius: 8px; box-shadow: 0 16px 50px rgba(0,0,0,0.5); }
+    #phrases { position: fixed; right: 16px; top: 50%; transform: translate(20px, -50%); width: 210px; padding: 14px; border-radius: 16px; background: rgba(255,248,232,0.95); border: 3px solid #c9a14a; box-shadow: 0 16px 50px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; z-index: 5; display: grid; gap: 8px; }
+    #phrases.on { opacity: 1; pointer-events: auto; transform: translate(0, -50%); }
+    #phrases .t { font: 600 16px Georgia, serif; color: #7a1d22; }
+    #phrases button { font: 600 15px Georgia, serif; color: #3a2414; background: #fff; border: 2px solid #d8b878; border-radius: 999px; padding: 8px 12px; cursor: pointer; text-align: left; }
+    #phrases button:hover { background: #fff3d6; }
+    #phrases button.x { position: absolute; top: 6px; right: 8px; border: 0; background: none; padding: 2px 6px; font-size: 18px; }
     #riddlecard.on { opacity: 1; transform: translate(0, -50%); }
     #riddlecard .t { font: 600 18px Georgia, serif; color: #7a1d22; margin-bottom: 8px; }
     #riddlecard .q { font: 24px/1.3 Georgia, serif; }
@@ -120,7 +131,8 @@
     #storybook .bookwrap { position: relative; width: min(1100px, calc(100vw - 32px), calc((100vh - 60px) * 1.6)); transform-origin: 50% 50%; transition: transform .28s ease-in; }
     #storybook.flip .bookwrap { transform: rotateY(-8deg) scale(0.985); }
     #storybook canvas { display: block; width: 100%; height: auto; border-radius: 18px; box-shadow: 0 30px 90px rgba(0,0,0,0.75); cursor: pointer; }
-    #storybook .skip { position: absolute; right: 14px; bottom: -48px; background: rgba(243,223,176,0.12); border-color: rgba(216,172,79,0.6); color: #f3dfb0; }
+    #storybook .skip { position: absolute; right: 14px; bottom: -58px; padding: 12px 26px; font-size: 17px; font-weight: 600; background: radial-gradient(circle at 35% 35%, #c0303a, #7a1018); border: 2px solid rgba(255,200,170,0.55); color: #ffe8c8; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+    #storybook .skip:hover { filter: brightness(1.15); }
         button#storybtn { background: rgba(216,172,79,0.18); border-color: rgba(216,172,79,0.6); }
     @media (max-width: 1100px) { #show { top: auto; bottom: 150px; } }
     @media (max-width: 760px) {
@@ -158,7 +170,7 @@
       <button id="enter-ar" class="xr" hidden>Enter AR (passthrough)</button>
       <button id="enter-vr" class="xr" hidden>Enter VR</button>
       <button id="demo" title="T">Demo</button>
-      <button id="talk" title="Hold V">🎙 Talk to Marlo</button>
+      <button id="talk" title="Pick something to say (or hold V to speak)">💬 Talk to Marlo</button>
       <button id="storybtn" title="J">🗺 Story map</button>
       <button id="bills">Playbills (0)</button>
       <button id="mode" title="N" hidden>Mode: Classic</button>
@@ -208,7 +220,9 @@
     <p class="thanks">A marionette theatre for Meta Quest · thank you for playing</p>
     <div class="more"><button id="credits-again">Play the story again</button><button id="credits-theatre">Visit the Grand Theatre</button></div>
   </div></div>
-  <div id="storybook"><div class="bookwrap"><button class="skip">Skip ›</button></div></div>
+  <div id="phrases"></div>
+  <div id="mindcard"></div>
+  <div id="storybook"><div class="bookwrap"><button class="skip">Skip · start the show ›</button></div></div>
   <div id="storymap"><div class="mapwrap"><button class="close">Close</button><button class="restart">Start a new story</button></div></div>
   <div id="toast"></div>
 

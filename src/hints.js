@@ -35,7 +35,7 @@ export const HINTS = {
   clap:        { target: "guest",    motion: "none",     desk: [["K"], "Clap for Marlo"], xr: "Clap your hands!", voice: "clapForMarlo" },
   perch:       { target: "guest",    motion: "none",     desk: [["Shift + hold still"], "Offer your other hand"], xr: "Hold out your open hand, very still", voice: "holdHand" },
   record:      { target: "knob:record", motion: "poke",  desk: [["R"], "Record your scene"], xr: "Poke the red button", voice: ["hintRecordDesk", "hintRecord"] },
-  talk:        { target: "marlo",    motion: "none",     desk: [["Hold V"], "Talk to Marlo"], xr: "Poke the blue button and speak", voice: "talk" },
+  talk:        { target: "marlo",    motion: "none",     desk: [["Talk"], "Pick something to say"], xr: "Poke the blue button, then a speech bubble", voice: "talk" },
 };
 
 const CYAN = 0x7ff3ff;

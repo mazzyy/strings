@@ -151,7 +151,10 @@ export class Robot {
     const lid = this.blink > 0 ? 0.15 : 1;
     this.talk = Math.max(0, this.talk - dt);
     const glow = (this.talk > 0 ? 1.6 + Math.abs(Math.sin(this.t * 11)) * 0.8 : 1.4) * (1 + (this.excite || 0) * 0.9);
-    this.eyeMat.color.setRGB(0.35 * glow, 0.95 * glow, 1.1 * glow);
+    // a gold flash when the guest's mind remembers something about you
+    this.memFlash = Math.max(0, (this.memFlash || 0) - dt);
+    const f = Math.min(1, this.memFlash * 1.5);
+    this.eyeMat.color.setRGB((0.35 + 0.9 * f) * glow, (0.95 - 0.15 * f) * glow, (1.1 - 0.8 * f) * glow);
     this.eyes.forEach((e) => (e.scale.y = 0.62 * lid));
     this.mouth.material = this.talk > 0 && Math.sin(this.t * 14) > 0 ? this.accentMat : this.mouthDark;
 

@@ -108,3 +108,20 @@ export class Sparkles {
     this.points.material.opacity = Math.max(0, this.fade) * (0.75 + 0.25 * Math.sin(this.t * 6));
   }
 }
+
+// A soft additive glow sprite: the headset's stand-in for the desktop bloom pass
+// (post-processing stalls in stereo WebXR; a sprite costs almost nothing).
+let haloTex = null;
+export function makeHalo(color, size, opacity = 0.6) {
+  if (!haloTex) {
+    const c = document.createElement("canvas"); c.width = c.height = 64;
+    const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.25, "rgba(255,255,255,0.55)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    haloTex = new THREE.CanvasTexture(c);
+  }
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  s.scale.setScalar(size);
+  s.userData.base = opacity;
+  return s;
+}

@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { paintBackdrop } from "./sets.js";
 
 const W = 1200, H = 750;
+const SEAL = { x: 1085, y: 640 }; // the "skip" wax seal (headset)
 
 // cartoon figures for the illustrations (feet at x, y; s = scale)
 function figure(g, kind, x, y, s = 1, flip = false) {
@@ -139,6 +140,7 @@ export class StoryBook {
 
   // Skip: closes this book and any book chained right after it (prologue → chapter one)
   skipAll() {
+    this.narrator.hush?.(); // the page being read stops too
     this.skipping = true;
     this.finish();
     setTimeout(() => { this.skipping = false; }, 60);
@@ -194,6 +196,9 @@ export class StoryBook {
     const local = this.mesh.worldToLocal(tipWorld.clone());
     if (Math.abs(local.z) > 0.02 || Math.abs(local.x) > 0.24 || Math.abs(local.y) > 0.15) return false;
     this.pokeCool = 0.8;
+    // the wax seal skips the rest (this book and the one chained after it)
+    const sx = (SEAL.x / W - 0.5) * 0.48, sy = (0.5 - SEAL.y / H) * 0.3;
+    if (Math.hypot(local.x - sx, local.y - sy) < 0.036) { this.skipAll(); return true; }
     this.turn();
     return true;
   }
@@ -293,6 +298,16 @@ export class StoryBook {
     for (let i = 0; i < ch.pages.length; i++) { g.fillStyle = i === n ? "#7a1d22" : "rgba(122,29,34,0.25)"; g.beginPath(); g.arc(W * 0.75 - 24 + i * 24, H - 86, 7, 0, Math.PI * 2); g.fill(); }
     g.fillStyle = "rgba(42,26,16,0.6)"; g.font = "italic 20px Georgia, serif"; g.textAlign = "center";
     g.fillText(this.xr ? "poke the book to turn the page" : "click to turn the page", W * 0.75, H - 50);
+    // headset: a big red wax seal to poke, to skip straight to the show
+    if (this.xr) {
+      const sx = SEAL.x, sy = SEAL.y;
+      g.fillStyle = "#9a1c22"; g.beginPath();
+      for (let i = 0; i <= 24; i++) { const a = (i / 24) * Math.PI * 2, r = 60 + (i % 2 ? 5 : -3); g.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); }
+      g.fill();
+      g.strokeStyle = "rgba(255,200,170,0.5)"; g.lineWidth = 3; g.beginPath(); g.arc(sx, sy, 44, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = "#ffe8c8"; g.textAlign = "center"; g.font = "700 26px Georgia, serif"; g.fillText("Skip", sx, sy - 2);
+      g.font = "italic 16px Georgia, serif"; g.fillText("start the show", sx, sy + 22);
+    }
     this.tex.needsUpdate = true;
   }
 
