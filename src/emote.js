@@ -77,7 +77,8 @@ export class Emotes {
       const h = 0.044 * pop;
       s.sprite.scale.set(h * s.aspect, h, 1);
       const rise = s.life > 100 ? 0 : k * 0.02; // long-lived bubbles (health) stay put
-      s.sprite.position.copy(s.at()).add(new THREE.Vector3(0, 0.055 + s.yOff + rise, 0));
+      s.sprite.position.copy(s.at());
+      s.sprite.position.y += 0.055 + s.yOff + rise;
       s.sprite.material.opacity = s.life > 100 ? 1 : k > 0.8 ? (1 - k) / 0.2 : 1;
     }
   }

@@ -436,5 +436,6 @@ export class Marionette {
     attrs.color.needsUpdate = true;
   }
 
-  setVisible(v) { this.group.visible = v; }
+  // hidden puppets also skip the scene's per-frame matrix updates
+  setVisible(v) { this.group.visible = v; this.group.matrixWorldAutoUpdate = v; }
 }

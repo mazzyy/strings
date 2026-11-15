@@ -259,7 +259,7 @@ export const MARLO_TALK = {
 export const GUESTS = {
   marlo: {
     name: "Marlo", title: "Marlo the dragon", says: MARLO_SAYS, talk: MARLO_TALK,
-    task: { gems: "My gems! You found my gems!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had." },
+    task: { gems: "The jewels! The music box can play again!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had." },
     personality: { joy: 0.55, trust: 0.45, energy: 0.85, sword: "wary", sulkAfter: 40, patience: 9 },
   },
   wizard: {
@@ -345,6 +345,28 @@ export const GUESTS = {
   },
 };
 
+// The prologue: why Sir Pip sets out at all. Read once, before the very first
+// chapter (each page names the painting and the characters it shows).
+export const PROLOGUE = {
+  id: "prologue", set: "courtyard", title: "The Tale of Sir Pip",
+  pages: [
+    "Once upon a time, in a kingdom no bigger than a desk, every night ended with a song from a little golden music box.",
+    "Each evening, Princess Juniper wound its tiny key, and the whole kingdom fell asleep smiling.",
+    "But one stormy night, Clank, a clockwork robot with a heart of rusty gears, crept into the castle.",
+    "He carried the princess away to his tower, and hid the music box's three jewels where no one would find them. The kingdom fell silent.",
+    "The king called for a hero. Nobody came. Nobody, that is, except one very small knight.",
+    "His name was Sir Pip. He had shiny armour, a brave heart, and absolutely no idea what he was doing. And so, the quest began.",
+  ],
+  art: [
+    { set: "courtyard", night: true, cast: [["musicbox", 0.5]] },
+    { set: "courtyard", night: true, cast: [["princess", 0.38], ["musicbox", 0.66]] },
+    { set: "tower", cast: [["clank", 0.5]] },
+    { set: "tower", cast: [["clank", 0.32], ["cage", 0.72], ["princess", 0.72]] },
+    { set: "courtyard", cast: [["king", 0.35], ["pip", 0.68, true]] },
+    { set: "courtyard", cast: [["pip", 0.5]] },
+  ],
+};
+
 // A chapter: a set, a guest, three storybook pages before the curtain rises,
 // and three acts. An act either waits for an action (`check`) or runs a
 // playable task (`task`, see tasks.js): a duel, a riddle, sneaking...
@@ -353,9 +375,9 @@ export const CHAPTERS = [
     id: "courtyard", set: "courtyard", guest: "marlo", title: "The Castle Courtyard", map: [270, 770],
     intro: "Chapter one: The Castle Courtyard. Our story begins with a knight, a dragon, and a very small stage.",
     pages: [
-      "Once upon a time, in a kingdom no bigger than a desk, there lived a small knight called Sir Pip.",
-      "Sir Pip had shiny armour, a brave heart, and absolutely no idea what he was doing.",
-      "One morning, a dragon landed in the castle courtyard. And that is where our story begins.",
+      "Every hero needs a friend for the road, and Sir Pip's was waiting in the castle courtyard.",
+      "Marlo was a young dragon who breathed only sparkles, and loved nothing more than an adventure.",
+      "But first, a proper introduction. A knight must always mind his manners.",
     ],
     acts: [
       { goal: "Act one. Walk Sir Pip over to meet the dragon.", check: "approach", hint: "walk" },
@@ -367,9 +389,9 @@ export const CHAPTERS = [
     id: "forest", set: "forest", guest: "wizard", title: "The Whispering Forest", map: [570, 545],
     intro: "Chapter two: The Whispering Forest.",
     pages: [
-      "Beyond the castle lay the Whispering Forest, where the trees tell secrets to the wind.",
-      "There lived Old Bramble, a wizard so old he had forgotten his own birthday. Twice.",
-      "But tonight his magic fireflies have escaped, and without them the forest is growing dark.",
+      "The road to Clank's tower led first into the Whispering Forest, where the trees tell secrets to the wind.",
+      "There lived Old Bramble, a wizard who knew the way to the tower, if only he could remember it.",
+      "But his magic fireflies had escaped, and without their light, even a wizard gets lost.",
     ],
     acts: [
       { goal: "Act one. Bramble needs light. Give Sir Pip the lantern.", check: "hold:lantern", hint: "takeLantern" },
@@ -381,9 +403,9 @@ export const CHAPTERS = [
     id: "ship", set: "ship", guest: "pirate", title: "The Pirate Ship", map: [960, 790],
     intro: "Chapter three: The Pirate Ship.",
     pages: [
-      "At the edge of the kingdom, a pirate ship rocked on the waves.",
-      "Its captain had one wooden leg, one noisy parrot, and one great wish: a worthy duel.",
-      "He had heard of a brave little knight. And he was waiting, sword in hand.",
+      "The tower stood across the sea, and only one ship would sail there.",
+      "Its captain had one wooden leg, one noisy parrot, and one condition: beat him in a duel.",
+      "Sir Pip gripped his sword. It was a very small sword. It would have to do.",
     ],
     acts: [
       { goal: "Act one. Arm Sir Pip with the sword.", check: "hold:sword", hint: "takeSword" },
@@ -395,7 +417,7 @@ export const CHAPTERS = [
     id: "bridge", set: "bridge", guest: "troll", title: "The Troll Bridge", map: [1190, 450],
     intro: "Chapter four: The Troll Bridge.",
     pages: [
-      "By moonlight, the road crossed a river at an old stone bridge.",
+      "Across the sea, the road climbed to an old stone bridge, silver in the moonlight.",
       "Under it lived Grumble, the grumpiest troll in all the land.",
       "And nobody, nobody at all, crosses Grumble's bridge without answering his riddle.",
     ],
@@ -406,12 +428,12 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: "tower", set: "tower", guest: "clank", title: "The Clockwork Tower", map: [1450, 560], princess: true,
+    id: "tower", set: "tower", guest: "clank", title: "The Clockwork Tower", map: [1330, 650], princess: true,
     intro: "Chapter five: The Clockwork Tower.",
     pages: [
-      "Far away stood the Clockwork Tower, ticking and whirring all night long.",
-      "Inside, an evil robot called Clank had locked Princess Juniper in a cage.",
-      "Only a knight brave enough to sneak past Clank's searchlight could set her free.",
+      "At last, the Clockwork Tower, ticking and whirring in the storm.",
+      "Inside, Princess Juniper waited in a cage, while Clank's searchlight swept the floor.",
+      "Only a knight brave enough to sneak past it could set her free.",
     ],
     acts: [
       { goal: "Act one. Sneak to the key. Move only when the searchlight looks away.", task: { type: "sneak" }, hint: "sneak" },
@@ -423,13 +445,13 @@ export const CHAPTERS = [
     id: "cave", set: "cave", guest: "marlo", title: "The Dragon's Cave", map: [1400, 225],
     intro: "Chapter six: The Dragon's Cave.",
     pages: [
-      "At last, the road wound up into the mountains, to a cave full of glittering crystals.",
-      "It was Marlo's home, and Marlo had a problem. His three treasure gems were missing.",
-      "Our hero had one adventure left. And then, the biggest bow of all.",
+      "With the princess free, one thing was still missing: the music box's three jewels.",
+      "Clank had hidden them in the Dragon's Cave, among the glittering crystals. Luckily, it was Marlo's home.",
+      "Find the jewels, and the music box will play again.",
     ],
     acts: [
       { goal: "Act one. It's dark in here. Give Sir Pip the lantern.", check: "hold:lantern", hint: "takeLantern" },
-      { goal: "Act two. Find Marlo's three lost gems.", task: { type: "collect", count: 3, look: "gem" }, hint: "collect" },
+      { goal: "Act two. Find the music box's three jewels.", task: { type: "collect", count: 3, look: "gem" }, hint: "collect" },
       { goal: "Act three. Take a final bow together.", check: "bow", hint: "bow" },
     ],
   },
@@ -469,7 +491,7 @@ export const STORY_LINES = {
   mapOpen: "Where shall our story go next? Choose a place on the map.",
   unlocked: "A new chapter of the story is unlocked!",
   travel: "And so, our hero set off down the road.",
-  theEnd: "And so ends the tale of Sir Pip. But the Grand Theatre has a brand new show every night.",
+  theEnd: "And so the music box played again, and the whole kingdom fell asleep smiling. The end. But the Grand Theatre has a brand new show every night.",
   theatre: "Tonight, at the Grand Theatre.",
 };
 
@@ -496,6 +518,7 @@ export function allLines() {
   Object.values(MARLO_SAYS).forEach((l) => say(l, "marlo"));
   Object.values(ENDINGS).forEach((e) => say(e.line));
   for (const ch of CHAPTERS) { say(ch.intro); ch.acts.forEach((a) => say(a.goal)); ch.pages.forEach((l) => say(l)); }
+  PROLOGUE.pages.forEach((l) => say(l));
   Object.values(TASK_LINES).forEach((l) => say(l));
   RIDDLES.forEach((r) => say(r.line, "troll"));
   Object.values(STORY_LINES).forEach((l) => say(l));

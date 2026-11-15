@@ -30,6 +30,9 @@ export function mergeStatic(root, skip = []) {
     const merged = mergeGeometries(b.geos, false);
     if (!merged) continue;
     const mesh = new THREE.Mesh(merged, b.material);
+    // merged meshes never move on their own: compute their matrix once
+    mesh.matrixAutoUpdate = false;
+    mesh.updateMatrix();
     mesh.castShadow = b.cast;
     mesh.receiveShadow = b.receive;
     root.add(mesh);
