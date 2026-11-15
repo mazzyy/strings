@@ -97,6 +97,9 @@ export const COACH = {
   recordEnd: "And... curtain. What a performance.",
   replay: "Here comes your shadow. Perform alongside it.",
   shared: "Someone has sent you a performance. Watch their shadow, then join in.",
+  storyIntro: "Ah, there you are! Welcome, welcome. Come closer, and let me tell you a story.",
+  storyIntro2: "It's about a very small knight, and a very big adventure.",
+  welcomeBack: "Welcome back! Now, where were we?",
   pullCord: "Welcome to our little theatre. Pinch the golden cord, and pull it down to raise the curtain.",
   pullCordDesk: "Welcome to our little theatre. Drag the golden cord down to raise the curtain.",
   copyIntro: "Marlo wants a turn. Copy what he does!",
@@ -451,7 +454,7 @@ export const CHAPTERS = [
     acts: [
       { goal: "Act one. Sneak to the key. Move only when the searchlight looks away.", task: { type: "sneak" }, hint: "sneak" },
       { goal: "Act two. Take the key, and unlock the princess's cage.", task: { type: "unlock" }, hint: "takeKey" },
-      { goal: "Act three. Clank attacks! Jump over his zaps until he overheats.", task: { type: "dodge", count: 3 }, hint: "dodge" },
+      { goal: "Act three. Clank attacks! Jump over his zaps until he overheats.", task: { type: "dodge", count: 6 }, hint: "dodge" },
     ],
   },
   {

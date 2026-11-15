@@ -155,6 +155,19 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
   - static meshes compute their matrix once;
   - tasks dispose their objects.
 
+### Phase 11: presentation polish
+- **The robot storyteller opening:** the camera glides up to the robot puppeteer, the stage dims, his eyes brighten, he waves, magic sparkles spiral from his hands, and he says *"Ah, there you are! … let me tell you a story."* Then the book opens. Returning players get *"Welcome back! Now, where were we?"*
+- **Real paper page turns:** the old page lifts, curls over the spine in slices and becomes the new left page, with shading, a cast shadow and a paper sound.
+- **Superman-style flight:** while flying, Marlo is posed flat (head forward, belly down, legs and tail trailing), banks into turns and faces the direction of travel, with Sir Pip riding on his back. The free flight in the experiment uses the same pose.
+- **Clank fires six zaps,** each a little faster.
+- **The redrawn map:**
+  - aged parchment with fibres and stains, an ornate double border and burnt edges;
+  - meadows, a shaded forest, snow-capped mountains and hills;
+  - a winding river, and a sea with a serpent;
+  - cottages, a windmill and sheep, clouds and stars;
+  - a cobbled road, a compass rose and a scale bar;
+  - place names on ribbon banners with red wax-seal numbers.
+
 ---
 
 ## 4. The story

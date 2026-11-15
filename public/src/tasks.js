@@ -458,8 +458,10 @@ function dodge(spec, c, done) {
       if (body(c).feet > 0.016) lastAir = t;
       if (!zap && t > 0 && !finished) { fire(); t = -99; }
       if (zap) {
-        zap.went += dt * 0.34;
-        zap.m.position.addScaledVector(zap.dir, dt * 0.34);
+        // each zap comes a little faster than the last
+        const speed = 0.3 + dodged * 0.035;
+        zap.went += dt * speed;
+        zap.m.position.addScaledVector(zap.dir, dt * speed);
         zap.m.scale.setScalar(1 + Math.sin(t * 30) * 0.2);
         if (!zap.judged && zap.went >= zap.dist) {
           zap.judged = true;
@@ -487,7 +489,7 @@ function dodge(spec, c, done) {
             c.confetti("smoke");
             setTimeout(() => c.guestSay("defeated"), 2500);
             setTimeout(done, 4200);
-          } else t = -1.6;
+          } else t = -Math.max(0.9, 1.6 - dodged * 0.12);
         }
       }
     },

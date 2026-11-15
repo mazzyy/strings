@@ -102,11 +102,16 @@ function wrap(g, text, x, y, maxW, lh) {
 }
 
 export class StoryBook {
-  constructor({ narrator }) {
+  constructor({ narrator, onFlip }) {
     this.narrator = narrator;
+    this.onFlip = onFlip;
     this.canvas = document.createElement("canvas");
     this.canvas.width = W; this.canvas.height = H;
     this.g = this.canvas.getContext("2d");
+    // the spread before and after a turn (the page flip is composited from these)
+    this.prevC = document.createElement("canvas"); this.prevC.width = W; this.prevC.height = H;
+    this.nextC = document.createElement("canvas"); this.nextC.width = W; this.nextC.height = H;
+    this.flip = null;
     this.el = document.getElementById("storybook");
     if (this.el) {
       this.el.querySelector(".bookwrap").appendChild(this.canvas);
@@ -156,10 +161,17 @@ export class StoryBook {
     if (!this.open || this.turning) return;
     this.page++;
     if (this.page >= this.chapter.pages.length) return this.finish();
+    if (this.flip) { this.page--; return; } // let the current turn finish first
     const text = this.chapter.pages[this.page];
-    this.turning = true;
-    this.el?.classList.add("flip");
-    setTimeout(() => { this.draw(); this.el?.classList.remove("flip"); this.turning = false; }, this.page === 0 ? 0 : 280);
+    if (this.page === 0) this.draw(this.g);
+    else {
+      // turn the page like real paper: keep the old spread, draw the new one, and flip between them
+      this.prevC.getContext("2d").drawImage(this.canvas, 0, 0);
+      this.draw(this.nextC.getContext("2d"));
+      this.flip = { t: 0, dur: 0.85 };
+      this.turning = true;
+      this.onFlip?.();
+    }
     this.narrator.queue.length = 0;
     this.narrator.coach(text);
     this.pageT = 0;
@@ -188,6 +200,12 @@ export class StoryBook {
 
   update(dt) {
     if (this.pokeCool > 0) this.pokeCool -= dt;
+    if (this.flip) {
+      this.flip.t += dt;
+      const p = Math.min(1, this.flip.t / this.flip.dur);
+      this._flipFrame(p * p * (3 - 2 * p));
+      if (p >= 1) { this.g.drawImage(this.nextC, 0, 0); this.tex.needsUpdate = true; this.flip = null; this.turning = false; }
+    }
     if (!this.open) return;
     this.pageT += dt;
     // turn by itself once the narrator has finished reading the page
@@ -197,8 +215,52 @@ export class StoryBook {
     } else this.idle = 0;
   }
 
-  draw() {
-    const g = this.g, ch = this.chapter, n = this.page;
+  // one frame of a page turn (p: 0 → 1). The right page lifts, curls over the spine and
+  // becomes the new left page; it's drawn in thin vertical slices so the sheet bows as it
+  // turns, with a shadow falling across the page underneath.
+  _flipFrame(p) {
+    const g = this.g, A = this.prevC, B = this.nextC;
+    const mid = W / 2, top = 26, ph = H - 52, rightW = W - 28 - mid, leftW = mid - 28;
+    const N = 30, lift = Math.sin(p * Math.PI) * 30;
+    g.drawImage(A, 0, 0);
+    // the page underneath is already the next one
+    g.drawImage(B, mid, 0, W - mid, H, mid, 0, W - mid, H);
+    if (p < 0.5) {
+      const w = rightW * Math.cos(p * Math.PI);
+      const sh = g.createLinearGradient(mid + w, 0, mid + w + 80, 0);
+      sh.addColorStop(0, `rgba(30,15,5,${0.4 * Math.sin(p * Math.PI)})`); sh.addColorStop(1, "rgba(30,15,5,0)");
+      g.fillStyle = sh; g.fillRect(mid + w, top, 80, ph);
+      for (let i = 0; i < N; i++) {
+        const u0 = i / N, u1 = (i + 1) / N, curl = Math.sin(u0 * Math.PI / 2);
+        const grow = 1 + 0.06 * Math.sin(p * Math.PI) * curl;
+        g.drawImage(A, mid + u0 * rightW, top, rightW / N + 0.5, ph, mid + u0 * w, top - lift * curl - (ph * (grow - 1)) / 2, (u1 - u0) * w + 0.8, ph * grow);
+      }
+      const shade = g.createLinearGradient(mid, 0, mid + w, 0);
+      shade.addColorStop(0, `rgba(70,35,10,${0.15 + 0.45 * p})`); shade.addColorStop(1, `rgba(255,250,235,${0.12 * (1 - p)})`);
+      g.fillStyle = shade; g.fillRect(mid, top - lift, w, ph + lift);
+    } else {
+      const w = leftW * -Math.cos(p * Math.PI);
+      const sh = g.createLinearGradient(mid - w, 0, mid - w - 80, 0);
+      sh.addColorStop(0, `rgba(30,15,5,${0.4 * Math.sin(p * Math.PI)})`); sh.addColorStop(1, "rgba(30,15,5,0)");
+      g.fillStyle = sh; g.fillRect(mid - w - 80, top, 80, ph);
+      for (let i = 0; i < N; i++) {
+        const u0 = i / N, u1 = (i + 1) / N, curl = Math.sin(u0 * Math.PI / 2);
+        const grow = 1 + 0.06 * Math.sin(p * Math.PI) * curl;
+        g.drawImage(B, mid - u1 * leftW, top, leftW / N + 0.5, ph, mid - u1 * w, top - lift * curl - (ph * (grow - 1)) / 2, (u1 - u0) * w + 0.8, ph * grow);
+      }
+      const shade = g.createLinearGradient(mid, 0, mid - w, 0);
+      shade.addColorStop(0, `rgba(70,35,10,${0.6 - 0.45 * p})`); shade.addColorStop(1, "rgba(255,250,235,0.05)");
+      g.fillStyle = shade; g.fillRect(mid - w, top - lift, w, ph + lift);
+    }
+    // the spine
+    const sp = g.createLinearGradient(mid - 30, 0, mid + 30, 0);
+    sp.addColorStop(0, "rgba(0,0,0,0)"); sp.addColorStop(0.5, "rgba(60,30,10,0.3)"); sp.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = sp; g.fillRect(mid - 30, top, 60, ph);
+    this.tex.needsUpdate = true;
+  }
+
+  draw(g = this.g) {
+    const ch = this.chapter, n = this.page;
     // the open book: leather cover, two cream pages, a soft spine shadow
     g.fillStyle = "#5a2a1a"; g.beginPath(); g.roundRect(0, 0, W, H, 26); g.fill();
     g.fillStyle = "#f3e6c4"; g.beginPath(); g.roundRect(28, 26, W / 2 - 34, H - 52, 10); g.fill();

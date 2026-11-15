@@ -20,7 +20,7 @@ import { XRHands, DesktopHands, SimHandMeshes } from "./input.js";
 import { ActionDetector, AIPerformer, describe } from "./director.js";
 import { MarloMind } from "./mind.js";
 import { Emotes } from "./emote.js";
-import { Confetti } from "./fx.js";
+import { Confetti, Sparkles } from "./fx.js";
 import { GUESTS, STORY_LINES, PROLOGUE, EPILOGUE, TASK_LINES, CHAPTERS as CHAPTER_LIST } from "./lines.js";
 import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin, kingSkin } from "./cast.js";
 import { createTask } from "./tasks.js";
@@ -291,6 +291,7 @@ let recordHintPending = false;
 // ---- Marlo's mind, his emotes and his own voice --------------------------------------
 const emotes = new Emotes(stageRoot);
 const confetti = new Confetti(stageRoot);
+const sparkles = new Sparkles(stageRoot);
 const marloHead = () => marlo.get("head");
 const pipHead = () => pip.get("head");
 const marloLines = [];
@@ -857,12 +858,31 @@ function setFlight(on) {
     ai.react("carry", {
       force: true,
       target: () => _fv.copy(pip.main.position).add(_fo),
-      yaw: () => _fe.setFromQuaternion(pip.main.quaternion, "YXZ").y,
+      yaw: () => _fl.yaw,
       stop: () => !flying,
     });
   } else {
     ai.base.copy(ai.home); // Marlo glides home
+    marlo.flight = null;
+    marlo.flapBoost = 0;
   }
+}
+// while flying, Marlo is posed flat under Sir Pip (who rides on his back), banking into turns
+const _fl = { last: new THREE.Vector3(), bank: 0, yaw: Math.PI / 2 };
+function updateFlightPose(dt) {
+  if (!flying) return;
+  const p = pip.get("pelvis");
+  const vx = (p.x - _fl.last.x) / Math.max(dt, 1e-3);
+  _fl.last.copy(p);
+  // fly sideways across the stage (it reads as flying), turning to face the way you're going
+  const want = vx < -0.08 ? -Math.PI / 2 : vx > 0.08 ? Math.PI / 2 : _fl.yaw;
+  _fl.yaw += (want - _fl.yaw) * Math.min(1, dt * 3);
+  const yaw = _fl.yaw;
+  _fl.bank += (THREE.MathUtils.clamp(-vx * 1.2, -0.45, 0.45) - _fl.bank) * Math.min(1, dt * 4);
+  const f = marlo.flight || (marlo.flight = { center: new THREE.Vector3() });
+  f.center.set(p.x, p.y - 0.045, p.z);
+  f.yaw = yaw; f.pitch = 1.32 + Math.sin(elapsed * 2) * 0.05; f.roll = _fl.bank;
+  marlo.flapBoost = 1;
 }
 
 // the knighting: a quick curtain dip, and the castle courtyard with the King waiting
@@ -979,7 +999,7 @@ show.makeTask = (spec, done) => {
 };
 
 // ---- the storybook: three illustrated, narrated pages before each chapter -------------------
-const book = new StoryBook({ narrator });
+const book = new StoryBook({ narrator, onFlip: () => sfx.play("page", null, { volume: 0.55, rate: 0.9 + Math.random() * 0.2 }) });
 book.mesh.position.set(0, 0.42, 0.14);
 book.mesh.scale.setScalar(1.25);
 stageRoot.add(book.mesh);
@@ -1190,6 +1210,65 @@ try {
 } catch { /* compile on demand instead */ }
 ghost.setVisible(false); confetti.points.visible = false;
 
+// ---- the storyteller: the robot puppeteer opens the show ------------------------------
+// The camera glides up to him, the stage dims, he waves and gestures while magic
+// sparkles spiral from his hands, and he says "let me tell you a story"; then the book opens.
+const intro = { on: false, t: 0, next: null };
+const camTween = { on: false, t: 0, dur: 2.6, fromPos: new THREE.Vector3(), fromLook: new THREE.Vector3(), toPos: new THREE.Vector3(), toLook: new THREE.Vector3() };
+const camLook = desktopCam.look.clone();
+function tweenCam(pos, look, dur = 2.6) {
+  camTween.on = true; camTween.t = 0; camTween.dur = dur;
+  camTween.fromPos.copy(camera.position); camTween.fromLook.copy(camLook);
+  camTween.toPos.copy(pos); camTween.toLook.copy(look);
+}
+function updateCam(dt) {
+  if (!camTween.on || xrMode) return;
+  camTween.t += dt;
+  const k = Math.min(1, camTween.t / camTween.dur), e = k * k * (3 - 2 * k);
+  camera.position.lerpVectors(camTween.fromPos, camTween.toPos, e);
+  camLook.lerpVectors(camTween.fromLook, camTween.toLook, e);
+  camera.lookAt(camLook);
+  if (k >= 1) camTween.on = false;
+}
+const _rh = new THREE.Vector3();
+const robotHeadLocal = () => stageRoot.worldToLocal(robot.head.getWorldPosition(_rh).clone());
+function storytellerIntro(first, next) {
+  intro.on = true; intro.t = 0; intro.next = next;
+  hints.hide();
+  nightTarget = 1;
+  robot.excite = 1;
+  const sc = robot.group.scale.x;
+  sparkles.start(() => robotHeadLocal().add(new THREE.Vector3(0, -0.26 * sc, 0.12 * sc)), () => new THREE.Vector3(0, 0.42, xrMode ? 0.14 : 0.32));
+  if (!xrMode) {
+    const hw = robot.head.getWorldPosition(new THREE.Vector3());
+    tweenCam(hw.clone().add(new THREE.Vector3(-0.12, -0.16, 1.3)), hw.clone().add(new THREE.Vector3(0, -0.2, 0)));
+  }
+  narrator.queue.length = 0;
+  narrator.coach(first ? "storyIntro" : "welcomeBack");
+  if (first) narrator.coach("storyIntro2");
+  sfx.play("chime", null, { volume: 0.4, rate: 0.8 });
+}
+function updateIntro(dt) {
+  if (!intro.on) return;
+  intro.t += dt;
+  if (intro.t > 3.5 && !narrator.speaking && !narrator.queue.length) {
+    intro.on = false;
+    robot.excite = 0;
+    sparkles.stop();
+    const next = intro.next; intro.next = null;
+    next?.();
+  }
+}
+// while he tells it: the right hand waves, the left opens toward you
+function introGrips() {
+  const hp = robotHeadLocal(), sc = robot.group.scale.x, t = intro.t;
+  const wave = new THREE.Vector3(0.15 * sc + Math.sin(t * 6) * 0.035 * sc, -0.03 * sc + Math.abs(Math.sin(t * 6)) * 0.02 * sc, 0.1 * sc).add(hp);
+  const offer = new THREE.Vector3(-0.13 * sc, -0.22 * sc + Math.sin(t * 1.5) * 0.01 * sc, 0.17 * sc).add(hp);
+  return [offer, wave];
+}
+const gripL = new THREE.Vector3(), gripR = new THREE.Vector3();
+let gripInit = false;
+
 // the loading screen turns into the opening: one click raises the curtain
 // (and lets the browser play sound)
 if (loadingEl) {
@@ -1204,7 +1283,11 @@ if (loadingEl) {
     `<small>Best with sound on · works with Quest hand tracking</small></div>`;
   loadingEl.classList.add("ready");
   const enter = () => { loadingEl.classList.add("done"); unlockAudio(); };
-  const begin = () => { enter(); openingBook(startPreshow); };
+  const first = !storyMap.hasProgress();
+  const begin = () => {
+    enter();
+    storytellerIntro(first && chapter.id === "courtyard", () => openingBook(() => { if (!xrMode) tweenCam(desktopCam.pos, desktopCam.look, 2); startPreshow(); }));
+  };
   $("begin").onclick = begin;
   if ($("newstory")) $("newstory").onclick = () => {
     if (!confirm("Start the tale of Sir Pip again from the beginning? Your playbills are kept.")) return;
@@ -1334,7 +1417,7 @@ async function enterXR(mode) {
     placeStage = true;
     unlockAudio();
     // (the stage is placed on the first XR frame; open the book just after)
-    setTimeout(() => { if (!showStarted && !book.open) openingBook(startPreshow); }, 300);
+    setTimeout(() => { if (!showStarted && !book.open && !intro.on) storytellerIntro(!storyMap.hasProgress() && chapter.id === "courtyard", () => openingBook(startPreshow)); }, 300);
   }
   session.addEventListener("end", () => {
     xrMode = null;
@@ -1425,7 +1508,7 @@ function updatePlacement(dt, frame, hands) {
   if ((pinched && (found || placeTimer > 1.5)) || (!hitSource && placeTimer > 2) || placeTimer > 25) {
     placing = false;
     reticle.visible = false;
-    if (!showStarted && !book.open) openingBook(startPreshow);
+    if (!showStarted && !book.open && !intro.on) storytellerIntro(!storyMap.hasProgress() && chapter.id === "courtyard", () => openingBook(startPreshow));
   }
 }
 
@@ -1516,6 +1599,7 @@ renderer.setAnimationLoop((time, frame) => {
 
   ai.update(dt);
   pip.update(dt);
+  updateFlightPose(dt);
   marlo.update(dt);
   detector.update(dt);
   show.update(dt, !!xrMode);
@@ -1539,6 +1623,9 @@ renderer.setAnimationLoop((time, frame) => {
   book.update(dt);
   updatePrincess(dt);
   updateExtras(dt);
+  updateIntro(dt);
+  updateCam(dt);
+  sparkles.update(dt);
   unbound.update(dt, hands);
   if (mode.id === "party") {
     spot.color.setHSL((elapsed * 0.12) % 1, 0.75, 0.7);
@@ -1552,13 +1639,18 @@ renderer.setAnimationLoop((time, frame) => {
   scene.environmentIntensity = 0.4 - 0.3 * night;
   narrator.update(dt);
 
-  const [lg, rg] = unbound.busy ? unbound.frozenGrips : ai.grips();
+  let [lg, rg] = unbound.busy ? unbound.frozenGrips : ai.grips();
+  if (intro.on) [lg, rg] = introGrips();
+  // the arms ease between targets (no snapping when he starts or stops gesturing)
+  if (!gripInit) { gripL.copy(lg); gripR.copy(rg); gripInit = true; }
+  gripL.lerp(lg, Math.min(1, dt * (intro.on ? 5 : 12)));
+  gripR.lerp(rg, Math.min(1, dt * (intro.on ? 5 : 12)));
   // the robot watches the knight, and looks out at you while it narrates
   const viewCam = xrMode ? renderer.xr.getCamera() : camera;
   const lookAt = robot.talk > 0
     ? stageRoot.worldToLocal(new THREE.Vector3().setFromMatrixPosition(viewCam.matrixWorld))
     : pip.get("head").clone();
-  robot.update(dt, lg, rg, lookAt);
+  robot.update(dt, gripL, gripR, lookAt);
   robotBatch?.update();
 
   if (captionTimer > 0 && (captionTimer -= dt) <= 0) caption.classList.remove("on");
@@ -1622,4 +1714,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };
+window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, pip, marlo, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord };
