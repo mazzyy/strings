@@ -75,12 +75,27 @@ const MARLO_SYSTEM = `You are Marlo, a friendly, playful young dragon marionette
 A person in the audience just spoke to you. Answer in character, in first person, in ONE short spoken line
 (max 14 words), warm, funny and family-friendly, no emoji or stage directions. Then choose what your puppet does.
 You love visitors, dancing and shiny things; you breathe only warm air and sparkles; your friend is Sir Pip the knight.`;
+// the other guests Sir Pip meets on the storybook map
+const CHARACTERS = {
+  marlo: { system: MARLO_SYSTEM, voice: null },
+  wizard: { voice: "bm_george", system: `You are Old Bramble, a kind, slightly forgetful old wizard marionette who keeps the Whispering Forest, in a tiny puppet theatre.
+A person in the audience just spoke to you. Answer in character, in first person, in ONE short spoken line (max 14 words),
+warm, wise and gently funny, family-friendly, no emoji or stage directions. Then choose what your puppet does.` },
+  pirate: { voice: "am_fenrir", system: `You are Captain Pegg, a boisterous, big-hearted pirate marionette with a peg leg and a parrot, in a tiny puppet theatre.
+A person in the audience just spoke to you. Answer in character with pirate talk, in first person, in ONE short spoken line (max 14 words),
+funny and family-friendly, no emoji or stage directions. Then choose what your puppet does.` },
+  troll: { voice: "am_onyx", system: `You are Grumble, a grumpy but secretly soft-hearted bridge troll marionette who talks about himself in the third person, in a tiny puppet theatre.
+A person in the audience just spoke to you. Answer in character, in ONE short spoken line (max 14 words),
+grumpy but sweet underneath, family-friendly, no emoji or stage directions. Then choose what your puppet does.` },
+};
 const TalkReply = z.object({
   line: z.string().describe("Marlo's spoken reply, max 14 words."),
   reaction: z.enum(REACTIONS).describe("What Marlo's puppet does."),
 });
 
 async function talk(body) {
+  const who = CHARACTERS[body.character] || CHARACTERS.marlo;
+  const SYSTEM = who.system;
   const text = String(body.text || "").slice(0, 300);
   const story = Array.isArray(body.story) ? body.story.slice(-4) : [];
   const prompt = `Recent story: ${story.join(" ") || "(the show just began)"}\nThe audience member says to you: "${text}"`;
@@ -88,14 +103,14 @@ async function talk(body) {
     const r = await client.messages.parse({
       model: MODEL, max_tokens: 2000,
       output_config: { effort: "low", format: zodOutputFormat(TalkReply) },
-      system: MARLO_SYSTEM,
+      system: SYSTEM,
       messages: [{ role: "user", content: prompt }],
     });
     if (r.stop_reason === "refusal" || !r.parsed_output) throw new Error("no reply");
     return r.parsed_output;
   }
   for (let i = 0; i < 3; i++) {
-    const out = await ollamaOnce(prompt + "\nReply in English only.", MARLO_SYSTEM + "\nAlways write in English.", TalkReply);
+    const out = await ollamaOnce(prompt + "\nReply in English only.", SYSTEM + "\nAlways write in English.", TalkReply);
     if (!NON_ENGLISH.test(out.line)) return out;
   }
   throw new Error("no English reply");
@@ -233,8 +248,9 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/talk" && req.method === "POST") {
     if (!client && !ollamaReady) { res.writeHead(503); res.end("{}"); return; }
     try {
-      const out = await talk(JSON.parse(await readBody(req)));
-      out.audio = await speak(out.line, MARLO_VOICE).catch(() => null);
+      const body = JSON.parse(await readBody(req));
+      const out = await talk(body);
+      out.audio = await speak(out.line, (CHARACTERS[body.character] || {}).voice || MARLO_VOICE).catch(() => null);
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify(out));
     } catch (err) {

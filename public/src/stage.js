@@ -276,7 +276,12 @@ export function buildStage(assets) {
   modeKnob.position.set(-0.21, 0.004, D / 2 - 0.05);
   root.add(modeKnob);
 
-  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob }, shadowCatcher, curtains, cord };
+  // the "map" knob (parchment brown): opens the storybook map in the headset
+  const mapKnob = makeKnob(0xb07a3a, "map");
+  mapKnob.position.set(-0.16, 0.004, D / 2 - 0.05);
+  root.add(mapKnob);
+
+  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob, map: mapKnob }, shadowCatcher, curtains, cord };
 }
 
 // ---------------------------------------------------------------------------

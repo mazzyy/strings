@@ -26,6 +26,7 @@ export class ActionDetector {
     this.yawHist = [];
     this.wasHeld = false;
     this.state = "standing";
+    this.otherName = "Marlo";
   }
 
   on(fn) { this.listeners.push(fn); }
@@ -92,11 +93,11 @@ export class ActionDetector {
         const dir = new THREE.Vector3(this.vel.x, 0, this.vel.z).normalize();
         const d = dir.dot(toOther);
         let where = "across the stage";
-        if (d > 0.6) where = "toward Marlo";
-        else if (d < -0.6) where = "away from Marlo";
+        if (d > 0.6) where = `toward ${this.otherName}`;
+        else if (d < -0.6) where = `away from ${this.otherName}`;
         else if (dir.z > 0.6) where = "toward the audience";
         else if (dir.z < -0.6) where = "upstage, toward the back";
-        this.emit("walk", { where, fast: speed > 0.12 }, 4);
+        this.emit("walk", { where, fast: speed > 0.12, toOther: d > 0.6, away: d < -0.6 }, 4);
       }
     } else this.walkTime = Math.max(0, this.walkTime - dt * 2);
 
@@ -117,13 +118,13 @@ export class ActionDetector {
       if (Math.abs(dy) > 1.2 && !recentlyBowed) {
         const facingAudience = hipF.z > 0.7;
         const facingMarlo = v.subVectors(this.other.center(new THREE.Vector3()), c).setY(0).normalize().dot(hipF) > 0.7;
-        this.emit("turn", { toward: facingMarlo ? "Marlo" : facingAudience ? "the audience" : "away" }, 3);
+        this.emit("turn", { toward: facingMarlo ? this.otherName : facingAudience ? "the audience" : "away" }, 3);
       }
     }
 
     // approach: close to the other puppet
     const dist = c.distanceTo(this.other.center(DV.o));
-    if (dist < 0.11) this.emit("approach", {}, 8);
+    if (dist < 0.11) this.emit("approach", { who: this.otherName }, 8);
 
     // idle: nothing for a while
     if (this.t - this.lastActive > 9) this.emit("idle", {}, 12);
@@ -140,10 +141,10 @@ export function describe(ev) {
     case "turn": return `Sir Pip turns to face ${ev.toward}`;
     case "slump": return "Sir Pip goes limp and collapses";
     case "rise": return "Sir Pip is lifted back to his feet";
-    case "approach": return "Sir Pip comes right up close to Marlo the dragon";
+    case "approach": return `Sir Pip comes right up close to ${ev.who || "Marlo"}`;
     case "idle": return "Sir Pip stands very still for a long moment";
     case "hold": return `Sir Pip is handed the ${ev.prop}`;
-    case "give": return `Sir Pip gives the ${ev.prop} to Marlo as a gift`;
+    case "give": return `Sir Pip gives the ${ev.prop} to ${ev.who || "Marlo"} as a gift`;
     case "drop": return `The ${ev.prop} goes back on its rack`;
     case "talk": return "The audience member talks to Marlo";
     case "snap": return "One of Sir Pip's strings snaps";
@@ -168,6 +169,20 @@ export class AIPerformer {
     this.p.main.held = true;
     this.current = "idle";
     this.lookYaw = this.yaw;
+  }
+
+  // a different guest takes the stage: the robot picks up their bars
+  setPuppet(puppet) {
+    this.p = puppet;
+    this.home = puppet.main.position.clone();
+    this.base = this.home.clone();
+    this.yaw = puppet.yaw;
+    this.lookYaw = this.yaw;
+    this.clip = null;
+    this.queue.length = 0;
+    this.sleeping = false;
+    this.current = "idle";
+    puppet.main.held = true;
   }
 
   // Marlo dozes off (strings slack) until woken
@@ -535,7 +550,7 @@ export function localReaction(ev, ai) {
     case "fall": return "help";
     case "slump": return pick("slump", "approach");
     case "rise": return pick("wave", "jump");
-    case "walk": return ev.where === "toward Marlo" ? pick("retreat", "bow", "approach") : pick("approach", "mirror", "turn");
+    case "walk": return ev.toOther ? pick("retreat", "bow", "approach") : pick("approach", "mirror", "turn");
     case "approach": return pick("dance", "bow", "retreat");
     case "turn": return pick("turn", "mirror");
     case "idle": return pick("wave", "dance", "approach");

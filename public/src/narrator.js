@@ -90,7 +90,8 @@ export class Narrator {
       line = pick(LINES[ev.type] || PROP_LINES[ev.type] || ["Sir Pip does something no one expected."])
         .replace("{where}", ev.where || "across the stage")
         .replace("{toward}", ev.toward || "the audience")
-        .replace("{prop}", ev.prop || "prop");
+        .replace("{prop}", ev.prop || "prop")
+        .replace("{who}", ev.who || "Marlo");
     }
     this.story.push(line);
     if (this.story.length > 12) this.story.shift();

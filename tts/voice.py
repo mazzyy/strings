@@ -18,10 +18,10 @@ class Speaker:
         self.voice = voice or DEFAULT_VOICE
         self.speed = speed
 
-    def mp3(self, text, voice=None):
+    def mp3(self, text, voice=None, speed=None):
         voice = voice or self.voice
         lang = "en-gb" if voice.startswith("b") else "en-us"
-        samples, sr = self.k.create(text, voice=voice, speed=self.speed, lang=lang)
+        samples, sr = self.k.create(text, voice=voice, speed=speed or self.speed, lang=lang)
         # a short breath of silence at the end so lines don't clip
         samples = np.concatenate([samples, np.zeros(int(sr * 0.15), dtype=samples.dtype)])
         pcm = (np.clip(samples, -1, 1) * 32767).astype(np.int16).tobytes()

@@ -20,14 +20,23 @@ def main():
     lines = json.loads(subprocess.check_output(["node", str(ROOT / "tts" / "export_lines.mjs")]))
     OUT.mkdir(parents=True, exist_ok=True)
     spk = Speaker(voice)
+    # each character has their own voice (and pace)
+    cast = {
+        "narrator": (spk.voice, None),
+        "marlo": (marlo_voice, None),
+        "wizard": ("bm_george", 0.88),   # an unhurried old wizard
+        "pirate": ("am_fenrir", 1.02),   # a boisterous captain
+        "troll": ("am_onyx", 0.84),      # a slow, deep, grumpy troll
+    }
     manifest = {}
     for i, item in enumerate(lines):
         text, who = item["text"], item["who"]
-        v = marlo_voice if who == "marlo" else spk.voice
-        name = hashlib.sha1(f"{spk.model}|{v}|{text}".encode()).hexdigest()[:12] + ".mp3"
+        v, speed = cast.get(who, cast["narrator"])
+        tag = f"{v}" if speed is None else f"{v}@{speed}"
+        name = hashlib.sha1(f"{spk.model}|{tag}|{text}".encode()).hexdigest()[:12] + ".mp3"
         path = OUT / name
         if not path.exists():
-            path.write_bytes(spk.mp3(text, v))
+            path.write_bytes(spk.mp3(text, v, speed))
         manifest[text] = name
         print(f"[{i + 1}/{len(lines)}] {text}")
     # remove clips that are no longer used

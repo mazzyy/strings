@@ -17,10 +17,11 @@ const RULES = [
   [/\b(fire|breathe|flame)\b/, "fire", "jump"],
 ];
 
-export function understand(text) {
+// talk: the current guest's lines (Marlo's by default)
+export function understand(text, talk = MARLO_TALK) {
   const t = text.toLowerCase();
-  for (const [re, key, reaction] of RULES) if (re.test(t)) return { line: MARLO_TALK[key], reaction };
-  return { line: MARLO_TALK.unknown, reaction: "turn" };
+  for (const [re, key, reaction] of RULES) if (re.test(t)) return { line: talk[key], reaction };
+  return { line: talk.unknown, reaction: "turn" };
 }
 
 export class Talk {
@@ -59,13 +60,13 @@ export class Talk {
         const r = await fetch("api/talk", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text, story: this.narrator.story }),
+          body: JSON.stringify({ text, story: this.narrator.story, character: this.character?.() }),
           signal: AbortSignal.timeout(9000),
         });
         if (r.ok) out = await r.json();
         if (out && !out.audio) out = null; // never answer in a robotic voice
       } catch { out = null; }
     }
-    this.onReply?.(out || understand(text));
+    this.onReply?.(out || understand(text, this.talkLines?.()));
   }
 }

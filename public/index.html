@@ -42,7 +42,7 @@
     #help td { padding: 1px 0; vertical-align: top; }
     #help td:first-child { color: var(--accent); padding-right: 10px; white-space: nowrap; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
     #help p { margin: 8px 0 0; color: var(--muted); }
-    #logwrap { bottom: 16px; right: 16px; max-width: 360px; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); }
+    #logwrap { bottom: 16px; right: 16px; max-width: 340px; pointer-events: none !important; opacity: 0.88; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); }
     #log { list-style: none; margin: 0; padding: 0; }
     #log li:first-child { color: var(--ink); }
     #caption { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); max-width: min(720px, calc(100% - 32px)); text-align: center; font: italic 20px/1.35 ui-serif, Georgia, serif; color: #fff8ea; text-shadow: 0 2px 12px #000, 0 0 2px #000; opacity: 0; transition: opacity .5s; pointer-events: none; }
@@ -83,6 +83,17 @@
     #billpanel button { margin-top: 12px; background: #7a1d22; color: #fff; border: 0; }
     button.live#talk { background: #3f8fe0; border-color: transparent; }
     #xr-note { color: var(--muted); font: 12px ui-sans-serif, system-ui, sans-serif; align-self: center; }
+    /* hover tooltip for props */
+    #tip { position: fixed; z-index: 6; padding: 6px 11px; border-radius: 8px; background: rgba(10, 24, 32, 0.9); border: 1px solid rgba(127, 243, 255, 0.7); color: #eafcff; font: 13px ui-sans-serif, system-ui, sans-serif; pointer-events: none; opacity: 0; transition: opacity .15s; white-space: nowrap; }
+    #tip.on { opacity: 1; }
+    /* the storybook map */
+    #storymap { position: fixed; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(12, 7, 5, 0.72); opacity: 0; pointer-events: none; transition: opacity .45s; }
+    #storymap.on { opacity: 1; pointer-events: auto; }
+    #storymap .mapwrap { position: relative; width: min(1100px, calc(100vw - 32px), calc((100vh - 40px) * 1.6)); border-radius: 10px; overflow: hidden; box-shadow: 0 20px 80px rgba(0,0,0,0.7); transform: scale(0.96); transition: transform .45s; border: 3px solid #7a5a32; }
+    #storymap.on .mapwrap { transform: none; }
+    #storymap canvas { display: block; width: 100%; height: auto; }
+    #storymap .close { position: absolute; top: 12px; left: 12px; background: rgba(58,36,20,0.85); color: #f3dfb0; border: 1px solid #d8ac4f; }
+    button#storybtn { background: rgba(216,172,79,0.18); border-color: rgba(216,172,79,0.6); }
     @media (max-width: 1100px) { #show { top: auto; bottom: 150px; } }
     @media (max-width: 760px) {
       #logwrap { display: none; }
@@ -109,7 +120,7 @@
       <div class="status">
         <span>mode</span><b id="st-mode">desktop simulator</b>
         <span>your hand</span><b id="st-grip">open hand</b>
-        <span>Marlo</span><b id="st-marlo">idle</b>
+        <span>guest</span><b id="st-marlo">idle</b>
         <span>narrator</span><b id="st-narrator">built-in</b>
         <span>take</span><b id="st-rec">—</b>
       </div>
@@ -120,6 +131,7 @@
       <button id="enter-vr" class="xr" hidden>Enter VR</button>
       <button id="demo" title="T">Demo</button>
       <button id="talk" title="Hold V">🎙 Talk to Marlo</button>
+      <button id="storybtn" title="J">🗺 Story map</button>
       <button id="bills">Playbills (0)</button>
       <button id="mode" title="N" hidden>Mode: Classic</button>
       <button id="rec" title="R">● Record</button>
@@ -148,6 +160,7 @@
         <tr><td>release</td><td>open hand — the puppet slumps</td></tr>
         <tr><td>R · P · L</td><td>record · replay shadow · copy share link</td></tr>
         <tr><td>T · M · C · N</td><td>demo · voice · captions · fun mode</td></tr>
+        <tr><td>J</td><td>the storybook map</td></tr>
       </table>
       <p>On Quest: pull the gold cord to raise the curtain. Pinch near a bar to hold it (from below is fine, so you can play seated with your arms low). Pinch a prop to carry it. Poke the red knob to record, green to replay your shadow, blue to talk to Marlo, gold for fun modes. Pinch both hands in the air for 1.5 s to move the stage.</p>
     </div>
@@ -158,6 +171,8 @@
   <div id="hint"></div>
   <div id="billpanel"></div>
   <div id="caption"></div>
+  <div id="tip"></div>
+  <div id="storymap"><div class="mapwrap"><button class="close">Close</button></div></div>
   <div id="toast"></div>
 
   <script type="module" src="./src/main.js"></script>

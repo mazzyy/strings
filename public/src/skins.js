@@ -12,7 +12,7 @@ const tv = new THREE.Vector3();
 const tq = new THREE.Quaternion();
 
 // place a height-1 mesh (cylinder/box along +Y) between two points
-function span(mesh, A, B) {
+export function span(mesh, A, B) {
   tv.subVectors(B, A);
   const len = tv.length();
   mesh.position.addVectors(A, B).multiplyScalar(0.5);
@@ -20,12 +20,12 @@ function span(mesh, A, B) {
   if (len > 1e-6) mesh.quaternion.setFromUnitVectors(UP, tv.divideScalar(len));
 }
 // place an object at point P + offset rotated by q, oriented by q
-function pin(obj, P, q, off) {
+export function pin(obj, P, q, off) {
   obj.position.copy(off ? tv.set(off[0], off[1], off[2]).applyQuaternion(q).add(P) : P);
   obj.quaternion.copy(q);
 }
 
-function shadowed(root, on = true) {
+export function shadowed(root, on = true) {
   root.traverse((o) => { if (o.isMesh) { o.castShadow = on; o.receiveShadow = false; } });
   return root;
 }
@@ -36,7 +36,7 @@ function glowMaterial(color, opacity) {
   return new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 }
 
-function makeBars(m, style, assets) {
+export function makeBars(m, style, assets) {
   const group = new THREE.Group();
   const mk = (kind) => {
     const g = new THREE.Group();

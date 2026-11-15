@@ -40,7 +40,7 @@ const STYLE = {
 };
 function styleOf(ev) {
   if (ev.type === "hold") return ev.prop === "sword" ? { drama: 0.8 } : ev.prop === "flower" ? { grace: 0.5 } : { drama: 0.3 };
-  if (ev.type === "walk") return ev.fast ? { drama: 0.6 } : ev.where === "away from Marlo" ? { drama: 0.5 } : { grace: 0.15 };
+  if (ev.type === "walk") return ev.fast ? { drama: 0.6 } : ev.away ? { drama: 0.5 } : { grace: 0.15 };
   return STYLE[ev.type] || null;
 }
 export function scoreStyle(style) {
@@ -65,7 +65,7 @@ function playbillTexture(scene, stars, streak, entry = {}) {
   for (const w of words) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > 280) { g.fillText(line, 180, y); y += 44; line = w; } else line = t; }
   g.fillText(line, 180, y);
   g.font = "22px Georgia, serif"; g.fillStyle = "#4a3020";
-  g.fillText("starring Sir Pip & Marlo", 180, y + 56);
+  g.fillText(`starring Sir Pip & ${entry.guest || "Marlo"}`, 180, y + 56);
   g.font = "40px Georgia, serif"; g.fillStyle = "#c9a14a";
   g.fillText("★".repeat(stars) + "☆".repeat(3 - stars), 180, y + 104);
   if (entry.ending) {
@@ -142,8 +142,9 @@ export class Show {
   }
 
   // curtain is up; begin a scene
-  start() {
-    this.scene = this.pickScene();
+  start(scene = null) {
+    this.scene = scene || this.pickScene();
+    this._doneFired = false;
     this.state = "intro";
     this.act = -1;
     this.stars = 0;
@@ -233,7 +234,7 @@ export class Show {
     const before = playbills.list().length;
     const entry = {
       id: this.scene.id, title: this.scene.title, date: today(), stars: this.stars,
-      ending: e.title, endingType: this.endingType || "grace", scores: scoreStyle(this.style),
+      ending: e.title, endingType: this.endingType || "grace", scores: scoreStyle(this.style), guest: this.guestName || "Marlo",
       critic: e.critics[Math.floor(Math.random() * e.critics.length)],
     };
     playbills.add(entry);
@@ -256,7 +257,10 @@ export class Show {
       if (this.wait <= 0) {
         if (this.state === "between") this._nextAct();
         else if (this.state === "ending") this._finale();
-        else if (this.state === "finale") { this.state = "done"; this.narrator.coach(SHOW_LINES.encore); this.doneT = this.t; }
+        else if (this.state === "finale") {
+          this.state = "done"; this.doneT = this.t;
+          if (this.onDone) this.onDone(this); else this.narrator.coach(SHOW_LINES.encore);
+        }
       }
       return;
     }
@@ -268,7 +272,7 @@ export class Show {
     }
     if (this.state === "done") {
       // encore: pick the bar up again (or keep performing) and the next show begins
-      if (this.t - this.doneT > 6 && held) this.start();
+      if (!this.onDone && this.t - this.doneT > 6 && held) this.start();
       return;
     }
     if (this.state !== "act") return;
