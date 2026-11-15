@@ -119,6 +119,16 @@ export class StoryMap {
   // the chapter to play next (furthest unlocked, not yet finished)
   current() { return this.places.find((p) => p.id === this.state.at) || CHAPTERS[0]; }
 
+  // start the tale again from the beginning (playbills and unlocked modes are kept)
+  resetStory() {
+    this.state = { unlocked: 1, done: {}, at: "courtyard" };
+    story.save(this.state);
+    const at = CHAPTERS[0];
+    this.token.x = at.map[0]; this.token.y = at.map[1];
+    this.draw();
+  }
+  hasProgress() { return Object.keys(this.state.done).length > 0 || this.state.at !== "courtyard"; }
+
   complete(id, entry) {
     const i = CHAPTERS.findIndex((c) => c.id === id);
     const before = this.state.unlocked;

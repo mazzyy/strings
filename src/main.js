@@ -21,7 +21,7 @@ import { ActionDetector, AIPerformer, describe } from "./director.js";
 import { MarloMind } from "./mind.js";
 import { Emotes } from "./emote.js";
 import { Confetti } from "./fx.js";
-import { GUESTS, STORY_LINES, PROLOGUE } from "./lines.js";
+import { GUESTS, STORY_LINES, PROLOGUE, CHAPTERS as CHAPTER_LIST } from "./lines.js";
 import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin } from "./cast.js";
 import { createTask } from "./tasks.js";
 import { StoryBook } from "./storybook.js";
@@ -806,6 +806,11 @@ const taskCtx = {
   showHint: (name) => hints.show(name, !!xrMode),
   hideHint: () => hints.hide(),
   knockPip, movePipTo,
+  // a shove for the guest (a sword hit lands)
+  knockGuest: (dir, amount) => {
+    const d = dir.clone().setY(0).normalize();
+    for (let i = 0; i < marlo.pos.length; i++) { marlo.pos[i].addScaledVector(d, amount * 0.5); marlo.pos[i].y += amount * 0.2; }
+  },
   confetti: (k) => confetti.burst(k),
   tower: () => towerRefs(),
 };
@@ -865,6 +870,22 @@ function openMap() {
   if (hints.current) hints.hide();
 }
 function toggleMap() { storyMap.open ? storyMap.hide() : openMap(); }
+// back to chapter one (the prologue plays again; playbills and modes are kept)
+function newStory() {
+  storyMap.resetStory();
+  chapter = storyMap.current();
+  show.state = "idle";
+  hints.hide();
+  resetAll(true);
+  stagePlace(chapter);
+}
+document.querySelector("#storymap .restart")?.addEventListener("click", () => {
+  if (!confirm("Start the tale of Sir Pip again from the beginning? Your playbills are kept.")) return;
+  storyMap.hide();
+  newStory();
+  curtains.close();
+  setTimeout(() => playBook(PROLOGUE, () => playBook(chapter, () => { curtains.open(); music.play(); setTimeout(startChapterShow, 2400); })), 1200);
+});
 
 // the scene change: curtain down, new set and guest, curtain up, the chapter begins
 let changing = false;
@@ -1007,10 +1028,33 @@ ghost.setVisible(false); confetti.points.visible = false;
 // the loading screen turns into the opening: one click raises the curtain
 // (and lets the browser play sound)
 if (loadingEl) {
-  loadingEl.innerHTML = `<div class="open"><h1>Strings</h1><p>a marionette theatre with an AI co-performer</p><button id="begin">Enter the theatre</button><small>Best with sound on · works with Quest hand tracking</small></div>`;
+  // the start menu: continue where you left off, start the tale again, or pick a chapter
+  const n = CHAPTER_LIST.findIndex((c) => c.id === chapter.id);
+  const where = chapter.id === "theatre" ? "The Grand Theatre" : `Chapter ${n + 1}: ${chapter.title}`;
+  const resume = storyMap.hasProgress();
+  loadingEl.innerHTML = `<div class="open"><h1>Strings</h1><p>a marionette theatre with an AI co-performer</p>` +
+    (resume
+      ? `<button id="begin">Continue · ${where}</button><div class="more"><button id="newstory">Start a new story</button><button id="chapters">Chapter map</button></div>`
+      : `<button id="begin">Begin the story</button>`) +
+    `<small>Best with sound on · works with Quest hand tracking</small></div>`;
   loadingEl.classList.add("ready");
-  const begin = () => { loadingEl.classList.add("done"); unlockAudio(); openingBook(startPreshow); };
+  const enter = () => { loadingEl.classList.add("done"); unlockAudio(); };
+  const begin = () => { enter(); openingBook(startPreshow); };
   $("begin").onclick = begin;
+  if ($("newstory")) $("newstory").onclick = () => {
+    if (!confirm("Start the tale of Sir Pip again from the beginning? Your playbills are kept.")) return;
+    newStory();
+    begin();
+  };
+  if ($("chapters")) $("chapters").onclick = () => {
+    enter();
+    // straight to the stage with the curtain up, and the map open
+    showStarted = true; preshow = false;
+    curtains.open();
+    setNight(false);
+    music.play();
+    openMap();
+  };
   if (new URLSearchParams(location.search).has("autostart")) { loadingEl.classList.add("done"); raiseCurtain(); }
 }
 $("enter-vr").addEventListener("click", () => loadingEl?.classList.add("done"));

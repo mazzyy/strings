@@ -59,6 +59,8 @@
     .open h1 { font: 600 64px/1 ui-serif, Georgia, serif; letter-spacing: 0.06em; margin: 0 0 10px; color: #f3dfb0; text-shadow: 0 4px 30px rgba(224,178,58,0.35); }
     .open p { margin: 0 0 28px; color: var(--muted); font: italic 18px ui-serif, Georgia, serif; }
     .open button { font: 600 17px ui-sans-serif, system-ui, sans-serif; background: linear-gradient(#e7bf55, #c9962e); color: #241810; border: 0; padding: 14px 30px; border-radius: 999px; box-shadow: 0 8px 30px rgba(224,178,58,0.35); }
+    .open .more { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+    .open .more button { font: 600 14px ui-sans-serif, system-ui, sans-serif; background: rgba(243,223,176,0.1); color: #f3dfb0; border: 1px solid rgba(216,172,79,0.55); padding: 10px 18px; box-shadow: none; }
     .open small { display: block; margin-top: 14px; color: var(--muted); font: 12px ui-sans-serif, system-ui, sans-serif; }
     /* "what do I do next" chip */
     #hint { position: fixed; left: 50%; bottom: 92px; transform: translate(-50%, 12px); display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: rgba(10, 24, 32, 0.86); border: 1px solid rgba(127, 243, 255, 0.7); box-shadow: 0 0 24px rgba(41, 230, 255, 0.25); color: #eafcff; font: 15px ui-sans-serif, system-ui, sans-serif; opacity: 0; transition: opacity .35s, transform .35s; pointer-events: none; white-space: nowrap; }
@@ -92,6 +94,7 @@
     #storymap .mapwrap { position: relative; width: min(1100px, calc(100vw - 32px), calc((100vh - 40px) * 1.6)); border-radius: 10px; overflow: hidden; box-shadow: 0 20px 80px rgba(0,0,0,0.7); transform: scale(0.96); transition: transform .45s; border: 3px solid #7a5a32; }
     #storymap.on .mapwrap { transform: none; }
     #storymap canvas { display: block; width: 100%; height: auto; }
+    #storymap .restart { position: absolute; bottom: 12px; left: 12px; background: rgba(58,36,20,0.75); color: #f3dfb0; border: 1px solid rgba(216,172,79,0.6); font-size: 12px; }
     #storymap .close { position: absolute; top: 12px; left: 12px; background: rgba(58,36,20,0.85); color: #f3dfb0; border: 1px solid #d8ac4f; }
     /* the storybook before each chapter */
     #storybook { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 45%, rgba(40,20,12,0.82), rgba(8,4,3,0.95)); opacity: 0; pointer-events: none; transition: opacity .5s; perspective: 1600px; }
@@ -180,7 +183,7 @@
   <div id="caption"></div>
   <div id="tip"></div>
   <div id="storybook"><div class="bookwrap"><button class="skip">Skip ›</button></div></div>
-  <div id="storymap"><div class="mapwrap"><button class="close">Close</button></div></div>
+  <div id="storymap"><div class="mapwrap"><button class="close">Close</button><button class="restart">Start a new story</button></div></div>
   <div id="toast"></div>
 
   <script type="module" src="./src/main.js"></script>

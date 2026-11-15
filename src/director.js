@@ -554,6 +554,14 @@ const CLIPS = {
       },
     };
   },
+  // knocked flat: the strings go slack, then the puppeteer hauls him back up
+  knockout: () => ({
+    run(t, pose) {
+      pose.held = t > 2.3;
+      if (t > 2.3) { const k = 1 - Math.min(1, (t - 2.3) / 0.8); pose.roll = Math.sin(t * 16) * 0.25 * k; }
+      return t > 3.6;
+    },
+  }),
   cheer: () => ({
     run(t, pose) {
       const up = ease(t / 0.3) * (1 - ease((t - 2.2) / 0.3));
