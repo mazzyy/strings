@@ -60,6 +60,13 @@
     .open p { margin: 0 0 28px; color: var(--muted); font: italic 18px ui-serif, Georgia, serif; }
     .open button { font: 600 17px ui-sans-serif, system-ui, sans-serif; background: linear-gradient(#e7bf55, #c9962e); color: #241810; border: 0; padding: 14px 30px; border-radius: 999px; box-shadow: 0 8px 30px rgba(224,178,58,0.35); }
     .open .more { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+    /* a clean screen while playing: only Menu, Talk and Enter VR/AR; the rest lives in ☰ Menu */
+    body:not(.devui) #top .card, body:not(.devui) #logwrap, body:not(.devui) #xr-note { display: none !important; }
+    body:not(.devui) #top .buttons > button:not(#menubtn):not(#talk):not(.xr) { display: none !important; }
+    body:not(.showhelp) #help { display: none; }
+    .open .extras { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; max-width: 560px; }
+    .open .extras button { font: 600 13px ui-sans-serif, system-ui, sans-serif; background: rgba(255,255,255,0.06); color: #e8d8b8; border: 1px solid rgba(216,172,79,0.35); padding: 8px 12px; box-shadow: none; border-radius: 999px; }
+    .open .extras-t { margin-top: 18px; font: 600 12px ui-sans-serif, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: rgba(243,223,176,0.6); }
     .open .more button { font: 600 14px ui-sans-serif, system-ui, sans-serif; background: rgba(243,223,176,0.1); color: #f3dfb0; border: 1px solid rgba(216,172,79,0.55); padding: 10px 18px; box-shadow: none; }
     .open small { display: block; margin-top: 14px; color: var(--muted); font: 12px ui-sans-serif, system-ui, sans-serif; }
     /* "what do I do next" chip */

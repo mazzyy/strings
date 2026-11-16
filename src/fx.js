@@ -125,3 +125,38 @@ export function makeHalo(color, size, opacity = 0.6) {
   s.userData.base = opacity;
   return s;
 }
+
+// Magic dust: motes of light drifting slowly around the storyteller robot, twinkling
+// blue-white and gold (one draw call).
+export class Dust {
+  constructor(parent, n = 140, box = [0.5, 0.75, 0.22]) {
+    this.n = n; this.box = box;
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    this.seed = [];
+    for (let i = 0; i < n; i++) {
+      this.seed.push([Math.random() * 6.28, (Math.random() - 0.5) * 2 * box[0], -0.1 + Math.random() * box[1], (Math.random() - 0.6) * 2 * box[2], 0.3 + Math.random() * 0.7]);
+      const gold = Math.random() < 0.3;
+      col[i * 3] = gold ? 1.2 : 0.7; col[i * 3 + 1] = gold ? 0.95 : 0.9; col[i * 3 + 2] = gold ? 0.5 : 1.25;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.006, vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    this.points.frustumCulled = false;
+    parent.add(this.points);
+    this.t = 0;
+  }
+  update(dt) {
+    this.t += dt;
+    const p = this.points.geometry.attributes.position.array, t = this.t;
+    for (let i = 0; i < this.n; i++) {
+      const [ph, x, y, z, sp] = this.seed[i];
+      const yy = ((y + t * 0.02 * sp + 0.1) % this.box[1]) - 0.1; // rising slowly, wrapping round
+      p[i * 3] = x + Math.sin(t * 0.3 * sp + ph) * 0.03;
+      p[i * 3 + 1] = yy;
+      p[i * 3 + 2] = z + Math.cos(t * 0.25 * sp + ph) * 0.02;
+    }
+    this.points.geometry.attributes.position.needsUpdate = true;
+    this.points.material.opacity = 0.65 + Math.sin(t * 2.1) * 0.15;
+  }
+}
