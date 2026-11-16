@@ -1867,6 +1867,20 @@ function leaveCurrentMode() {
   hints.hide();
   return true;
 }
+// which headset modes this browser offers (filled in once the browser answers; see the XR section)
+const xrSupport = { vr: false, ar: false };
+// in a headset the start menu leads with the way in: two big buttons above everything else
+function refreshXrMenu() {
+  const row = loadingEl?.querySelector(".xrrow");
+  if (!row) return;
+  const any = xrSupport.vr || xrSupport.ar;
+  row.hidden = !any;
+  if ($("go-vr")) $("go-vr").hidden = !xrSupport.vr;
+  if ($("go-ar")) $("go-ar").hidden = !xrSupport.ar;
+  const here = loadingEl.querySelector("#begin .here");
+  if (here) here.hidden = !any; // (the gold bar then plays on the flat screen, and says so)
+  fitTheatre();
+}
 // the menu's theatre is designed at a fixed size, and scaled to fit the window
 function fitTheatre() {
   const wrap = loadingEl?.querySelector(".theatre-wrap");
@@ -1934,7 +1948,11 @@ function renderStartMenu(midGame = false) {
     bulbs(5, "top l") + bulbs(5, "top r") +
     `<div class="curtain l">${I.curtain}</div><div class="curtain r">${I.curtain}</div>` + I.puppet +
     `<div class="titlebox"><h1>Strings</h1>${I.star}${I.flourish}<p>A marionette theatre with an AI co-performer</p></div>` +
-    `<button id="begin" class="cta"><i class="pl">${I.play}</i><span>${resume ? `Continue · ${where}` : "Begin the Story"}</span><i class="ch">${I.chev}</i>${thumb ? `<span class="thumb" style="background-image:url(${thumb})"></span>` : ""}</button>` +
+    `<div class="xrrow" hidden>` +
+      `<button id="go-vr" class="xrgo" hidden><i>${I.vr}</i><span><b>Play in VR</b><small>The theatre appears in front of you</small></span></button>` +
+      `<button id="go-ar" class="xrgo" hidden><i>${I.vr}</i><span><b>Play on Your Real Desk</b><small>Mixed reality · the stage sits in your room</small></span></button>` +
+    `</div>` +
+    `<button id="begin" class="cta"><i class="pl">${I.play}</i><span>${resume ? `Continue · ${where}` : "Begin the Story"}<em class="here" hidden> · on this screen</em></span><i class="ch">${I.chev}</i>${thumb ? `<span class="thumb" style="background-image:url(${thumb})"></span>` : ""}</button>` +
     `<div class="pair"><button id="chapters" class="outline"><i class="gold">${I.book}</i>Play Any Chapter · All Unlocked</button>` +
       (resume ? `<button id="newstory" class="outline"><i>${I.plus}</i>Start a New Story</button>` : "") + `</div>` +
     `<div class="duo"><button id="mystory" class="violet"><i>${I.pen}</i>Make Your Own Story</button><button id="freeplay" class="azure"><i class="blue">${I.pad}</i>Free Play · No Story, Just Fun</button></div>` +
@@ -1961,6 +1979,11 @@ function renderStartMenu(midGame = false) {
     startPreshow();
   };
   $("begin").onclick = begin;
+  // straight into the headset from the menu (the story starts by itself once you're in)
+  const goXR = (mode) => { enter(); enterXR(mode).catch((e) => { toast(e.message); renderStartMenu(showStarted); }); };
+  $("go-vr").onclick = () => goXR("immersive-vr");
+  $("go-ar").onclick = () => goXR("immersive-ar");
+  refreshXrMenu();
   if ($("onehand")) { $("onehand").checked = oneHand; $("onehand").onchange = (e) => setOneHand(e.target.checked, true); }
   if ($("pinchlock")) { $("pinchlock").checked = pinchLock; $("pinchlock").onchange = (e) => setPinchLock(e.target.checked, true); }
   if ($("newstory")) $("newstory").onclick = () => {
@@ -2161,10 +2184,10 @@ async function enterXR(mode) {
 }
 if (navigator.xr) {
   navigator.xr.isSessionSupported("immersive-ar").then((ok) => {
-    if (ok) { $("enter-ar").hidden = false; $("enter-ar").onclick = () => enterXR("immersive-ar").catch((e) => toast(e.message)); }
+    if (ok) { $("enter-ar").hidden = false; $("enter-ar").onclick = () => enterXR("immersive-ar").catch((e) => toast(e.message)); xrSupport.ar = true; refreshXrMenu(); }
   });
   navigator.xr.isSessionSupported("immersive-vr").then((ok) => {
-    if (ok) { $("enter-vr").hidden = false; $("enter-vr").onclick = () => enterXR("immersive-vr").catch((e) => toast(e.message)); }
+    if (ok) { $("enter-vr").hidden = false; $("enter-vr").onclick = () => enterXR("immersive-vr").catch((e) => toast(e.message)); xrSupport.vr = true; refreshXrMenu(); }
     else $("xr-note").hidden = false;
   });
 } else $("xr-note").hidden = false;
@@ -2535,12 +2558,23 @@ function applyQuality(i, why = "") {
 function trackPerf() {
   const now = performance.now(), d = now - perfWin.last;
   perfWin.last = now;
-  if (pinnedQuality || d > 250 || document.hidden || now < perfWin.settle) return;
+  if (pinnedQuality != null || perfWin.locked || d > 250 || document.hidden || now < perfWin.settle) return; // (tier 0 is a valid pin)
   perfWin.sum += d; perfWin.n++;
   if (perfWin.sum < 2500) return;
   const avg = perfWin.sum / perfWin.n;
   perfWin.sum = 0; perfWin.n = 0;
-  if (avg > 20.5 && qTier < QUALITY.length - 1) { applyQuality(qTier + 1, `${(1000 / avg).toFixed(0)} fps`); perfWin.downs++; }
+  if (avg > 20.5 && qTier < QUALITY.length - 1) {
+    // a step down that didn't make frames faster means something else sets the pace (a 30 Hz
+    // display, a battery saver, a background tab), not the GPU: go back to the better picture
+    // and stop stepping, instead of sliding to the blurriest tier for nothing
+    if (perfWin.before && avg > perfWin.before.avg * 0.92) {
+      perfWin.locked = true;
+      applyQuality(perfWin.before.tier, "stepping down didn't help; frame rate is capped elsewhere");
+      return;
+    }
+    perfWin.before = { tier: qTier, avg };
+    applyQuality(qTier + 1, `${(1000 / avg).toFixed(0)} fps`); perfWin.downs++;
+  } else if (avg <= 20.5) perfWin.before = null;
   // only climb back on fast displays with real headroom, and not after struggling twice
   else if (avg < 11 && qTier > 0 && perfWin.downs < 2) applyQuality(qTier - 1, `${(1000 / avg).toFixed(0)} fps`);
 }
