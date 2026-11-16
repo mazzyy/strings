@@ -32,13 +32,15 @@ function chipTexture(text) {
 }
 
 export class Phrases {
-  constructor(parent, onPick) {
+  // (also used for the headset's game menu: other items, no desktop panel)
+  constructor(parent, onPick, items = PHRASES, elId = "phrases") {
     this.onPick = onPick;
     this.group = new THREE.Group();
     this.group.visible = false;
     parent.add(this.group);
     const geo = new THREE.PlaneGeometry(CW, CH * 1.236);
-    this.chips = PHRASES.map((p, i) => {
+    this.items = items;
+    this.chips = items.map((p, i) => {
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: chipTexture(p.text), transparent: true, toneMapped: false, depthWrite: false }));
       m.position.set(((i % 3) - 1) * (CW + 0.012), (i < 3 ? 1 : 0) * (CH + 0.016), 0);
       m.userData.phrase = p;
@@ -48,7 +50,7 @@ export class Phrases {
     this.t = 0;
     this.cool = 0;
     // desktop: the same bubbles as buttons
-    this.el = document.getElementById("phrases");
+    this.el = elId ? document.getElementById(elId) : null;
     if (this.el) {
       this.el.innerHTML = `<div class="t">Say something</div>` + PHRASES.map((p, i) => `<button data-i="${i}">${p.text}</button>`).join("") + `<button class="x" aria-label="Close">×</button>`;
       this.el.addEventListener("click", (e) => {

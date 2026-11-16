@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { withRepeat } from "./assets.js";
 
-const KNOB_LABELS = { record: "Record", replay: "Replay", talk: "Talk", mode: "Modes", map: "Map", free: "Free Marlo", lock: "Pinch lock", hand: "One hand" };
+const KNOB_LABELS = { record: "Record", replay: "Replay", talk: "Talk", mode: "Modes", map: "Map", free: "Free Marlo", lock: "Pinch lock", hand: "One hand", menu: "Menu" };
 export const STAGE = { width: 0.86, depth: 0.42, base: 0.075 };
 
 const gold = () => new THREE.MeshStandardMaterial({ color: 0xd8ac4f, metalness: 1, roughness: 0.24 });
@@ -308,7 +308,12 @@ export function buildStage(assets) {
   handKnob.position.set(-0.01, 0.004, D / 2 - 0.05);
   root.add(handKnob);
 
-  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob, map: mapKnob, free: freeKnob, lock: lockKnob, hand: handKnob }, shadowCatcher, curtains, cord };
+  // the "menu" knob (white): the game menu in the headset (story, chapters, free play...)
+  const menuKnob = makeKnob(0xf0ece0, "menu");
+  menuKnob.position.set(0.04, 0.004, D / 2 - 0.05);
+  root.add(menuKnob);
+
+  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob, map: mapKnob, free: freeKnob, lock: lockKnob, hand: handKnob, menu: menuKnob }, shadowCatcher, curtains, cord };
 }
 
 // ---------------------------------------------------------------------------
