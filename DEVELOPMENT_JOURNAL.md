@@ -21,6 +21,9 @@ You pinch a glowing control bar and work **Sir Pip**, a little knight marionette
 - **The "wow" ending.** After the finale your applause (or the audience's) sets Marlo free: his strings snap, he flies around your head and lands on your open palm.
 - **Mixed reality with a purpose.** In passthrough the theatre sits on your real desk, and the puppets can step off the stage onto the tabletop itself.
 - **A mind you can see.** The guest remembers what you did; the puppeteer's eyes flash when it does, and a "Backstage Notes" card shows trust, mood and memories after each show.
+- **A scene partner.** When you fall or fail, the co-star turns it into theatre (a matching pratfall, a "ta-da!"), and the audience reacts to every move.
+- **Your own story.** Pick a conflict, who needs rescuing, a villain, a setting and a twist (or write it in your own words), see "Tonight's Show", and the theatre stages it, fully voiced.
+- **A storybook look.** A theatre-style start menu, and a storyteller robot with a glowing screen face whose sound-wave mouth moves as he speaks.
 
 ---
 
@@ -328,7 +331,7 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
 - **In the headset:** the story-card board has the same tabs (Conflict, Rescue who?, Villain, Setting, Twist with Surprise me, and Stage it!). The same "Tonight's Show" poster then floats in front of the stage, with *Start adventure* and *Edit my choices* to poke, while the narrator announces the title.
 - All 25 conflict × villain combinations were checked to build a playable show of 3 to 5 acts.
 
-### Phase 23: a believable robot, and a clean screen
+### Phase 23: a believable robot, a clean screen, the theatre menu and the dragon ride
 - **The robot puppeteer, redesigned** (from a reference sketch, then refined after feedback that a first pass looked fake):
   - **Face:** a band of dark, glossy glass across the eyes, like a real robot's sensor visor. The eyes are camera-like lenses behind it, each a lit iris ring around a bright pupil, in one soft cyan-white (a first try with mismatched blue and gold eyes read as broken). They blink with a shutter and flash gold when the guest remembers something.
   - **Mouth:** a slim speaker grille (a rounded slot with slats) whose light pulses with his voice. It replaced a drawn-on glowing smile.
@@ -399,12 +402,12 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
 
 The **Grand Theatre** (on the map after chapter 1) runs a new three-act show every day, for coming back.
 
-**Ways in, from the start menu:**
-- **Begin the story** (or **Continue**, which names your chapter) and **Start a new story**.
-- **Play any chapter · all unlocked:** every place on the map can be chosen straight away (for judges, or anyone short of time).
-- **✎ Make your own story:** type a story in your own words and the theatre stages it (Phase 18).
-- **Free play · no story, just fun:** the playground (Phase 15).
-- **Pinch lock** can be switched on right there, before you start.
+**Ways in, from the start menu** (a little gold-framed theatre; the same menu opens any time with ☰ Menu or Esc, or the white Menu button on the stage in the headset):
+- **Begin the Story** (or **Continue**, a gold bar naming your chapter with a picture of it) and **Start a New Story**.
+- **Play Any Chapter · All Unlocked:** every place on the map can be chosen straight away (for judges, or anyone short of time).
+- **Make Your Own Story:** pick it from illustrated cards (or write it yourself), preview "Tonight's Show", then start (Phases 18–22). In the headset, the same choices come as story cards to poke.
+- **Free Play · No Story, Just Fun:** the playground (Phase 15).
+- **Pinch Lock** and **One Hand** can be switched on right there, before you start.
 
 ---
 
@@ -415,8 +418,9 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 | File | What it does |
 |---|---|
 | `main.js` | The orchestrator: renderer and scene, cast, input and grabs (including pinch lock and the story lock), the flow (start menu → cord → warm-up → storyteller → book → chapters → map, or free play), soundscape cues, tasks context, extras (non-AI puppets), flight, finale, real-desk play and contact shadows, halos, 3D subtitles, the guest's memory display, XR session, adaptive quality, loop |
-| `puppet.js` | Verlet marionette: physics, strings (tension colour, snapping), gait and bow assists, moon gravity, fragile strings, batching hook |
-| `skins.js` / `cast.js` | Procedural visuals for every character on the shared rig; control bars; the generic humanoid skin builder |
+| `puppet.js` | Verlet marionette: physics, strings (tension colour, snapping), gait and bow assists, moon gravity, fragile strings, the flight pose and the seated riding pose, the real-desk floor, batching hook |
+| `skins.js` / `cast.js` | Procedural visuals for every character on the shared rig; control bars (wooden for the robot, glowing for whoever you play); the generic humanoid skin builder |
+| `robot.js` | The storyteller robot puppeteer: helmet head with a black glass screen face (oval eyes that blink and flash gold on a memory, a sound-wave mouth driven by his voice), brass collar, a chest clock that keeps real time, two-bone arm IK onto the guest's bars, jointed fingers |
 | `batch.js` | GPU-skinned batching of moving parts |
 | `director.js` | Move detector, and the AI performer with its clips (bow, wave, dance, fetch, slash, stagger, scan, zap, carry, knockout, endings…) |
 | `mind.js` | The guest's offline mind: mood, memory (counts plus remembered moments in words), personality, initiative, the Backstage Notes report |
@@ -427,7 +431,8 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 | `storybook.js` / `storymap.js` | The illustrated book and the parchment map; each is one canvas used as a desktop overlay or as a pokeable texture in VR |
 | `sets.js` / `stage.js` | Stage sets (painted backdrops, set pieces, lighting), the stage itself, curtains, cord, knobs, room |
 | `props.js` | Props, hit areas, hover, use-targets (key → cage) |
-| `hints.js` / `emote.js` / `fx.js` | Hints, emote bubbles, confetti |
+| `hints.js` / `emote.js` / `fx.js` | Hints, emote bubbles (sized to their text), confetti, sparkles, drifting light motes, additive glow halos |
+| `index.html` | The page: the theatre start menu's styles and its animated gesture icons, the story picker, panels and captions |
 | `input.js` | XR hands (One-Euro filter, anchor, grace) and the desktop simulator |
 | `recorder.js` | Record, replay, share links |
 | `audio.js` | Sound: real CC0 recordings with random variants (procedural sounds as a fallback), the per-chapter soundscape (music and ambience that loop, crossfade, duck under speech and swell), and recorded character emotions |
@@ -476,6 +481,12 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 - **Talking didn't exist in the headset:** the Quest Browser has no speech recognition and the hosted build has no server. Replaced by speech bubbles.
 - **Bubbles cut off longer text** (a fixed canvas width); they now size to fit.
 - **Two module-order bugs** (a variable read before its declaration) stopped the page from loading; found by loading the page in the browser pane after each change.
+- **Recent visual fixes:**
+  - the story picker's conflict and twist cards came out blank, because the emoji drawn onto a canvas didn't render in some browsers. They're now vector icons;
+  - the robot's screen frame showed thin white lines when he looked down, because a one-sided surface was seen from behind. It now renders from both sides, and it was checked from six angles;
+  - an earlier face had an eye clipped by its visor and hair-like slivers from an overlapping shell;
+  - Sir Pip's legs passed through the dragon while riding. He now has a seated pose;
+  - typing a story triggered keyboard shortcuts (R recorded, U freed Marlo). Shortcuts now ignore typing.
 - **Hosting:**
   - GitHub Actions is locked by an account billing issue, so Pages deploys from a `gh-pages` branch;
   - a dead custom domain (`musawar.me`) broke every github.io page and was removed (with permission).
@@ -488,10 +499,11 @@ There's no headset, so testing used:
 - **Headless Chromium** (playwright-core, CPU rendering) with scripted end-to-end runs of every chapter: the opening, menu, prologue, cord, all tasks (played by steering, not teleporting, where it matters), endings, playbills, modes, ghost duet, map, storybook, finale, credits.
 - **The IWER Quest emulator** for the XR path: pinch grabs, the lap grab with amplification, the cord pull, prop hand-offs, poking the map and the book (and its skip seal), speech bubbles, the free-play board, Marlo's flight around the head and landing on the palm, clap detection with synthetic palms, facing checks.
 - **Newer scripted checks:** the cord-first opening with an "eager player" who never stops moving (the story still starts); the shy approach (rushing makes Marlo hide), high fives, jumping together, shy fireflies, the owls and the blooming spell; the ending with no clap at all (Marlo still breaks free); the Backstage Notes card; Sir Pip stepping down onto the real desk; every character, co-star, stage and toy in free play; the character-emotion hook with a stand-in recording.
+- **Visual checks against references:** screenshots compared repeatedly with mock-ups and reference images: the theatre menu, the story picker (all 25 conflict × villain combinations also build a playable show), the robot's face from the front, above, both upper corners, the side and below, and the dragon ride from the front and above.
 - **Draw-call counts, per-system JavaScript timing, and before/after asset sizes.**
 
 **Not tested:**
-- a real Quest: frame rate, how hand tracking and pinch lock feel, clap and palm detection, the step down onto a real desk, the reach of the floating boards;
+- a real Quest: frame rate, how hand tracking, pinch lock and one-hand mode feel, clap and palm detection, the step down onto a real desk, the reach of the floating boards (menu, story cards, playground), the robot's face and the dragon ride up close;
 - listening to every voice line and sound by ear.
 
 ---
