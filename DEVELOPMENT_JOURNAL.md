@@ -413,6 +413,15 @@ The storybook pictures and several stage backdrops (the crystal cave most of all
 - **Robot, life:** the body sways a little; the head nods on each phrase while he speaks and tilts curiously now and then; the eyes glance about, double-blink, widen when he remembers something and squint into happy arcs when a show ends or a playbill is won (with a bob of the head); the antenna is a small spring that lags behind his head and quivers with his voice; all his lights beat with his speech.
 - **Tested:** `tools/headless-tests/views.mjs` captures the menu, the play view, the robot from three angles and the headset view in the emulator; `t57` and `t58` still pass. Not tested on a real headset.
 
+### Phase 28: a new start menu, "a night at the theatre"
+The old menu was a gold-framed card over a dimmed view of the room. The new one (`public/menu.css`, and the template in `renderStartMenu`) fills the screen with a theatre.
+- **The scene:** the painted night sky from chapter seven as the backdrop; full-height velvet curtains that part when the page opens (and sweep off when you start); a swagged valance with gold fringe and the two masks; a wooden stage floor with a row of footlights; dust drifting up through two swaying spotlights.
+- **The title hangs on strings:** each letter of "Strings" drops in on its own string from a marionette's control bar and then sways on its own beat. Sir Pip and Marlo (the storybook figures) are lowered in on strings at the wings.
+- **The ways to play:** a gold marquee for Begin (or Continue, with the chapter's name and picture) with a sheen that sweeps across it; three playbill cards pinned at slight angles, each with a painted picture (Play Any Chapter, Make Your Own Story, Free Play), which lift and straighten under the pointer; the Pinch Lock and One Hand options as chips with their animated hand icons. In a headset the two "Play in VR" and "Play on Your Real Desk" buttons come first.
+- **Fit:** the middle is designed 1180 wide and scaled to sit between the valance and the footlights at any window size (it used to slide off-centre when the window was smaller than the design).
+- **Tested:** `tools/headless-tests/menu.mjs` captures the menu at 1440 x 900, 800 x 600, 1024 x 640 with the headset buttons, mid-entrance and mid-game, and checks every button can be clicked; `t57` and `t58` still pass.
+
+
 
 
 ---

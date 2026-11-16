@@ -29,6 +29,8 @@ import { GUESTS, STORY_LINES, PROLOGUE, EPILOGUE, TASK_LINES, CHAPTERS as CHAPTE
 import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin, kingSkin } from "./cast.js";
 import { createTask } from "./tasks.js";
 import { StoryBook } from "./storybook.js";
+import { figure } from "./figures.js";
+import { paintBackdrop } from "./backdrops.js";
 import { Unbound } from "./unbound.js";
 import { Sets, SET_LIGHT } from "./sets.js";
 import { StoryMap } from "./storymap.js";
@@ -1884,13 +1886,13 @@ function refreshXrMenu() {
   if (here) here.hidden = !any; // (the gold bar then plays on the flat screen, and says so)
   fitTheatre();
 }
-// the menu's theatre is designed at a fixed size, and scaled to fit the window
+let menuArt = null, menuShown = false; // (the start menu's pictures; whether it has made its entrance)
+// the menu's middle is designed 1180 wide, and scaled to fit between the curtains, valance and floor
 function fitTheatre() {
   const wrap = loadingEl?.querySelector(".theatre-wrap");
   if (!wrap) return;
-  wrap.style.transform = "none";
-  const k = Math.min(1, (innerWidth - 24) / 1010, (innerHeight - 24) / (wrap.offsetHeight + 70));
-  wrap.style.transform = `scale(${k.toFixed(3)})`;
+  const k = Math.min(1.3, (innerWidth * 0.86) / 1180, (innerHeight * 0.735) / wrap.offsetHeight); // (clear of the valance above and the footlights below)
+  wrap.style.transform = `translate(-50%, -50%) scale(${k.toFixed(3)})`;
 }
 addEventListener("resize", fitTheatre);
 function renderStartMenu(midGame = false) {
@@ -1944,33 +1946,63 @@ function renderStartMenu(midGame = false) {
     chev: `<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     plus: `<svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>`,
   };
-  const bulbs = (n, cls) => `<div class="bulbs ${cls}">${Array.from({ length: n }, (_, i) => `<i style="animation-delay:${(i % 4) * 0.35}s"></i>`).join("")}</div>`;
   // the Continue bar shows a little picture of where you'll be
-  const thumb = (() => { try { return cardImage("place", (at.id === "theatre" ? "courtyard" : at.set) || "courtyard", 360, 120).toDataURL(); } catch { return ""; } })();
-  loadingEl.innerHTML = `<div class="theatre-wrap"><div class="open theatre">` + I.crest +
-    bulbs(5, "top l") + bulbs(5, "top r") +
-    `<div class="curtain l">${I.curtain}</div><div class="curtain r">${I.curtain}</div>` + I.puppet +
-    `<div class="titlebox"><h1>Strings</h1>${I.star}${I.flourish}<p>A marionette theatre with an AI co-performer</p></div>` +
-    `<div class="xrrow" hidden>` +
-      `<button id="go-vr" class="xrgo" hidden><i>${I.vr}</i><span><b>Play in VR</b><small>The theatre appears in front of you</small></span></button>` +
-      `<button id="go-ar" class="xrgo" hidden><i>${I.vr}</i><span><b>Play on Your Real Desk</b><small>Mixed reality · the stage sits in your room</small></span></button>` +
-    `</div>` +
-    `<button id="begin" class="cta"><i class="pl">${I.play}</i><span>${resume ? `Continue · ${where}` : "Begin the Story"}<em class="here" hidden> · on this screen</em></span><i class="ch">${I.chev}</i>${thumb ? `<span class="thumb" style="background-image:url(${thumb})"></span>` : ""}</button>` +
-    `<div class="pair"><button id="chapters" class="outline"><i class="gold">${I.book}</i>Play Any Chapter · All Unlocked</button>` +
-      (resume ? `<button id="newstory" class="outline"><i>${I.plus}</i>Start a New Story</button>` : "") + `</div>` +
-    `<div class="duo"><button id="mystory" class="violet"><i>${I.pen}</i>Make Your Own Story</button><button id="freeplay" class="azure"><i class="blue">${I.pad}</i>Free Play · No Story, Just Fun</button></div>` +
-    `<div class="opts">` +
-      `<label class="opt"><input type="checkbox" id="pinchlock"><span class="ic">${I.pinch}</span><span class="tx"><b>Pinch Lock</b><small>No need to hold a pinch</small></span></label>` +
-      `<label class="opt"><input type="checkbox" id="onehand"><span class="ic">${I.wave}</span><span class="tx"><b>One Hand</b><small>No second hand needed</small></span></label>` +
-      `<div class="opt info"><span class="ic">${I.vr}</span><span class="tx"><b>VR Ready</b><small>Best with sound on ·<br>Works with hand tracking</small></span></div>` +
-    `</div>` +
-    (midGame
-      ? `<div class="pair"><button id="backtoshow" class="outline">× Back to the show</button></div>` +
-        `<div class="extras-t">More</div><div class="extras">` +
-        [["x-map", "🗺 Story map"], ["x-bills", $("bills")?.textContent || "Playbills"], ["x-mode", "✦ Fun modes", !$("mode") || $("mode").hidden], ["x-rec", recorder.recording ? "■ Stop recording" : "● Record a scene"], ["x-play", "▶ Replay my scene"], ["x-share", "🔗 Share link"], ["x-mute", $("mute")?.textContent || "Voice"], ["x-demo", "🤖 Demo"], ["x-help", document.body.classList.contains("showhelp") ? "Hide controls" : "⌨ Controls"], ["x-dev", document.body.classList.contains("devui") ? "Hide developer info" : "Developer info"], ["x-reset", "↺ Reset the stage"]]
-          .filter(([, , hide]) => !hide).map(([id, label]) => `<button id="${id}">${label}</button>`).join("") + `</div>`
-      : "") +
-    bulbs(12, "foot") + `</div><div class="apron"></div></div>`;
+  const thumb = (() => { try { return cardImage("place", (at.id === "theatre" ? "courtyard" : at.set) || "courtyard", 420, 140).toDataURL(); } catch { return ""; } })();
+  // the menu's pictures are the game's own art: the painted night sky, Sir Pip and Marlo from
+  // the storybook, and three story cards (made once)
+  if (!menuArt) {
+    try {
+      const pic = (kind, x, flip) => { const c = document.createElement("canvas"); c.width = 360; c.height = 400; figure(c.getContext("2d"), kind, x, 388, 1.9, flip); return c.toDataURL(); };
+      const sky = document.createElement("canvas"); sky.width = 1600; sky.height = 900; paintBackdrop("sky", sky.getContext("2d"), 1600, 900, 0.7);
+      menuArt = { sky: sky.toDataURL("image/jpeg", 0.86), pip: pic("pip", 170), marlo: pic("marlo", 186, true), chapters: cardImage("place", "bridge", 504, 256).toDataURL(), story: cardImage("villain", "troll", 504, 256).toDataURL(), free: cardImage("who", "marlo", 504, 256).toDataURL() };
+    } catch { menuArt = {}; }
+  }
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const motes = Array.from({ length: 28 }, () => `<i style="--x:${(rnd() * 100).toFixed(1)}%;--s:${(3 + rnd() * 6).toFixed(1)}px;--d:${(11 + rnd() * 14).toFixed(1)}s;--dl:${(-rnd() * 22).toFixed(1)}s;--dx:${((rnd() - 0.5) * 160).toFixed(0)}px"></i>`).join("");
+  const drape = `<svg viewBox="0 0 200 900" preserveAspectRatio="none"><defs><linearGradient id="mv" x1="0" x2="1"><stop offset="0" stop-color="#4a040e"/><stop offset=".16" stop-color="#b81a2c"/><stop offset=".3" stop-color="#6e0816"/><stop offset=".46" stop-color="#d02a3c"/><stop offset=".62" stop-color="#7a0a1a"/><stop offset=".8" stop-color="#c42234"/><stop offset="1" stop-color="#8a0e1e"/></linearGradient><linearGradient id="mt" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff0b0"/><stop offset="1" stop-color="#b8801e"/></linearGradient></defs>
+    <path d="M0 0H200C196 210 150 430 64 566c-10 16-8 30 0 46 30 70 44 170 50 288H0z" fill="url(#mv)"/>
+    <g stroke="rgba(40,0,8,0.5)" stroke-width="3" fill="none"><path d="M150 0C146 200 110 420 52 560"/><path d="M100 0C98 180 78 400 40 548"/><path d="M50 0C50 160 42 380 26 540"/><path d="M44 624C64 700 74 800 78 900"/><path d="M20 612C30 700 36 800 38 900"/></g>
+    <g stroke="rgba(255,176,156,0.3)" stroke-width="2.5" fill="none"><path d="M176 0C172 210 130 430 60 562"/><path d="M126 0C124 190 96 410 46 554"/><path d="M76 0C76 170 62 390 32 544"/><path d="M62 620C84 700 96 800 100 900"/></g>
+    <path d="M0 572C30 592 58 590 70 562" stroke="url(#mt)" stroke-width="11" fill="none" stroke-linecap="round"/>
+    <g transform="translate(60 596)"><ellipse rx="24" ry="11" fill="url(#mt)" stroke="#7a4a10" stroke-width="2"/><path d="M-7 8c-10 16-14 36-10 58h34c4-22 0-42-10-58z" fill="url(#mt)" stroke="#7a4a10" stroke-width="2"/><path d="M-12 68v26M-3 68v30M7 68v28M16 68v24" stroke="#e2b04a" stroke-width="3"/></g></svg>`;
+  const swag = "M0 0H1200V34" + Array.from({ length: 8 }, (_, i) => `Q${1125 - i * 150} 108 ${1050 - i * 150} 34`).join("") + "Z";
+  const valance = `<svg viewBox="0 0 1200 100" preserveAspectRatio="none"><defs><linearGradient id="mvv" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#6a0816"/><stop offset=".5" stop-color="#c8243a"/><stop offset="1" stop-color="#7a0a1a"/></linearGradient><linearGradient id="mvg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff0b0"/><stop offset="1" stop-color="#b8801e"/></linearGradient></defs>
+    <path d="${swag}" fill="url(#mvv)"/><path d="${swag.replace("M0 0H1200V34", "M1200 34").replace("Z", "")}" fill="none" stroke="#f2c860" stroke-width="9" stroke-dasharray="3 4" transform="translate(0 2)"/><path d="${swag.replace("M0 0H1200V34", "M1200 34").replace("Z", "")}" fill="none" stroke="#fff0b0" stroke-width="2.5" transform="translate(0 -4)"/><rect width="1200" height="13" fill="url(#mvg)"/></svg>`;
+  const letters = [..."Strings"].map((ch, i) => `<span class="mw" style="--i:${i}"><span class="ml" style="--len:${[44, 72, 56, 80, 50, 68, 46][i]}px;--dur:${[3.1, 2.7, 3.4, 2.9, 3.3, 2.8, 3.2][i]}s;--dl:${-i * 0.63}s"><i class="mstr"></i><b>${ch}</b></span></span>`).join("");
+  const card = (id, img, icon, title, sub, r) => `<button id="${id}" class="mcard" style="--r:${r}deg">${img ? `<img alt="" src="${img}">` : ""}<span class="lb"><i>${icon}</i><span><b>${title}</b><small>${sub}</small></span></span></button>`;
+  loadingEl.innerHTML =
+    `<div class="mbg" style="--art:url(${menuArt.sky || ""})"></div><div class="mmotes">${motes}</div><div class="mfloor"></div>` +
+    `<div class="mcur l">${drape}</div><div class="mcur r">${drape}</div><div class="mval">${valance}${I.crest}</div>` +
+    `<div class="theatre-wrap mq">` +
+      `<div class="mtitle"><div class="mbar"></div><div class="mletters">${letters}</div></div>` +
+      (menuArt.pip ? `<div class="mpup l"><img alt="" src="${menuArt.pip}"></div><div class="mpup r"><img alt="" src="${menuArt.marlo}"></div>` : "") +
+      `<div class="msub">A marionette theatre with an AI co-performer</div>` +
+      (midGame ? `<div><button id="backtoshow" class="mback">× Back to the show</button></div>` : "") +
+      `<div class="xrrow" hidden>` +
+        `<button id="go-vr" class="xrgo" hidden><i>${I.vr}</i><span><b>Play in VR</b><small>The theatre appears in front of you</small></span></button>` +
+        `<button id="go-ar" class="xrgo" hidden><i>${I.vr}</i><span><b>Play on Your Real Desk</b><small>Mixed reality · the stage sits in your room</small></span></button>` +
+      `</div>` +
+      `<button id="begin" class="cta"><i class="pl">${I.play}</i><span class="tx"><b>${resume ? "Continue the Story" : "Begin the Story"}<em class="here" hidden> · on this screen</em></b><small>${resume ? where : "The Tale of Sir Pip · seven chapters, about ten minutes each"}</small></span>${thumb ? `<span class="thumb" style="background-image:url(${thumb})"></span>` : ""}</button>` +
+      (resume ? `<div><button id="newstory" class="mlink">↺ Start a new story</button></div>` : "") +
+      `<div class="mcards">` +
+        card("chapters", menuArt.chapters, I.book, "Play Any Chapter", "All seven are unlocked", -2.2) +
+        card("mystory", menuArt.story, I.pen, "Make Your Own Story", "Pick a villain, a place, a twist", 1.2) +
+        card("freeplay", menuArt.free, I.pad, "Free Play", "No story, just fun", -1.4) +
+      `</div>` +
+      `<div class="mopts">` +
+        `<label class="mopt"><input type="checkbox" id="pinchlock"><span class="ic">${I.pinch}</span><span><b>Pinch Lock</b><small>No need to hold a pinch</small></span></label>` +
+        `<label class="mopt"><input type="checkbox" id="onehand"><span class="ic">${I.wave}</span><span><b>One Hand</b><small>No second hand needed</small></span></label>` +
+        `<div class="mopt info"><span class="ic">${I.vr}</span><span><b>Hands only</b><small>Best with sound on · seated</small></span></div>` +
+      `</div>` +
+      (midGame
+        ? `<div class="mextras">` +
+          [["x-map", "🗺 Story map"], ["x-bills", $("bills")?.textContent || "Playbills"], ["x-mode", "✦ Fun modes", !$("mode") || $("mode").hidden], ["x-rec", recorder.recording ? "■ Stop recording" : "● Record a scene"], ["x-play", "▶ Replay my scene"], ["x-share", "🔗 Share link"], ["x-mute", $("mute")?.textContent || "Voice"], ["x-demo", "🤖 Demo"], ["x-help", document.body.classList.contains("showhelp") ? "Hide controls" : "⌨ Controls"], ["x-dev", document.body.classList.contains("devui") ? "Hide developer info" : "Developer info"], ["x-reset", "↺ Reset the stage"]]
+            .filter(([, , hide]) => !hide).map(([id, label]) => `<button id="${id}">${label}</button>`).join("") + `</div>`
+        : "") +
+    `</div>`;
+  // (the curtains part and the title drops in only the first time the menu appears)
+  loadingEl.classList.toggle("intro", !menuShown);
+  menuShown = true;
   loadingEl.classList.add("ready");
   loadingEl.classList.remove("done");
   fitTheatre();
