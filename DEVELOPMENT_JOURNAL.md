@@ -308,6 +308,25 @@ Feedback: "Pirates captured the dragon! Sir Pip must fight the captain." showed 
   - **a friendship ending** when the story says they become friends or forgive each other: a bow together, and the villain dances too.
 - The spelling corrector no longer "fixes" real verb forms (it had turned "cursed" into "curse", losing the captive).
 - 35 new voice lines (687 in total): every villain capturing every possible captive, and every rescue title.
+
+### Phase 22: the story picker and "Tonight's Show"
+Typing invites stories the theatre can't stage, so the main way to make a story is now **choosing** it, where every combination is guaranteed to work (`storypicker.js`):
+- **The picker** ("✎ Make your own story") is a big illustrated screen. The card pictures are drawn in the storybook's own style: characters from the storybook illustrations, settings from the painted backdrops. The steps are:
+  1. **Conflict:** Rescue, Duel, Treasure Hunt, Outsmart, Befriend;
+  2. **Who needs rescuing** (only for a rescue): the princess, the King, or any character except the villain;
+  3. **Villain:** Marlo, Clank, Grumble, Captain Pegg, Bramble;
+  4. **Setting:** any of the 7 stages, following the villain's home until you choose one;
+  5. **Twist:** none, moon gravity, fragile strings, night mode.
+
+  Also on the screen: **🎲 Surprise me**, **✎ Write it yourself** (the typed story reader, kept as an extra), and **Generate my story ✨**.
+- **"Tonight's Show" preview:** a theatre board with marquee lights shows the title, a picture of the scene (Sir Pip, the villain, the captive in a cage or the treasure, with night if chosen), and three act cards:
+  - *The Trouble* (what happened);
+  - *The Adventure* (what Sir Pip must do, built from the real acts);
+  - *The Finale* (how it ends).
+
+  A summary row lists hero, villain, setting, conflict and twist. **← Edit my choices** goes back; **Start adventure ▶** raises the curtain.
+- **In the headset:** the story-card board has the same tabs (Conflict, Rescue who?, Villain, Setting, Twist with Surprise me, and Stage it!). The same "Tonight's Show" poster then floats in front of the stage, with *Start adventure* and *Edit my choices* to poke, while the narrator announces the title.
+- All 25 conflict × villain combinations were checked to build a playable show of 3 to 5 acts.
 ---
 
 ## 4. The story
@@ -362,6 +381,7 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 | `audio.js` | Sound: real CC0 recordings with random variants (procedural sounds as a fallback), the per-chapter soundscape (music and ambience that loop, crossfade, duck under speech and swell), and recorded character emotions |
 | `phrases.js` | Talking without a microphone: speech bubbles to poke or click |
 | `playground.js` | The free-play menu: a desktop panel, and a board of tabs to poke in the headset |
+| `storypicker.js` | The story picker: the choices, the illustrated cards, the "Tonight's Show" poster (shared by desktop and headset) |
 | `storymaker.js` | Make your own story: a typo-tolerant key-word reader and a builder that turns it into storybook pages and acts; lists every sentence it can say for the voice builder |
 | `unbound.js` | Marlo breaking free, flying around your head, landing on your palm; clap detection |
 | `public/audio/` | 42 converted CC0 sound files, plus `voices/` for recorded character emotions (`index.json` lists them) |
@@ -439,7 +459,7 @@ There's no headset, so testing used:
 ## 9. Hosting and deployment
 
 - `main` holds the code. The site is `public/`, published by pushing `git subtree split --prefix public` to the `gh-pages` branch. Pages builds from that branch (Actions is unavailable).
-- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`, `story-cards`, `story-roles`.
+- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`, `story-cards`, `story-roles`, `story-picker`.
 
 ---
 

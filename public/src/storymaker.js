@@ -91,8 +91,8 @@ const EXTRA_KW = {
   dark: /\b(dark|darkness|night|lantern|fireflies|firefly|light)\b/,
 };
 const FRIEND_END = /\b(friend|friends|forgive\w*|kind|kindness|hug|peace|make up|made up|sorry|befriend)\b/;
-const DEFAULT_CHALLENGE = { marlo: "dodge", troll: "riddle", pirate: "duel", wizard: "spell", clank: "dodge" };
-const DEFAULT_PLACE = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower" };
+export const DEFAULT_CHALLENGE = { marlo: "dodge", troll: "riddle", pirate: "duel", wizard: "spell", clank: "dodge" };
+export const DEFAULT_PLACE = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower" };
 const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // typos are fine: a word one or two letters off a story word is read as that word

@@ -15,6 +15,7 @@ import { Sfx, Soundscape } from "./audio.js";
 import { Phrases } from "./phrases.js";
 import { Playground } from "./playground.js";
 import { parseStory, buildStory, storyFromCards, CARD_SECTIONS, STORY_EXAMPLES, VILLAINS } from "./storymaker.js";
+import { StoryPicker, storyFromPicks, surprisePicks, drawPreview, PICKS } from "./storypicker.js";
 import { Hints } from "./hints.js";
 import { Props } from "./props.js";
 import { Show, playbills, mindCardTexture } from "./show.js";
@@ -1646,21 +1647,47 @@ function playStory(story) {
 // story cards (in the headset, where there's no keyboard): pick a villain, who needs help,
 // the setting, the challenge and a twist, then poke "Stage it!"
 let placeTouched = false;
-const LAIR = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower" };
+const CARD_TABS = [
+  { id: "conflict", title: "Conflict", items: PICKS.conflict.map(([id, label]) => [id, label]) },
+  { id: "who", title: "Rescue who?", items: PICKS.who.map(([id, label]) => [id, label]) },
+  { id: "villain", title: "Villain", items: PICKS.villain.map(([id, label]) => [id, label]) },
+  { id: "place", title: "Setting", items: PICKS.place.map(([id, label]) => [id, label]) },
+  { id: "twist", title: "Twist", items: PICKS.twist.map(([id, label]) => [id, label]).concat([["surprise", "Surprise me"]]) },
+  { id: "go", title: "Stage it!", action: true, items: [] },
+];
 const storyCards = new Playground(stageRoot, (section, id) => {
   unlockAudio();
-  if (section === "go") {
-    storyCards.hide();
-    sfx.play("swish", null, { volume: 0.5 });
-    playStory(buildStory(storyFromCards(storyCards.active)));
-    return;
-  }
+  if (section === "go") { storyCards.hide(); showPoster(buildStory(storyFromPicks(storyCards.active))); return; }
+  if (section === "twist" && id === "surprise") { const r = surprisePicks(); for (const k of Object.keys(r)) storyCards.set(k, r[k]); storyCards.hide(); showPoster(buildStory(storyFromPicks(storyCards.active))); return; }
   sfx.play("chime", null, { volume: 0.3, rate: 1.1 + Math.random() * 0.3 });
   if (section === "place") placeTouched = true;
   if (section === "villain" && !placeTouched) storyCards.set("place", LAIR[id]); // (the villain's home, unless you chose)
-}, CARD_SECTIONS, null, { villain: "marlo", captive: "princess", place: "cave", challenge: "dodge", twist: "none" });
+}, CARD_TABS, null, { conflict: "rescue", who: "princess", villain: "marlo", place: "cave", twist: "none" });
 storyCards.group.position.set(0, 0.56, 0.18);
-storyCards.group.scale.setScalar(1.15);
+storyCards.group.scale.setScalar(1.05);
+const LAIR = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower" };
+// the poster: "Tonight's Show", the scene and the three acts, then Start or Edit
+const poster = { mesh: new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.3), new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false })), story: null };
+poster.mesh.visible = false;
+poster.mesh.position.set(0, 0.6, 0.16);
+stageRoot.add(poster.mesh);
+const posterChoices = new Phrases(stageRoot, (it) => {
+  posterChoices.hide(); poster.mesh.visible = false;
+  if (it.key === "start") playStory(poster.story);
+  else openStoryCards();
+}, [{ key: "start", text: "Start adventure ▶" }, { key: "edit", text: "Edit my choices" }], null);
+posterChoices.group.position.set(0, 0.42, 0.2);
+function showPoster(story) {
+  poster.story = story;
+  poster.mesh.material.map?.dispose();
+  const tex = new THREE.CanvasTexture(drawPreview(story)); tex.colorSpace = THREE.SRGBColorSpace;
+  poster.mesh.material.map = tex; poster.mesh.material.needsUpdate = true;
+  poster.mesh.visible = true;
+  faceViewer(poster.mesh);
+  posterChoices.show(true); faceViewer(posterChoices.group);
+  narrator.coach(story.intro);
+  sfx.play("chime", null, { volume: 0.45, rate: 0.9 });
+}
 function openStoryCards() {
   if (!xrMode) { openStoryMaker(); return; }
   storyCards.show(true);
@@ -1693,26 +1720,13 @@ function storySummary(p) {
     ? `<b>Starring</b> ${NAMES[p.villain]} · <b>at</b> ${PLACE_NAMES[p.place]} · <b>Sir Pip must</b> ${what} (a gentle hello, high fives, a dance)`
     : `<b>Villain</b> ${NAMES[p.villain]} · <b>at</b> ${PLACE_NAMES[p.place]} · <b>Sir Pip must</b> ${what} · <b>by</b> ${CHALLENGE_NAMES[p.challenge]}`;
 }
+const picker = new StoryPicker($("storymaker"), {
+  onStart: (story) => { loadingEl?.classList.add("done"); unlockAudio(); playStory(story); },
+  summarize: storySummary,
+});
 function openStoryMaker() {
-  const el = $("storymaker");
-  if (!el) return;
-  if (xrMode) { openMap(); return; } // (no keyboard in the headset)
-  el.classList.add("on");
-  const ta = el.querySelector("textarea");
-  const sum = el.querySelector(".sum");
-  const refresh = () => { sum.innerHTML = ta.value.trim() ? storySummary(parseStory(ta.value)) : "Write a sentence or two, or tap an idea below."; };
-  ta.oninput = refresh;
-  el.querySelectorAll(".ideas button").forEach((b) => (b.onclick = () => { ta.value = b.textContent; refresh(); }));
-  el.querySelector(".go").onclick = () => {
-    const text = ta.value.trim() || STORY_EXAMPLES[0];
-    el.classList.remove("on");
-    loadingEl?.classList.add("done");
-    unlockAudio();
-    playStory(buildStory(parseStory(text)));
-  };
-  el.querySelector(".x").onclick = () => el.classList.remove("on");
-  refresh();
-  setTimeout(() => ta.focus(), 50);
+  if (xrMode) { openStoryCards(); return; } // (no keyboard or mouse in the headset: the cards)
+  picker.open();
 }
 
 // ---- free play: no story, just the theatre and everything in it ------------------------
@@ -1814,7 +1828,7 @@ function startFreePlay() {
 function leaveCurrentMode() {
   if (unbound.busy) return false;
   if (twistMode) { applyMode(MODES[0], false); twistMode = false; } // (a story's twist ends with it)
-  storyCards.hide();
+  storyCards.hide(); posterChoices.hide(); poster.mesh.visible = false;
   // cancel any opening still in progress (the warm-up, the storyteller, a book) so it
   // can't carry on into the old chapter afterwards
   if (warmup.on) { warmup.on = false; warmup.step = "end"; warmup.next = null; mind.taskBusy = false; }
@@ -2200,6 +2214,7 @@ function xrGestures(dt, hands, t) {
   if (phrases.group.visible) for (const h of hands) if (h.present && phrases.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (gameBoard.group.visible) for (const h of hands) if (h.present && gameBoard.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (storyCards.group.visible) for (const h of hands) if (h.present && storyCards.poke(stageRoot.localToWorld(h.tip.clone()))) break;
+  if (posterChoices.group.visible) for (const h of hands) if (h.present && posterChoices.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (playground.group.visible) for (const h of hands) if (h.present && playground.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   for (const [name, knob] of Object.entries(knobs)) {
     const kp = knob.position.clone().add(new THREE.Vector3(0, 0.01, 0));
@@ -2329,6 +2344,7 @@ renderer.setAnimationLoop((time, frame) => {
   phrases.update(dt);
   gameBoard.update(dt);
   storyCards.update(dt);
+  posterChoices.update(dt);
   if (xrMode && storyCards.group.visible) faceViewer(storyCards.group);
   if (xrMode && gameBoard.group.visible) faceViewer(gameBoard.group);
   playground.update(dt);
@@ -2414,4 +2430,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, openGameMenu, gameBoard, storyCards, openStoryCards, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };

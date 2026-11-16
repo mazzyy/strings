@@ -10,7 +10,7 @@ const W = 1200, H = 750;
 const SEAL = { x: 1085, y: 640 }; // the "skip" wax seal (headset)
 
 // cartoon figures for the illustrations (feet at x, y; s = scale)
-function figure(g, kind, x, y, s = 1, flip = false) {
+export function figure(g, kind, x, y, s = 1, flip = false) {
   g.save();
   g.translate(x, y);
   g.scale(flip ? -s : s, s);
