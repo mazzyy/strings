@@ -117,7 +117,7 @@ export class Robot {
     skull.scale.set(1.07, 0.95, 0.98);                 // wider than tall, like a helmet
 
     // the face frame and screen: a rounded-square oval ("squircle"), bent to a gentle curve
-    const FY = 0.0765, R = 0.115, Z0 = 0.0775;          // face centre, curvature, front of the frame
+    const FY = 0.0765, R = 0.092, Z0 = 0.0745;          // face centre, curvature, front of the frame
     const sq = (A, B, t, n = 2.6) => { const c = Math.cos(t), s = Math.sin(t); return [A * Math.sign(c) * Math.abs(c) ** (2 / n), B * Math.sign(s) * Math.abs(s) ** (2 / n)]; };
     const bend = (x, y) => -(x * x + (y - FY) * (y - FY)) / (2 * R); // how far the curve falls back
     const outline = (A, B, n) => { const pts = []; for (let i = 0; i < 96; i++) pts.push(sq(A, B, (i / 96) * Math.PI * 2, n)); return pts; };
@@ -135,7 +135,9 @@ export class Robot {
     frameG.setAttribute("position", new THREE.Float32BufferAttribute(fp, 3));
     frameG.setIndex(fi);
     frameG.computeVertexNormals();
-    const frame = add(this.head, frameG, face); frame.castShadow = false;
+    // (both sides drawn: from above, below or the side you'd otherwise see through the back wall)
+    const frameMat = face.clone(); frameMat.side = THREE.DoubleSide;
+    const frame = add(this.head, frameG, frameMat); frame.castShadow = false;
     // the screen: black glass, recessed a little inside the frame
     const scrG = new THREE.RingGeometry(0.0001, 1, 128, 14);
     { const p = scrG.attributes.position;

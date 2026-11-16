@@ -359,6 +359,7 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
   - **big tall glowing oval eyes** with a soft layered glow;
   - a **wide cyan sound-wave mouth** of 21 rounded bars that ripple with his voice and rest as a row of dots;
   - **tall rounded ear pods** with a vertical cyan light strip on the front edge, and a short cyan light on the shell above the frame.
+  - **Fixed:** when the robot looked down, thin white lines showed along the frame, because its back wall was a one-sided surface and steep angles saw through it. The frame now renders from both sides, and it curves back closer to the helmet. Checked from the front, above, both upper corners, the side and below.
 ---
 
 ## 4. The story
