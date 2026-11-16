@@ -386,6 +386,14 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
 ### Phase 24: submission readiness (checked against the official rules)
 - **No brand names in the experience:** the three visible mentions of the headset's brand ("Works with Quest hand tracking" on the menu, "On Quest: …" in the controls panel, and the credits line) now say "hand tracking", "In the headset" and "for VR".
 - **Spatial anchoring in passthrough:** when you set the stage down on a real surface, it's anchored to that spot with WebXR anchors (created from the hit-test result). Every frame the stage follows the anchor, so as the headset refines its map of the room the theatre stays on your desk instead of drifting. If tracking of the anchor is briefly lost, the stage holds still; where anchors aren't supported, it simply stays where it was set. Re-centring (both hands pinched for 1.5 s) in passthrough now lets you place the stage again on a surface, with a fresh anchor; the anchor is released when the session ends. Tested with stand-in anchors: placement, following a 2 cm correction, holding still while lost, and no support at all.
+
+### Phase 25: the way into the headset, and two quality fixes
+A review of the build found that the start menu hid the way into the headset, and that the picture could get stuck at its worst setting.
+- **Headset buttons on the start menu:** where the browser offers a headset, the menu now leads with two large buttons, **Play in VR** and **Play on Your Real Desk** (mixed reality). One pinch goes straight in and the story starts by itself. Before, the only way in was two small buttons in the corner, which the menu covered so they couldn't be pressed until it was closed; "Begin the Story" played on the flat screen. That gold bar now says "on this screen" when a headset is present.
+- **`?quality=high` now stays put:** "high" is tier 0, and the check for a pinned tier treated 0 as "not pinned", so the game still stepped down.
+- **Adaptive quality no longer slides to the blurriest tier for nothing:** if a step down doesn't make frames at least 8% faster, something else is setting the pace (a 30 Hz display, a battery saver, a background tab). The game goes back to the better tier and stops stepping.
+- **Tested:** both buttons in the IWER emulator (a VR session with the cord opening; a passthrough session); `tools/headless-tests/t57.mjs` forces every frame to arrive 33 ms apart and checks the game steps down once, steps back and stays, and that `?quality=high` never moves. Not tested on a real headset.
+
 ---
 
 ## 4. The story
