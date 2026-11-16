@@ -5,7 +5,7 @@
 //   Headset: the same choices as a board of cards, and the preview as a poster.
 // Typing a story is still there as "write it yourself".
 import { VILLAINS, CAPTIVES, DEFAULT_CHALLENGE, DEFAULT_PLACE, buildStory, parseStory, STORY_EXAMPLES } from "./storymaker.js";
-import { figure } from "./storybook.js";
+import { figure } from "./figures.js";
 import { paintBackdrop } from "./sets.js";
 
 export const PICKS = {
@@ -96,73 +96,18 @@ function wrapText(g, text, x, y, maxW, lh, maxLines = 4) {
   g.fillText(line, x, y);
   return y + lh;
 }
-// each setting card gets its landmark, drawn in the storybook's outlined style
-function landmark(g, id, w, h) {
-  const ink = "#2a1a10";
-  g.lineWidth = Math.max(1.5, w / 110); g.strokeStyle = ink; g.lineJoin = "round";
-  const poly = (pts, fill) => { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x * w, y * h) : g.moveTo(x * w, y * h))); g.closePath(); g.fillStyle = fill; g.fill(); g.stroke(); };
-  const glow = (c, b) => { g.shadowColor = c; g.shadowBlur = b; };
-  if (id === "cave") {
-    g.fillStyle = "rgba(10,6,16,0.45)"; g.fillRect(0, 0, w, h);
-    poly([[0, 1], [0, 0.35], [0.18, 0.12], [0.38, 0.2], [0.5, 0.08], [0.66, 0.18], [0.84, 0.1], [1, 0.3], [1, 1], [0.78, 1], [0.7, 0.55], [0.5, 0.42], [0.3, 0.55], [0.22, 1]], "#3a3044");
-    glow("#5dffb0", 14);
-    for (const [x, y, s] of [[0.36, 0.95, 1], [0.46, 0.98, 1.4], [0.58, 0.96, 1.1], [0.66, 0.99, 0.8], [0.27, 0.99, 0.7]]) poly([[x - 0.035 * s, y], [x, y - 0.32 * s], [x + 0.035 * s, y]], "#5df0a8");
-    g.shadowBlur = 0;
-  } else if (id === "ship") {
-    poly([[0.18, 0.7], [0.82, 0.7], [0.72, 0.88], [0.28, 0.88]], "#7a4a28");
-    g.beginPath(); g.moveTo(0.5 * w, 0.7 * h); g.lineTo(0.5 * w, 0.14 * h); g.stroke();
-    poly([[0.5, 0.18], [0.74, 0.42], [0.5, 0.46]], "#f6efe0");
-    poly([[0.5, 0.48], [0.7, 0.64], [0.5, 0.66]], "#f6efe0");
-    poly([[0.48, 0.2], [0.3, 0.44], [0.48, 0.46]], "#f0e6d0");
-    poly([[0.5, 0.14], [0.6, 0.1], [0.5, 0.06]], "#c0303a");
-    g.fillStyle = "rgba(60,110,190,0.85)"; g.fillRect(0, 0.86 * h, w, 0.14 * h);
-  } else if (id === "tower") {
-    poly([[0.4, 0.95], [0.4, 0.32], [0.6, 0.32], [0.6, 0.95]], "#b08a5a");
-    poly([[0.36, 0.33], [0.5, 0.08], [0.64, 0.33]], "#6a3a8a");
-    g.beginPath(); g.arc(0.5 * w, 0.46 * h, 0.075 * w, 0, Math.PI * 2); g.fillStyle = "#f6f1e4"; g.fill(); g.stroke();
-    g.beginPath(); g.moveTo(0.5 * w, 0.46 * h); g.lineTo(0.5 * w, 0.41 * h); g.moveTo(0.5 * w, 0.46 * h); g.lineTo(0.535 * w, 0.47 * h); g.stroke();
-    poly([[0.46, 0.95], [0.46, 0.78], [0.54, 0.78], [0.54, 0.95]], "#4a2c1a");
-  } else if (id === "forest") {
-    g.fillStyle = "rgba(14,24,48,0.45)"; g.fillRect(0, 0, w, h);
-    glow("#cfe8ff", 22); g.beginPath(); g.arc(0.72 * w, 0.22 * h, 0.08 * w, 0, Math.PI * 2); g.fillStyle = "#f2f6ff"; g.fill(); g.shadowBlur = 0;
-    for (const [x, s] of [[0.15, 1], [0.38, 1.25], [0.62, 0.95], [0.86, 1.15]]) poly([[x - 0.12 * s, 0.98], [x, 0.98 - 0.62 * s], [x + 0.12 * s, 0.98]], "#1f3d2a");
-    glow("#fff09a", 8); g.fillStyle = "#fff09a";
-    for (const [x, y] of [[0.26, 0.6], [0.5, 0.72], [0.74, 0.55], [0.9, 0.78]]) { g.beginPath(); g.arc(x * w, y * h, 1.8, 0, Math.PI * 2); g.fill(); }
-    g.shadowBlur = 0;
-  } else if (id === "bridge") {
-    g.fillStyle = "rgba(10,16,40,0.35)"; g.fillRect(0, 0, w, h);
-    g.fillStyle = "#2f5a8a"; g.fillRect(0, 0.8 * h, w, 0.2 * h);
-    g.beginPath(); g.moveTo(0, 0.55 * h); g.lineTo(w, 0.55 * h); g.lineTo(w, 0.82 * h); g.lineTo(0.72 * w, 0.82 * h);
-    g.arc(0.5 * w, 0.82 * h, 0.22 * w, 0, Math.PI, true); g.lineTo(0, 0.82 * h); g.closePath(); g.fillStyle = "#7a7f8a"; g.fill(); g.stroke();
-    for (let x = 0.04; x < 1; x += 0.12) { g.strokeRect(x * w, 0.48 * h, 0.07 * w, 0.07 * h); }
-  } else if (id === "courtyard") {
-    const wall = "#cbbfae", roof = "#7a3fa0";
-    poly([[0.12, 0.92], [0.12, 0.5], [0.88, 0.5], [0.88, 0.92]], wall);
-    for (const x of [0.12, 0.88]) { poly([[x - 0.07, 0.92], [x - 0.07, 0.36], [x + 0.07, 0.36], [x + 0.07, 0.92]], wall); poly([[x - 0.09, 0.37], [x, 0.16], [x + 0.09, 0.37]], roof); }
-    poly([[0.42, 0.92], [0.42, 0.28], [0.58, 0.28], [0.58, 0.92]], wall); poly([[0.4, 0.29], [0.5, 0.06], [0.6, 0.29]], roof);
-    poly([[0.45, 0.92], [0.45, 0.74], [0.55, 0.74], [0.55, 0.92]], "#4a2c1a");
-    g.fillStyle = "#c0303a"; g.beginPath(); g.moveTo(0.5 * w, 0.06 * h); g.lineTo(0.62 * w, 0.03 * h); g.lineTo(0.5 * w, 0.0); g.fill();
-  } else if (id === "sky") {
-    g.fillStyle = "rgba(8,10,40,0.35)"; g.fillRect(0, 0, w, h);
-    glow("#fff6c8", 18); g.fillStyle = "#fff6c8"; g.beginPath(); g.arc(0.74 * w, 0.28 * h, 0.1 * w, 0, Math.PI * 2); g.fill();
-    g.shadowBlur = 0; g.fillStyle = "#1a1640"; g.beginPath(); g.arc(0.79 * w, 0.24 * h, 0.09 * w, 0, Math.PI * 2); g.fill();
-    g.fillStyle = "#e8ecff";
-    for (const [x, y, r] of [[0.2, 0.86, 0.14], [0.36, 0.82, 0.12], [0.55, 0.9, 0.16], [0.82, 0.88, 0.13]]) { g.beginPath(); g.arc(x * w, y * h, r * w, 0, Math.PI * 2); g.fill(); }
-  }
-}
-
 // a little card picture: a character on their home backdrop, a setting, or an icon
 export function cardImage(sec, id, w = 200, h = 140) {
   const c = document.createElement("canvas"); c.width = w; c.height = h;
   const g = c.getContext("2d");
   g.save(); g.beginPath(); g.roundRect(0, 0, w, h, 14); g.clip();
-  if (sec === "place") { paintBackdrop(id, g, w, h); landmark(g, id, w, h); }
+  if (sec === "place") paintBackdrop(id, g, w, h); // (the painted scene is its own landmark)
   else if (sec === "villain" || sec === "who") {
     paintBackdrop(sec === "villain" ? DEFAULT_PLACE[id] || "courtyard" : "courtyard", g, w, h);
     const vg = g.createRadialGradient(w / 2, h * 0.6, h * 0.2, w / 2, h * 0.6, w * 0.7);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(20,8,30,0.55)");
     g.fillStyle = vg; g.fillRect(0, 0, w, h);
-    figure(g, id, w / 2, h - 5, h / 172); // (sized so heads, horns and hats fit on the card)
+    figure(g, id, w / 2, h - 5, h / 208); // (sized so heads, horns and hats fit on the card)
   } else {
     const grad = g.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, "#4a2c6e"); grad.addColorStop(1, "#24163a");
     g.fillStyle = grad; g.fillRect(0, 0, w, h);

@@ -4,83 +4,13 @@
 //   Desktop: an overlay (click to turn the page, Skip to jump ahead).
 //   Headset: a floating book in front of the stage (poke to turn the page).
 import * as THREE from "three";
-import { paintBackdrop } from "./sets.js";
+import { paintBackdrop } from "./backdrops.js";
+import { figure } from "./figures.js";
 
 const W = 1200, H = 750;
 const SEAL = { x: 1085, y: 640 }; // the "skip" wax seal (headset)
 
-// cartoon figures for the illustrations (feet at x, y; s = scale)
-export function figure(g, kind, x, y, s = 1, flip = false) {
-  g.save();
-  g.translate(x, y);
-  g.scale(flip ? -s : s, s);
-  g.lineWidth = 3; g.strokeStyle = "#2a1a10";
-  const blob = (cx, cy, rx, ry, col) => { g.fillStyle = col; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill(); g.stroke(); };
-  const rect = (x0, y0, w, h, col) => { g.fillStyle = col; g.beginPath(); g.roundRect(x0, y0, w, h, 6); g.fill(); g.stroke(); };
-  const eyes = (cx, cy, d = 7) => { g.fillStyle = "#1a1410"; for (const sx of [-1, 1]) { g.beginPath(); g.arc(cx + sx * d, cy, 3, 0, Math.PI * 2); g.fill(); } };
-  if (kind === "pip") {
-    rect(-12, -40, 10, 40, "#9aa0aa"); rect(2, -40, 10, 40, "#9aa0aa");
-    rect(-24, -92, 48, 56, "#b4b9c1"); rect(-14, -88, 28, 46, "#1f4fa0");
-    blob(0, -112, 22, 24, "#b4b9c1"); blob(0, -108, 14, 14, "#e0b08a"); eyes(0, -110, 5);
-    g.fillStyle = "#2a6fd6"; g.beginPath(); g.moveTo(0, -134); g.quadraticCurveTo(26, -150, 34, -126); g.quadraticCurveTo(18, -138, 0, -128); g.fill(); g.stroke();
-  } else if (kind === "marlo") {
-    g.fillStyle = "#6d7a35"; g.beginPath(); g.moveTo(-20, -40); g.quadraticCurveTo(-70, -30, -64, -6); g.quadraticCurveTo(-40, -20, -18, -20); g.fill(); g.stroke();
-    rect(-16, -36, 12, 36, "#66722f"); rect(4, -36, 12, 36, "#66722f");
-    blob(0, -70, 30, 40, "#7d8a3f"); blob(4, -62, 18, 26, "#d8c890");
-    g.fillStyle = "#c8743a"; g.beginPath(); g.moveTo(-20, -90); g.lineTo(-58, -128); g.lineTo(-30, -84); g.fill(); g.stroke();
-    blob(6, -124, 26, 22, "#7d8a3f"); blob(26, -118, 16, 12, "#7d8a3f"); eyes(4, -130, 8);
-    g.fillStyle = "#e8dcc0"; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 12, -142); g.lineTo(sx * 18, -162); g.lineTo(sx * 4, -144); g.fill(); g.stroke(); }
-  } else if (kind === "wizard") {
-    g.fillStyle = "#4a2f86"; g.beginPath(); g.moveTo(-34, 0); g.lineTo(34, 0); g.lineTo(18, -90); g.lineTo(-18, -90); g.closePath(); g.fill(); g.stroke();
-    blob(0, -104, 18, 20, "#e6bc98"); eyes(0, -108, 6);
-    g.fillStyle = "#f2f0ea"; g.beginPath(); g.moveTo(-16, -100); g.quadraticCurveTo(0, -40, 16, -100); g.fill(); g.stroke();
-    g.fillStyle = "#4a2f86"; g.beginPath(); g.moveTo(-30, -118); g.lineTo(30, -118); g.lineTo(10, -176); g.lineTo(-2, -186); g.closePath(); g.fill(); g.stroke();
-    g.strokeStyle = "#6a4425"; g.lineWidth = 5; g.beginPath(); g.moveTo(42, 0); g.lineTo(42, -150); g.stroke();
-    g.fillStyle = "#9ff3ff"; g.beginPath(); g.arc(42, -156, 9, 0, Math.PI * 2); g.fill();
-  } else if (kind === "pirate") {
-    rect(-14, -40, 11, 40, "#2b2f3a"); g.strokeStyle = "#7a5432"; g.lineWidth = 6; g.beginPath(); g.moveTo(8, -40); g.lineTo(8, 0); g.stroke(); g.lineWidth = 3; g.strokeStyle = "#2a1a10";
-    rect(-26, -96, 52, 60, "#9a1f24"); rect(-8, -92, 16, 44, "#ece4d2");
-    blob(0, -114, 20, 22, "#c89070"); g.fillStyle = "#121212"; g.beginPath(); g.ellipse(0, -100, 18, 10, 0, 0, Math.PI); g.fill();
-    g.beginPath(); g.arc(-7, -118, 5, 0, Math.PI * 2); g.fill(); g.fillStyle = "#1a1410"; g.beginPath(); g.arc(7, -118, 3, 0, Math.PI * 2); g.fill();
-    g.fillStyle = "#121212"; g.beginPath(); g.moveTo(-34, -128); g.quadraticCurveTo(0, -160, 34, -128); g.quadraticCurveTo(0, -140, -34, -128); g.fill(); g.stroke();
-    blob(26, -102, 9, 12, "#2fa84a"); g.strokeStyle = "#d5d9e0"; g.lineWidth = 4; g.beginPath(); g.moveTo(-30, -70); g.quadraticCurveTo(-60, -110, -50, -140); g.stroke();
-  } else if (kind === "troll") {
-    rect(-24, -44, 18, 44, "#5f6e43"); rect(6, -44, 18, 44, "#5f6e43");
-    blob(0, -86, 44, 48, "#7d8f5a"); g.fillStyle = "#6a4a2c"; g.beginPath(); g.ellipse(0, -80, 46, 30, 0, Math.PI * 0.1, Math.PI * 0.9); g.fill();
-    blob(0, -148, 34, 28, "#7d8f5a"); blob(0, -142, 13, 11, "#5f6e43"); eyes(0, -156, 12);
-    g.fillStyle = "#f0e8d0"; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 14, -130); g.lineTo(sx * 18, -146); g.lineTo(sx * 8, -132); g.fill(); }
-    g.fillStyle = "#7d8f5a"; for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 30, -156); g.lineTo(sx * 58, -166); g.lineTo(sx * 32, -142); g.fill(); g.stroke(); }
-  } else if (kind === "clank") {
-    rect(-18, -40, 12, 40, "#3a3e46"); rect(6, -40, 12, 40, "#3a3e46");
-    rect(-34, -104, 68, 66, "#8a9098"); rect(-18, -92, 36, 28, "#3a3e46");
-    g.fillStyle = "#ff3020"; g.beginPath(); g.arc(0, -78, 5, 0, Math.PI * 2); g.fill();
-    rect(-26, -150, 52, 42, "#8a9098"); g.fillStyle = "#ff3020"; g.beginPath(); g.arc(0, -132, 9, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.moveTo(0, -150); g.lineTo(0, -170); g.stroke(); g.beginPath(); g.arc(0, -174, 5, 0, Math.PI * 2); g.fill();
-    g.fillStyle = "rgba(255,80,40,0.25)"; g.beginPath(); g.moveTo(10, -132); g.lineTo(150, -60); g.lineTo(150, -180); g.closePath(); g.fill();
-  } else if (kind === "princess") {
-    g.fillStyle = "#c8508a"; g.beginPath(); g.moveTo(-36, 0); g.lineTo(36, 0); g.lineTo(12, -84); g.lineTo(-12, -84); g.closePath(); g.fill(); g.stroke();
-    blob(0, -100, 17, 19, "#e8c0a0"); g.fillStyle = "#8a4a22"; g.beginPath(); g.ellipse(0, -106, 19, 14, 0, Math.PI, 0); g.fill(); eyes(0, -100, 6);
-    g.fillStyle = "#e8c060"; g.beginPath(); g.moveTo(-12, -118); for (let k = 0; k < 5; k++) { g.lineTo(-12 + k * 6 + 3, -132); g.lineTo(-12 + (k + 1) * 6, -120); } g.closePath(); g.fill(); g.stroke();
-  } else if (kind === "king") {
-    g.fillStyle = "#7a1d22"; g.beginPath(); g.moveTo(-36, 0); g.lineTo(36, 0); g.lineTo(22, -96); g.lineTo(-22, -96); g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = "#f2f0ea"; g.fillRect(-36, -8, 72, 8);
-    blob(0, -114, 20, 22, "#e6bc98"); eyes(0, -118, 7);
-    g.fillStyle = "#cfcfcf"; g.beginPath(); g.moveTo(-16, -108); g.quadraticCurveTo(0, -70, 16, -108); g.fill(); g.stroke();
-    g.fillStyle = "#e8c060"; g.beginPath(); g.moveTo(-18, -134); for (let k = 0; k < 4; k++) { g.lineTo(-18 + k * 12 + 6, -156); g.lineTo(-18 + (k + 1) * 12, -136); } g.closePath(); g.fill(); g.stroke();
-  } else if (kind === "musicbox") {
-    rect(-44, -46, 88, 46, "#c9a14a"); rect(-48, -62, 96, 18, "#e8c060");
-    g.fillStyle = "#7a1d22"; for (const dx of [-24, 0, 24]) { g.beginPath(); g.arc(dx, -24, 7, 0, Math.PI * 2); g.fill(); g.stroke(); }
-    g.strokeStyle = "#2a1a10"; g.lineWidth = 4; g.beginPath(); g.moveTo(48, -30); g.lineTo(66, -30); g.moveTo(66, -40); g.lineTo(66, -20); g.stroke();
-    // floating music notes
-    g.fillStyle = "#fff4c8";
-    for (const [nx, ny, r] of [[-30, -100, 1], [10, -128, 1.2], [44, -96, 0.9]]) { g.beginPath(); g.ellipse(nx, ny, 8 * r, 6 * r, -0.4, 0, Math.PI * 2); g.fill(); g.fillRect(nx + 6 * r, ny - 30 * r, 3, 30 * r); }
-  } else if (kind === "cage") {
-    g.strokeStyle = "#3a3e46"; g.lineWidth = 5;
-    for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(i * 14, 0); g.lineTo(i * 14, -150); g.stroke(); }
-    g.lineWidth = 8; g.beginPath(); g.moveTo(-50, 0); g.lineTo(50, 0); g.moveTo(-50, -150); g.lineTo(50, -150); g.stroke();
-  }
-  g.restore();
-}
+export { figure };
 
 // who appears on which page of each chapter
 const CASTS = {
@@ -125,17 +55,6 @@ export class StoryBook {
     this.mesh.visible = false;
     this.open = false;
     this.pokeCool = 0;
-    this.illos = new Map();
-  }
-
-  _illo(set) {
-    if (!this.illos.has(set)) {
-      const c = document.createElement("canvas");
-      c.width = 1024; c.height = 376;
-      paintBackdrop(set, c.getContext("2d"), 1024, 376);
-      this.illos.set(set, c);
-    }
-    return this.illos.get(set);
   }
 
   // Skip: closes this book and any book chained right after it (prologue → chapter one)
@@ -264,40 +183,102 @@ export class StoryBook {
     this.tex.needsUpdate = true;
   }
 
+  // the paper: a sheet of soft fibres and specks, made once and laid over both pages
+  _paper() {
+    if (!this.paper) {
+      const c = document.createElement("canvas"); c.width = 600; c.height = H;
+      const g = c.getContext("2d");
+      let seed = 91; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 2600; i++) { g.strokeStyle = r() < 0.5 ? `rgba(120,84,40,${0.05 * r()})` : `rgba(255,255,255,${0.12 * r()})`; g.lineWidth = 0.6 + r(); const x = r() * 600, y = r() * H, t = r() * 6.28, l = 3 + r() * 12; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(t) * l, y + Math.sin(t) * l); g.stroke(); }
+      for (let i = 0; i < 26; i++) { const x = r() * 600, y = r() * H, rad = 20 + r() * 60; const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(150,104,50,${0.05 * r()})`); gr.addColorStop(1, "rgba(150,104,50,0)"); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+      this.paper = c;
+    }
+    return this.paper;
+  }
+
   draw(g = this.g) {
     const ch = this.chapter, n = this.page;
-    // the open book: leather cover, two cream pages, a soft spine shadow
-    g.fillStyle = "#5a2a1a"; g.beginPath(); g.roundRect(0, 0, W, H, 26); g.fill();
-    g.fillStyle = "#f3e6c4"; g.beginPath(); g.roundRect(28, 26, W / 2 - 34, H - 52, 10); g.fill();
-    g.beginPath(); g.roundRect(W / 2 + 6, 26, W / 2 - 34, H - 52, 10); g.fill();
-    const sp = g.createLinearGradient(W / 2 - 40, 0, W / 2 + 40, 0);
-    sp.addColorStop(0, "rgba(0,0,0,0)"); sp.addColorStop(0.5, "rgba(60,30,10,0.35)"); sp.addColorStop(1, "rgba(0,0,0,0)");
-    g.fillStyle = sp; g.fillRect(W / 2 - 40, 26, 80, H - 52);
-    // left page: the illustration in a gilt frame
-    const fx = 62, fy = 70, fw = W / 2 - 100, fh = 420;
+    const mid = W / 2, pw = mid - 34, ph = H - 52;
+    g.textBaseline = "alphabetic";
+    // the open book: a tooled leather cover, the page block, two sheets of cream paper
+    const cover = g.createLinearGradient(0, 0, 0, H); cover.addColorStop(0, "#6e3422"); cover.addColorStop(1, "#3c180e");
+    g.fillStyle = cover; g.beginPath(); g.roundRect(0, 0, W, H, 26); g.fill();
+    g.strokeStyle = "rgba(232,192,96,0.5)"; g.lineWidth = 2; g.beginPath(); g.roundRect(8, 8, W - 16, H - 16, 20); g.stroke();
+    for (let k = 3; k >= 1; k--) { g.fillStyle = k % 2 ? "#d9c79c" : "#efe2bf"; g.beginPath(); g.roundRect(28 - k * 3, 26 + k * 2, pw + k * 3, ph, 10); g.fill(); g.beginPath(); g.roundRect(mid + 6, 26 + k * 2, pw + k * 3, ph, 10); g.fill(); }
+    for (const [x, dir] of [[28, 1], [mid + 6, -1]]) {
+      const pg = g.createLinearGradient(dir > 0 ? x : x + pw, 0, dir > 0 ? x + pw : x, 0); pg.addColorStop(0, "#f9efd3"); pg.addColorStop(0.8, "#f4e7c6"); pg.addColorStop(1, "#e6d5ac");
+      g.fillStyle = pg; g.beginPath(); g.roundRect(x, 26, pw, ph, 10); g.fill();
+      g.save(); g.beginPath(); g.roundRect(x, 26, pw, ph, 10); g.clip();
+      g.drawImage(this._paper(), x, 26, pw, ph);
+      const vg = g.createRadialGradient(x + pw / 2, 26 + ph / 2, ph * 0.35, x + pw / 2, 26 + ph / 2, ph * 0.85); vg.addColorStop(0, "rgba(130,90,40,0)"); vg.addColorStop(1, "rgba(130,90,40,0.2)");
+      g.fillStyle = vg; g.fillRect(x, 26, pw, ph);
+      g.restore();
+    }
+    const sp = g.createLinearGradient(mid - 46, 0, mid + 46, 0);
+    sp.addColorStop(0, "rgba(60,30,10,0)"); sp.addColorStop(0.5, "rgba(60,30,10,0.42)"); sp.addColorStop(1, "rgba(60,30,10,0)");
+    g.fillStyle = sp; g.fillRect(mid - 46, 26, 92, ph);
+    // a ribbon to keep your place
+    g.fillStyle = "#a81e26"; g.beginPath(); g.moveTo(mid + 22, 14); g.lineTo(mid + 36, 14); g.lineTo(mid + 36, H - 4); g.lineTo(mid + 29, H - 16); g.lineTo(mid + 22, H - 4); g.closePath(); g.fill();
+    g.fillStyle = "rgba(0,0,0,0.18)"; g.fillRect(mid + 32, 14, 4, H - 22);
+
+    // left page: the illustration, in a gilt frame
+    const fx = 62, fy = 62, fw = pw - 68, fh = 452;
+    const art = ch.art?.[n], set = art?.set || ch.set;
+    g.fillStyle = "rgba(70,36,10,0.3)"; g.beginPath(); g.roundRect(fx + 3, fy + 7, fw, fh, 10); g.fill();
     g.save();
     g.beginPath(); g.roundRect(fx, fy, fw, fh, 8); g.clip();
-    const art = ch.art?.[n];
-    g.drawImage(this._illo(art?.set || ch.set), 0, 0, 1024, 376, fx, fy, fw, fh);
-    if (art?.night) { g.fillStyle = "rgba(10,16,48,0.55)"; g.fillRect(fx, fy, fw, fh); g.fillStyle = "#f6f0d0"; g.beginPath(); g.arc(fx + fw * 0.82, fy + 60, 26, 0, Math.PI * 2); g.fill(); }
-    for (const [kind, px, flip] of art?.cast || CASTS[ch.id]?.[n] || []) figure(g, kind, fx + fw * px, fy + fh - 30, 1.15, flip);
+    g.translate(fx, fy);
+    paintBackdrop(set, g, fw, fh, art?.focus);
+    if (art?.night) { g.fillStyle = "rgba(14,20,64,0.55)"; g.fillRect(0, 0, fw, fh); const mx = fw * 0.82, my = 70; const mg = g.createRadialGradient(mx, my, 0, mx, my, 150); mg.addColorStop(0, "rgba(250,244,214,0.5)"); mg.addColorStop(1, "rgba(250,244,214,0)"); g.fillStyle = mg; g.fillRect(mx - 150, my - 150, 300, 300); g.fillStyle = "#fbf4d8"; g.beginPath(); g.arc(mx, my, 28, 0, Math.PI * 2); g.fill(); for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(255,255,240,${0.4 + ((i * 37) % 10) / 16})`; g.fillRect((i * 97) % fw, (i * 53) % 150, 2, 2); } }
+    for (const [kind, px, flip, dy = 0, sc = 1] of art?.cast || CASTS[ch.id]?.[n] || []) figure(g, kind, fw * px, fh - 30 + dy, 1.3 * sc, flip); // (dy, sc: lift or shrink one figure, e.g. a rider)
+    const iv = g.createRadialGradient(fw / 2, fh / 2, fh * 0.42, fw / 2, fh / 2, fw * 0.78); iv.addColorStop(0, "rgba(40,16,10,0)"); iv.addColorStop(1, "rgba(40,16,10,0.42)");
+    g.fillStyle = iv; g.fillRect(0, 0, fw, fh);
     g.restore();
-    g.strokeStyle = "#c9a14a"; g.lineWidth = 6; g.beginPath(); g.roundRect(fx, fy, fw, fh, 8); g.stroke();
-    g.fillStyle = "#7a1d22"; g.font = "italic 22px Georgia, serif"; g.textAlign = "center";
-    g.fillText(ch.title, fx + fw / 2, fy + fh + 50);
-    // right page: the words, with a decorated first letter
-    const tx = W / 2 + 60, tw = W / 2 - 120;
-    g.textAlign = "left"; g.fillStyle = "#7a1d22"; g.font = "600 24px Georgia, serif";
-    g.fillText(n === 0 ? (ch.id === "prologue" ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.id === "custom" ? "Your Story" : "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six", "Seven"][this._index()]) : "", tx, 110);
-    const text = ch.pages[n];
-    g.fillStyle = "#c9a14a"; g.font = "700 96px Georgia, serif"; g.fillText(text[0], tx, 240);
-    g.fillStyle = "#2a1a10"; g.font = "32px Georgia, serif";
-    const firstW = g.measureText ? 74 : 74;
-    wrap(g, text.slice(1), tx + firstW, 190, tw - firstW, 46);
-    // page dots and the hint
-    for (let i = 0; i < ch.pages.length; i++) { g.fillStyle = i === n ? "#7a1d22" : "rgba(122,29,34,0.25)"; g.beginPath(); g.arc(W * 0.75 - 24 + i * 24, H - 86, 7, 0, Math.PI * 2); g.fill(); }
+    const gold = g.createLinearGradient(fx, fy, fx + fw, fy + fh); gold.addColorStop(0, "#f6dc8a"); gold.addColorStop(0.5, "#c9962e"); gold.addColorStop(1, "#f0cf70");
+    g.strokeStyle = gold; g.lineWidth = 8; g.beginPath(); g.roundRect(fx, fy, fw, fh, 8); g.stroke();
+    g.strokeStyle = "rgba(90,50,10,0.55)"; g.lineWidth = 1.4; g.beginPath(); g.roundRect(fx - 5, fy - 5, fw + 10, fh + 10, 11); g.stroke(); g.beginPath(); g.roundRect(fx + 5, fy + 5, fw - 10, fh - 10, 5); g.stroke();
+    for (const [cx, cy] of [[fx, fy], [fx + fw, fy], [fx, fy + fh], [fx + fw, fy + fh]]) { g.fillStyle = gold; g.strokeStyle = "rgba(90,50,10,0.6)"; g.lineWidth = 1.4; g.beginPath(); g.moveTo(cx, cy - 13); g.lineTo(cx + 13, cy); g.lineTo(cx, cy + 13); g.lineTo(cx - 13, cy); g.closePath(); g.fill(); g.stroke(); g.fillStyle = "#a81e26"; g.beginPath(); g.arc(cx, cy, 4, 0, Math.PI * 2); g.fill(); }
+    // the chapter's name on a ribbon
+    const bx = fx + fw / 2, by = fy + fh + 66;
+    g.font = "italic 600 23px Georgia, serif"; g.textAlign = "center";
+    const bw = Math.max(250, g.measureText(ch.title).width + 80);
+    g.fillStyle = "#7a141a"; for (const d of [-1, 1]) { g.beginPath(); g.moveTo(bx + d * (bw / 2 - 14), by - 12); g.lineTo(bx + d * (bw / 2 + 26), by - 12); g.lineTo(bx + d * (bw / 2 + 14), by + 5); g.lineTo(bx + d * (bw / 2 + 26), by + 22); g.lineTo(bx + d * (bw / 2 - 14), by + 22); g.fill(); }
+    const rb = g.createLinearGradient(0, by - 20, 0, by + 16); rb.addColorStop(0, "#c8323a"); rb.addColorStop(1, "#9a1a22");
+    g.fillStyle = rb; g.beginPath(); g.roundRect(bx - bw / 2, by - 20, bw, 36, 4); g.fill();
+    g.strokeStyle = "rgba(255,220,150,0.6)"; g.lineWidth = 1.2; g.beginPath(); g.roundRect(bx - bw / 2 + 4, by - 16, bw - 8, 28, 3); g.stroke();
+    g.fillStyle = "#fff1d0"; g.fillText(ch.title, bx, by + 6);
+
+    // right page: the words
+    const tx = mid + 64, tw = pw - 112, cx = mid + 6 + pw / 2;
+    const head = n === 0 ? (ch.id === "prologue" ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.id === "custom" ? "Your Story" : "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six", "Seven"][this._index()]) : "";
+    g.textAlign = "center";
+    if (head) { g.fillStyle = "#8a1c22"; g.font = "600 22px Georgia, serif"; try { g.letterSpacing = "5px"; } catch { /* older browsers */ } g.fillText(head.toUpperCase(), cx + 2, 104); try { g.letterSpacing = "0px"; } catch { /* older browsers */ } }
+    // a flourish under the heading (or alone, on later pages)
+    const fy2 = head ? 126 : 104;
+    g.strokeStyle = "#c9a14a"; g.lineWidth = 2; g.lineCap = "round";
+    for (const d of [-1, 1]) { g.beginPath(); g.moveTo(cx + d * 14, fy2); g.quadraticCurveTo(cx + d * 60, fy2 - 12, cx + d * 104, fy2); g.quadraticCurveTo(cx + d * 118, fy2 + 5, cx + d * 108, fy2 + 9); g.stroke(); }
+    g.fillStyle = "#c9a14a"; g.beginPath(); g.moveTo(cx, fy2 - 8); g.lineTo(cx + 8, fy2); g.lineTo(cx, fy2 + 8); g.lineTo(cx - 8, fy2); g.fill();
+    // an illuminated first letter, then the text flowing round it
+    const text = ch.pages[n], top = 168, cap = 92;
+    const cg = g.createLinearGradient(tx, top, tx + cap, top + cap); cg.addColorStop(0, "#b8282e"); cg.addColorStop(1, "#7a141a");
+    g.fillStyle = "rgba(70,36,10,0.25)"; g.beginPath(); g.roundRect(tx + 2, top + 4, cap, cap, 8); g.fill();
+    g.fillStyle = cg; g.beginPath(); g.roundRect(tx, top, cap, cap, 8); g.fill();
+    g.strokeStyle = gold; g.lineWidth = 4; g.beginPath(); g.roundRect(tx, top, cap, cap, 8); g.stroke();
+    g.strokeStyle = "rgba(255,226,150,0.7)"; g.lineWidth = 1.2; g.beginPath(); g.roundRect(tx + 7, top + 7, cap - 14, cap - 14, 4); g.stroke();
+    g.fillStyle = "rgba(255,226,150,0.5)"; for (const [dx, dy] of [[14, 14], [cap - 14, 14], [14, cap - 14], [cap - 14, cap - 14]]) { g.beginPath(); g.arc(tx + dx, top + dy, 2.2, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = "#ffe9a8"; g.font = "700 70px Georgia, serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text[0], tx + cap / 2, top + cap / 2 + 4);
+    g.textBaseline = "alphabetic"; g.textAlign = "left"; g.fillStyle = "#2a1a10"; g.font = "35px Georgia, serif";
+    const lh = 52, words = text.slice(1).trimStart().split(" ");
+    let line = "", row = 0;
+    const slot = (i) => (i < 2 ? [tx + cap + 16, tw - cap - 16] : [tx, tw]); // (two lines sit beside the letter)
+    const put = () => { const [x] = slot(row); g.fillText(line, x, top + 36 + row * lh); row++; line = ""; };
+    // (when the page starts mid-word, the first word's remaining letters hug the big letter)
+    for (const w of words) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > slot(row)[1] && line) { put(); line = w; } else line = t; }
+    if (line) put();
+    // where you are in the chapter, and how to turn the page
+    for (let i = 0; i < ch.pages.length; i++) { g.fillStyle = i === n ? "#8a1c22" : "rgba(138,28,34,0.25)"; g.beginPath(); g.arc(cx - (ch.pages.length - 1) * 12 + i * 24, H - 88, i === n ? 7 : 5.5, 0, Math.PI * 2); g.fill(); }
     g.fillStyle = "rgba(42,26,16,0.6)"; g.font = "italic 20px Georgia, serif"; g.textAlign = "center";
-    g.fillText(this.xr ? "poke the book to turn the page" : "click to turn the page", W * 0.75, H - 50);
+    g.fillText(this.xr ? "poke the book to turn the page" : "click to turn the page", cx, H - 52);
     // headset: a big red wax seal to poke, to skip straight to the show
     if (this.xr) {
       const sx = SEAL.x, sy = SEAL.y;

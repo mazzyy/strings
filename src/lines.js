@@ -391,7 +391,7 @@ export const PROLOGUE = {
   id: "prologue", set: "courtyard", title: "The Tale of Sir Pip",
   pages: [
     "Once upon a time, in a kingdom no bigger than a desk, Princess Juniper wound a little golden music box every night, and everyone fell asleep smiling.",
-    "But one stormy night, Clank the clockwork robot carried her off to his tower, and hid the music box's three jewels. The kingdom fell silent.",
+    "But one stormy night, Clank the clockwork robot, who had never once been invited to listen, carried her off to his tower, and hid the music box's three jewels. The kingdom fell silent.",
     "Only one hero answered the king's call: Sir Pip. Shiny armour, a brave heart, and absolutely no idea what he was doing. And so, the quest began.",
   ],
   art: [
@@ -468,7 +468,7 @@ export const CHAPTERS = [
     id: "tower", set: "tower", guest: "clank", title: "The Clockwork Tower", map: [1330, 650], princess: true,
     intro: "Chapter five: The Clockwork Tower.",
     pages: [
-      "At last, the Clockwork Tower, ticking and whirring in the storm.",
+      "At last, the Clockwork Tower, ticking and whirring in the storm. No one ever came to visit. Clank had made quite sure of that.",
       "Inside, Princess Juniper waited in a cage, while Clank's searchlight swept the floor.",
       "Only a knight brave enough to sneak past it could set her free.",
     ],
@@ -503,7 +503,7 @@ export const CHAPTERS = [
     art: [
       { set: "courtyard", night: true, cast: [["princess", 0.25], ["musicbox", 0.5], ["king", 0.76, true]] },
       { set: "sky", cast: [["clank", 0.6], ["musicbox", 0.8]] },
-      { set: "sky", cast: [["marlo", 0.45], ["pip", 0.5]] },
+      { set: "sky", cast: [["pip", 0.4, false, -92, 0.8], ["marlo", 0.5]] }, // (Sir Pip rides behind Marlo's shoulders)
     ],
     acts: [
       { goal: "Act one. Climb aboard! Bring Sir Pip to Marlo.", task: { type: "mount" }, hint: "walk" },
