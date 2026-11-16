@@ -327,6 +327,21 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
   A summary row lists hero, villain, setting, conflict and twist. **← Edit my choices** goes back; **Start adventure ▶** raises the curtain.
 - **In the headset:** the story-card board has the same tabs (Conflict, Rescue who?, Villain, Setting, Twist with Surprise me, and Stage it!). The same "Tonight's Show" poster then floats in front of the stage, with *Start adventure* and *Edit my choices* to poke, while the narrator announces the title.
 - All 25 conflict × villain combinations were checked to build a playable show of 3 to 5 acts.
+
+### Phase 23: a believable robot, and a clean screen
+- **The robot puppeteer, redesigned** (from a reference sketch, then refined after feedback that a first pass looked fake):
+  - **Face:** a band of dark, glossy glass across the eyes, like a real robot's sensor visor. The eyes are camera-like lenses behind it, each a lit iris ring around a bright pupil, in one soft cyan-white (a first try with mismatched blue and gold eyes read as broken). They blink with a shutter and flash gold when the guest remembers something.
+  - **Mouth:** a slim speaker grille (a rounded slot with slats) whose light pulses with his voice. It replaced a drawn-on glowing smile.
+  - **Head:** a smooth porcelain dome, slightly wider than tall, with small ear sensors.
+  - **Body:**
+    - a black ribbed neck, and a slim brass collar band with flush rivets;
+    - a panel seam down the chest, and two brass rivets;
+    - a **clock in his chest** behind a glass cover; its hands keep the real time;
+    - a black accordion waist and a brass belt plate.
+  - **Joints and hands:** brushed-metal elbow joints, and rounded, jointed fingers with metal knuckles instead of blocks.
+  - **Materials:** ivory porcelain with clearcoat, polished brass, black rubber.
+- **Atmosphere:** a soft blue glow behind the robot, motes of blue-white and gold light drifting up around him (one draw call), and a stronger cool rim light on the cast.
+- **A clean screen while playing:** only ☰ Menu, Talk and Enter VR/AR stay in the toolbar. The status panel, the event log and the controls panel are hidden. Everything else is in ☰ Menu under "More": story map, playbills, fun modes, record and replay, share link, voice on or off, demo, controls, developer info, reset.
 ---
 
 ## 4. The story
@@ -459,7 +474,7 @@ There's no headset, so testing used:
 ## 9. Hosting and deployment
 
 - `main` holds the code. The site is `public/`, published by pushing `git subtree split --prefix public` to the `gh-pages` branch. Pages builds from that branch (Actions is unavailable).
-- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`, `story-cards`, `story-roles`, `story-picker`.
+- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`, `story-cards`, `story-roles`, `story-picker`, `robot-visuals`.
 
 ---
 

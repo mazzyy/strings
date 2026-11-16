@@ -24,7 +24,7 @@ import { XRHands, DesktopHands, SimHandMeshes } from "./input.js";
 import { ActionDetector, AIPerformer, describe } from "./director.js";
 import { MarloMind } from "./mind.js";
 import { Emotes } from "./emote.js";
-import { Confetti, Sparkles, makeHalo } from "./fx.js";
+import { Confetti, Sparkles, makeHalo, Dust } from "./fx.js";
 import { GUESTS, STORY_LINES, PROLOGUE, EPILOGUE, TASK_LINES, CHAPTERS as CHAPTER_LIST } from "./lines.js";
 import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin, kingSkin } from "./cast.js";
 import { createTask } from "./tasks.js";
@@ -107,7 +107,7 @@ spot.shadow.normalBias = 0.01;
 spot.shadow.camera.near = 0.3;
 spot.shadow.camera.far = 3;
 stageRoot.add(spot, spot.target);
-const rim = new THREE.DirectionalLight(0x9fc4ff, 0.35);
+const rim = new THREE.DirectionalLight(0x9fc4ff, 0.6); // a cool blue edge on the robot and the cast
 rim.position.set(0.6, 1.2, -1.2);
 stageRoot.add(rim);
 
@@ -132,10 +132,11 @@ const robot = new Robot();
 // XR: a desk-sized robot standing behind the stage, so it never looms over you
 saved += mergeStatic(robot.head, robot.eyes.concat([robot.mouth]));
 saved += mergeStatic(robot.neck, [robot.head]);
-saved += mergeStatic(robot.group, [robot.neck, ...robot.arms.flatMap((a) => [a.upper, a.elbow, a.lower, a.wrist, a.hand])]);
+saved += mergeStatic(robot.group, [robot.neck, robot.clock, ...robot.arms.flatMap((a) => [a.upper, a.elbow, a.lower, a.wrist, a.hand])]);
+saved += mergeStatic(robot.clock, [robot.hourHand, robot.minuteHand]);
 saved += mergeStatic(robot.arms[0].hand) + mergeStatic(robot.arms[1].hand);
 // the robot's moving parts become one skinned mesh per material (its mouth flashes, so it stays apart)
-const robotBatch = batchParts(robot.group, [robot.mouth]);
+const robotBatch = batchParts(robot.group, [robot.mouth, robot.hourHand, robot.minuteHand]);
 saved += robotBatch?.drawCallsSaved || 0;
 saved += (pip.batch?.drawCallsSaved || 0) + (marlo.batch?.drawCallsSaved || 0) + (ghost.batch?.drawCallsSaved || 0);
 console.info(`[perf] merged away ${saved} draw calls`);
@@ -146,6 +147,11 @@ function layoutRobot(xr) {
 }
 layoutRobot(false);
 stageRoot.add(robot.group);
+// the storyteller's magic: a soft blue glow behind him, and motes of light drifting about
+const robotGlow = makeHalo(0x5f9cff, 0.95, 0.22);
+robotGlow.position.set(0, 0.38, -0.16);
+robot.group.add(robotGlow);
+const dust = new Dust(robot.group);
 
 // desktop-only bloom so the holographic bars and robot eyes glow (skipped in XR for frame rate)
 const QUALITY = [
@@ -1866,7 +1872,13 @@ function renderStartMenu(midGame = false) {
     `<div class="more"><button id="mystory">✎ Make your own story</button><button id="freeplay">Free play · no story, just fun</button></div>` +
     `<label class="lockopt"><input type="checkbox" id="pinchlock"> Pinch lock: no need to hold a pinch</label>` +
     `<label class="lockopt"><input type="checkbox" id="onehand"> One hand: no second hand needed</label>` +
-    (midGame ? `<div class="more"><button id="backtoshow">× Back to the show</button></div>` : `<small>Best with sound on · works with Quest hand tracking</small>`) + `</div>`;
+    (midGame
+      ? `<div class="more"><button id="backtoshow">× Back to the show</button></div>` +
+        // everything that used to crowd the screen while playing
+        `<div class="extras-t">More</div><div class="extras">` +
+        [["x-map", "🗺 Story map"], ["x-bills", $("bills")?.textContent || "Playbills"], ["x-mode", "✦ Fun modes", !$("mode") || $("mode").hidden], ["x-rec", recorder.recording ? "■ Stop recording" : "● Record a scene"], ["x-play", "▶ Replay my scene"], ["x-share", "🔗 Share link"], ["x-mute", $("mute")?.textContent || "Voice"], ["x-demo", "🤖 Demo"], ["x-help", document.body.classList.contains("showhelp") ? "Hide controls" : "⌨ Controls"], ["x-dev", document.body.classList.contains("devui") ? "Hide developer info" : "Developer info"], ["x-reset", "↺ Reset the stage"]]
+          .filter(([, , hide]) => !hide).map(([id, label]) => `<button id="${id}">${label}</button>`).join("") + `</div>`
+      : `<small>Best with sound on · works with Quest hand tracking</small>`) + `</div>`;
   loadingEl.classList.add("ready");
   loadingEl.classList.remove("done");
   const enter = () => { loadingEl.classList.add("done"); unlockAudio(); };
@@ -1899,6 +1911,12 @@ function renderStartMenu(midGame = false) {
   if ($("freeplay")) $("freeplay").onclick = () => { enter(); if (!leaveCurrentMode()) return; startFreePlay(); };
   if ($("mystory")) $("mystory").onclick = () => openStoryMaker();
   if ($("backtoshow")) $("backtoshow").onclick = () => enter();
+  // the extras just press the (hidden) toolbar buttons, then get out of the way
+  const extra = (id, btn, keepOpen = false) => { if ($(id)) $(id).onclick = () => { if (!keepOpen) enter(); $(btn)?.click(); if (keepOpen) renderStartMenu(true); }; };
+  extra("x-map", "storybtn"); extra("x-bills", "bills"); extra("x-mode", "mode"); extra("x-rec", "rec"); extra("x-play", "play");
+  extra("x-share", "share", true); extra("x-mute", "mute", true); extra("x-demo", "demo"); extra("x-reset", "reset");
+  if ($("x-help")) $("x-help").onclick = () => { document.body.classList.toggle("showhelp"); document.querySelector("#help")?.classList.remove("collapsed"); enter(); };
+  if ($("x-dev")) $("x-dev").onclick = () => { document.body.classList.toggle("devui"); enter(); };
 }
 // the headset version: a board of options to poke (writing a story needs the keyboard, so
 // that one takes the headset off: it ends the session and opens the story card)
@@ -2340,6 +2358,7 @@ renderer.setAnimationLoop((time, frame) => {
   scene.environmentIntensity = 0.4 - 0.3 * night;
   narrator.update(dt);
   updateBloom(dt);
+  dust.update(dt);
   updateWarmup(dt);
   phrases.update(dt);
   gameBoard.update(dt);
