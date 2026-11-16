@@ -16,6 +16,11 @@ You pinch a glowing control bar and work **Sir Pip**, a little knight marionette
 - **A seven-chapter story.** Told through an illustrated, narrated storybook and a parchment map.
 - **A different game every chapter:** a sword duel, a riddle, sneaking past a searchlight, rescuing a princess, flying on a dragon. The story ends with a knighting and a grand finale with the whole cast.
 - **Record, replay, share.** You can record a performance, duet with your own "shadow", and share it as a link.
+- **Hands in seconds.** Start goes straight to a glowing curtain cord; the story comes after you've touched the puppet, and every book can be skipped.
+- **Free play.** No story at all: play as any of eight characters, pick the robot's co-star, any stage and a box of toys.
+- **The "wow" ending.** After the finale your applause (or the audience's) sets Marlo free: his strings snap, he flies around your head and lands on your open palm.
+- **Mixed reality with a purpose.** In passthrough the theatre sits on your real desk, and the puppets can step off the stage onto the tabletop itself.
+- **A mind you can see.** The guest remembers what you did; the puppeteer's eyes flash when it does, and a "Backstage Notes" card shows trust, mood and memories after each show.
 
 ---
 
@@ -67,7 +72,7 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
 - **Draw calls:** static meshes merged to keep the count down.
 
 ### Phase 3: a human voice
-- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 484 lines). Each character has their own voice and pace:
+- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 526 lines, about 14 MB, each loaded only when spoken). Each character has their own voice and pace:
 
   | Character | Voice |
   |---|---|
@@ -155,6 +160,13 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
   - static meshes compute their matrix once;
   - tasks dispose their objects.
 
+### Phase 10b: the "Unbound" experiment (now part of the main build)
+An analysis of what judges and Meta reward (written up in `WOW_EXPERIMENT.md`) found two gaps: passthrough that doesn't use the room, and no single "only in a headset" moment for the video. The answer, built in `unbound.js`:
+- **Marlo breaks free:** his strings snap one by one (crack, flash), his control bar vanishes, and he flies out of the theatre in a full loop **around your head** at room scale, wings beating, in the Superman pose.
+- **He lands on your hand:** *"Hold out your hand, and keep it still."* Hold any open hand still and he glides down and **stands on your palm**, following it as you move. Pinch, or wave him off, and he flies home and his strings reattach. In tests his feet stayed within 3 cm of the palm.
+- **Real applause:** the game watches both palms; a fast close to under 7 cm is a clap, and two claps in a row make the audience roar and every puppet bow (K on desktop).
+- **The last beat of the story:** after the grand finale, the narrator invites you to clap, and your applause is what sets Marlo free (Phase 16 made this reliable). A green knob on the apron (and U on desktop) frees him any time.
+
 ### Phase 11: presentation polish
 - **The robot storyteller opening:** the camera glides up to the robot puppeteer, the stage dims, his eyes brighten, he waves, magic sparkles spiral from his hands, and he says *"Ah, there you are! … let me tell you a story."* Then the book opens. Returning players get *"Welcome back! Now, where were we?"*
 - **The storyteller's gesture:** both hands held out at chest height, slowly weaving as if conjuring the tale (the sparkles rise from between them), with a brief lift of one hand in greeting. This replaced a raised-hand wave that bent his arm unnaturally, since his fingers always point down.
@@ -225,6 +237,7 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
 - **Marlo always breaks free at the end.** After the grand finale he used to break free only if you clapped (real hands in the headset, K on desktop); otherwise the game moved on after 16 s, so many players never saw it. Now, if no clap comes within 10 s (or the headset misses it), the narrator says the whole audience is clapping for him, the crowd applauds, and he snaps his strings anyway. Desktop players are told to press K.
 - **No mystery "gold button".** Unlocking a fun mode used to announce itself ("press the gold button") right at the finale, drowning out the request to clap. Unlocks are no longer announced during the finale (a toast appears later instead), and the line now says *"the gold Modes button on the front of the stage"*.
 - **Every apron button has a little sign above it:** Record, Replay, Talk, Modes, Map, Free Marlo, Pinch lock.
+
 ---
 
 ## 4. The story
@@ -245,6 +258,12 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
 
 The **Grand Theatre** (on the map after chapter 1) runs a new three-act show every day, for coming back.
 
+**Ways in, from the start menu:**
+- **Begin the story** (or **Continue**, which names your chapter) and **Start a new story**.
+- **Play any chapter · all unlocked:** every place on the map can be chosen straight away (for judges, or anyone short of time).
+- **Free play · no story, just fun:** the playground (Phase 15).
+- **Pinch lock** can be switched on right there, before you start.
+
 ---
 
 ## 5. Architecture
@@ -253,14 +272,14 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 
 | File | What it does |
 |---|---|
-| `main.js` | The orchestrator: renderer and scene, cast, input, the story flow (start menu → prologue → cord → chapters → map), tasks context, extras (non-AI puppets), flight, finale, XR session, adaptive quality, loop |
+| `main.js` | The orchestrator: renderer and scene, cast, input and grabs (including pinch lock and the story lock), the flow (start menu → cord → warm-up → storyteller → book → chapters → map, or free play), soundscape cues, tasks context, extras (non-AI puppets), flight, finale, real-desk play and contact shadows, halos, 3D subtitles, the guest's memory display, XR session, adaptive quality, loop |
 | `puppet.js` | Verlet marionette: physics, strings (tension colour, snapping), gait and bow assists, moon gravity, fragile strings, batching hook |
 | `skins.js` / `cast.js` | Procedural visuals for every character on the shared rig; control bars; the generic humanoid skin builder |
 | `batch.js` | GPU-skinned batching of moving parts |
 | `director.js` | Move detector, and the AI performer with its clips (bow, wave, dance, fetch, slash, stagger, scan, zap, carry, knockout, endings…) |
-| `mind.js` | The guest's offline mind: mood, memory, personality, initiative |
-| `show.js` | Acts, stars, style tracking, endings, playbills, grand-finale hook |
-| `tasks.js` | The 13 playable tasks |
+| `mind.js` | The guest's offline mind: mood, memory (counts plus remembered moments in words), personality, initiative, the Backstage Notes report |
+| `show.js` | Acts, stars, style tracking, endings, playbills, the Backstage Notes card, grand-finale hook |
+| `tasks.js` | The 17 playable tasks (shy approach, high fives, jump together, owls, collect, spell, duel, riddle, sneak, unlock, dodge, mount, rings, gears, chase, kindness, knighting) |
 | `lines.js` | All the words: chapters, pages, guests (says/talk/task lines, personalities), hints, endings; read by the voice builder |
 | `narrator.js` | Line queue, LLM narration (local server), pre-recorded clips, guest lines take priority |
 | `storybook.js` / `storymap.js` | The illustrated book and the parchment map; each is one canvas used as a desktop overlay or as a pokeable texture in VR |
@@ -269,7 +288,11 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 | `hints.js` / `emote.js` / `fx.js` | Hints, emote bubbles, confetti |
 | `input.js` | XR hands (One-Euro filter, anchor, grace) and the desktop simulator |
 | `recorder.js` | Record, replay, share links |
-| `audio.js` | Procedural sound effects and the music box |
+| `audio.js` | Sound: real CC0 recordings with random variants (procedural sounds as a fallback), the per-chapter soundscape (music and ambience that loop, crossfade, duck under speech and swell), and recorded character emotions |
+| `phrases.js` | Talking without a microphone: speech bubbles to poke or click |
+| `playground.js` | The free-play menu: a desktop panel, and a board of tabs to poke in the headset |
+| `unbound.js` | Marlo breaking free, flying around your head, landing on your palm; clap detection |
+| `public/audio/` | 42 converted CC0 sound files, plus `voices/` for recorded character emotions (`index.json` lists them) |
 | `perf.js` | Static mesh merging |
 | `server.mjs` | Optional: Claude or Ollama narration and talk, Kokoro live voice |
 | `tts/` | Kokoro voice builder and worker |
@@ -280,7 +303,8 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 3. Detector → events → mind (guest reaction) + show (acts and tasks) + narrator.
 4. AI performer → the guest's bars.
 5. Tasks drive their own pieces.
-6. Render: bloom on desktop, foveated in XR.
+6. Soundscape, contact shadows, halos and subtitles follow along.
+7. Render: bloom on desktop; foveated rendering with additive halos instead of bloom in XR.
 
 ---
 
@@ -301,6 +325,13 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 - **The XR map** faced the floor; the head position is now read from the user camera.
 - **The grand finale** didn't trigger, because the scene builder dropped the finale flag.
 - **The cage** wouldn't unlock: the rack prop in front of it caught the click, and the "used on" field was dropped.
+- **The storyteller's hands** looked wrong twice (an arm bent behind his head, then an awkward conjuring pose). The opening is now a close-up of his face with his hands left on the bars.
+- **The book opened before the camera came home** (timers in real time, the camera in game time). The camera tween now calls back when it finishes.
+- **Moving Sir Pip during the story** swung his glowing bars into the close-up, and every move gave the narrator something new to say, so the story never started. The puppets now rest during the story and moves are ignored.
+- **The ending was easy to miss:** Marlo only broke free if you clapped, and a mode-unlock announcement ("press the gold button") played at that exact moment. The audience now claps if you don't, and the announcement waits.
+- **Talking didn't exist in the headset:** the Quest Browser has no speech recognition and the hosted build has no server. Replaced by speech bubbles.
+- **Bubbles cut off longer text** (a fixed canvas width); they now size to fit.
+- **Two module-order bugs** (a variable read before its declaration) stopped the page from loading; found by loading the page in the browser pane after each change.
 - **Hosting:**
   - GitHub Actions is locked by an account billing issue, so Pages deploys from a `gh-pages` branch;
   - a dead custom domain (`musawar.me`) broke every github.io page and was removed (with permission).
@@ -311,12 +342,13 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 
 There's no headset, so testing used:
 - **Headless Chromium** (playwright-core, CPU rendering) with scripted end-to-end runs of every chapter: the opening, menu, prologue, cord, all tasks (played by steering, not teleporting, where it matters), endings, playbills, modes, ghost duet, map, storybook, finale, credits.
-- **The IWER Quest emulator** for the XR path: pinch grabs, the lap grab with amplification, the cord pull, prop hand-offs, poking the map and the book, facing checks.
+- **The IWER Quest emulator** for the XR path: pinch grabs, the lap grab with amplification, the cord pull, prop hand-offs, poking the map and the book (and its skip seal), speech bubbles, the free-play board, Marlo's flight around the head and landing on the palm, clap detection with synthetic palms, facing checks.
+- **Newer scripted checks:** the cord-first opening with an "eager player" who never stops moving (the story still starts); the shy approach (rushing makes Marlo hide), high fives, jumping together, shy fireflies, the owls and the blooming spell; the ending with no clap at all (Marlo still breaks free); the Backstage Notes card; Sir Pip stepping down onto the real desk; every character, co-star, stage and toy in free play; the character-emotion hook with a stand-in recording.
 - **Draw-call counts, per-system JavaScript timing, and before/after asset sizes.**
 
 **Not tested:**
-- a real Quest (frame rate, how hand tracking feels, speech recognition in the Quest Browser);
-- listening to every voice line by ear.
+- a real Quest: frame rate, how hand tracking and pinch lock feel, clap and palm detection, the step down onto a real desk, the reach of the floating boards;
+- listening to every voice line and sound by ear.
 
 ---
 
@@ -324,9 +356,9 @@ There's no headset, so testing used:
 
 | | Value |
 |---|---|
-| Assets at start | ~1 MB (textures + HDRI); voice clips (12 MB total) load only when spoken |
+| Assets at start | ~1 MB (textures + HDRI) plus the short sound effects; music and ambience (5.6 MB) load per chapter; voice clips (14 MB, 526 lines) load only when spoken |
 | JavaScript per frame | ~0.3 ms on desktop (physics, AI, UI) |
-| Draw calls | ~178 per frame on desktop, ~84 per eye in the headset (chapter-dependent) |
+| Draw calls | ~178 per frame on desktop, ~84 per eye in the headset (chapter-dependent); the blooming flowers add 2, each halo and blob shadow 1 |
 | Desktop | adaptive quality steps down below ~50 fps |
 | Quest | foveation, cheaper materials, fewer and slower shadows |
 
@@ -335,26 +367,28 @@ There's no headset, so testing used:
 ## 9. Hosting and deployment
 
 - `main` holds the code. The site is `public/`, published by pushing `git subtree split --prefix public` to the `gh-pages` branch. Pages builds from that branch (Actions is unavailable).
-- Feature work happened on branches (`story-mode`, `chapters-v2`, `polish-v3`), which were merged into `main` and then published.
+- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`.
 
 ---
 
 ## 10. Assets and licences
 
 - **Poly Haven:** HDRI and textures, CC0.
+- **OpenGameArt:** music (*The Bard's Tale*, *Minstrel Dance*, *King's Feast*, a pirate-ship loop, *Mysterious Clock*), ambience (birds and wind, crickets, a river for the sea, a dungeon), and crowd sounds (applause, giggling, cheering), all CC0.
+- **Kenney "RPG Audio":** footsteps, cloth, creaks, metal clicks, knife draws and slices, leather, CC0.
 - **Kokoro TTS:** Apache-2.0.
 - **three.js, IWER:** MIT.
 - **Qwen 2.5:** Apache-2.0.
 
-Everything else (characters, sets, map, storybook illustrations, sounds, music box tune) is generated in code for this project. There are no brands or real people.
+The audio files were trimmed, loudness-matched and converted to MP3; full sources are in `CREDITS.md`. Everything else (characters, sets, map, storybook illustrations, the fallback sounds) is generated in code for this project. There are no brands or real people. Character emotion sounds will be the developer's own recordings (`RECORDING_GUIDE.md`).
 
 ---
 
 ## 11. What's left
 
-1. **A real Quest test** (frame rate, seated comfort, pinch reliability, speech input).
+1. **A real Quest test:** frame rate, seated comfort, pinch and pinch-lock reliability, clap and palm detection, the step onto a real desk.
 2. **The demo video** (under 3 minutes) and **the Devpost text**.
-3. **The "wow" experiment** (see `WOW_EXPERIMENT.md` on its branch) for features that use what Meta's platform does uniquely.
+3. **Character emotion recordings** for Marlo and Grumble (the game already plays them once they're added; see `RECORDING_GUIDE.md`).
 
 ## 12. Run it
 

@@ -1,6 +1,6 @@
 # What would make Strings win: analysis and an experiment
 
-*This is on the `experiment-wow` branch. It's a prototype, separate from the main build.*
+*This started on the `experiment-wow` branch and is now part of the main build: it's the last beat of the story (Phase 10b and Phase 16 in `DEVELOPMENT_JOURNAL.md`).*
 
 ## 1. What the judges and Meta are looking for
 
