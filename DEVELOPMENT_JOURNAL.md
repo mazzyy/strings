@@ -72,7 +72,7 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
 - **Draw calls:** static meshes merged to keep the count down.
 
 ### Phase 3: a human voice
-- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 646 lines, about 17 MB, each loaded only when spoken). Each character has their own voice and pace:
+- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 652 lines, about 17 MB, each loaded only when spoken). Each character has their own voice and pace:
 
   | Character | Voice |
   |---|---|
@@ -280,6 +280,20 @@ Prompted by outside feedback (and a comparison with *Make with Puppet*, which re
 - **☰ Menu** (a new toolbar button, or **Esc**) reopens the start menu mid-game, with a "× Back to the show" button. Every option works from wherever you are: continue the story, start a new one, play any chapter, make your own story, free play, pinch lock, one hand. Switching cleanly leaves the current mode first (it ends a running task, leaves free play, returns to Sir Pip, puts away the extra cast and closes the map).
 - **In the headset,** a white **Menu** button on the apron opens a board of options to poke: Continue the story, Chapter map, Free play, Write a story, Pinch lock, One hand. *Write a story* needs a keyboard, so it ends the VR session and opens the story card on the page.
 - **Fixed:** typing in the story card used to trigger keyboard shortcuts (R started recording, T the demo, U freed Marlo). Shortcuts now ignore typing.
+
+### Phase 20: story cards in the headset
+- **Story cards:** in the headset there's no keyboard, so instead of writing, you pick a story from pokeable cards (Menu → *Story cards*). There are five tabs:
+  - **Villain:** Marlo, Clank, Grumble, Pegg, Bramble;
+  - **Who needs help:** the princess, the King, the treasure, nobody;
+  - **Setting:** any of the 7 stages (it follows the villain's home until you choose one);
+  - **Challenge:** dodge attacks, sword duel, riddle, magic spell, dance-off, make friends;
+  - **Twist:** none, moon gravity, fragile strings, at night.
+
+  A red **Stage it!** tab builds the story with the same builder as written stories: the storybook, the stage, the captive, the acts. When a story ends in the headset, the cards come back for another one.
+- **Twists:** moon gravity and fragile strings switch on for that story only; "at night" darkens the stage and lights the lantern. Written stories that mention night or the dark get the night twist too.
+- **Friendship stories** now include **giving the flower** as a present (gentle hello, the flower, a dance, a bow).
+- **Fixed:** opening the menu during the opening warm-up or the storyteller could let the old opening carry on afterwards. Switching modes now cancels any opening in progress.
+- 6 new voice lines (652 in total).
 ---
 
 ## 4. The story
@@ -411,7 +425,7 @@ There's no headset, so testing used:
 ## 9. Hosting and deployment
 
 - `main` holds the code. The site is `public/`, published by pushing `git subtree split --prefix public` to the `gh-pages` branch. Pages builds from that branch (Actions is unavailable).
-- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`.
+- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`, `story-cards`.
 
 ---
 

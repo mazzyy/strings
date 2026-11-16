@@ -104,6 +104,7 @@ export const COACH = {
   rescueBravo: "Up again! What a trouper. Bravo!",
   rescueTrier: "Never mind! The audience loves a trier.",
   rescueDrama: "Oh, the drama! The crowd is on the edge of its seats.",
+  storyCards: "Pick a card for each part of the story: the villain, who needs help, the setting, the challenge, and a twist. Then poke Stage it!",
   storyEnd: "And they all lived happily ever after. The end! Shall we make another story?",
   audienceClaps: "Listen to that! The whole audience is clapping for Marlo.",
   freePlay: "Free play! No story tonight. Pick who you'd like to be, who plays with you, and which stage. Then just have fun.",

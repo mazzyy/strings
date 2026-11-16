@@ -41,23 +41,26 @@ function chipTex(text, kind) {
 }
 
 export class Playground {
-  constructor(parent, onPick) {
+  // (also used for the story cards: other sections, and an "action" tab such as "Stage it!")
+  constructor(parent, onPick, sections = PLAY_SECTIONS, elId = "playground", active = { you: "knight", costar: "marlo", stage: "courtyard" }) {
     this.onPick = onPick;          // (section, id) => void
-    this.active = { you: "knight", costar: "marlo", stage: "courtyard" };
-    this.tab = "you";
+    this.sections = sections;
+    this.active = active;
+    this.tab = sections[0].id;
     this.cool = 0;
     this.group = new THREE.Group();
     this.group.visible = false;
     parent.add(this.group);
     this.geo = new THREE.PlaneGeometry(CW, CH);
-    this.tabs = PLAY_SECTIONS.map((sec, i) => this._chip(sec.title, { tab: sec.id }, (i - 1.5) * (CW + GAP), 0.03));
+    const n = sections.length;
+    this.tabs = sections.map((sec, i) => this._chip(sec.title, { tab: sec.id, action: !!sec.action }, (i - (n - 1) / 2) * (CW + GAP), 0.03));
     this.items = [];
     this._buildItems();
     // desktop
-    this.el = document.getElementById("playground");
+    this.el = elId ? document.getElementById(elId) : null;
     if (this.el) {
       this.el.innerHTML = `<div class="hd"><b>Free play</b><button class="x" aria-label="Hide">–</button></div>` +
-        PLAY_SECTIONS.map((sec) => `<div class="sec"><div class="t">${sec.title}</div>${sec.items.map(([id, label]) => `<button data-s="${sec.id}" data-id="${id}">${label}</button>`).join("")}</div>`).join("");
+        sections.filter((sec) => !sec.action).map((sec) => `<div class="sec"><div class="t">${sec.title}</div>${sec.items.map(([id, label]) => `<button data-s="${sec.id}" data-id="${id}">${label}</button>`).join("")}</div>`).join("");
       this.el.addEventListener("click", (e) => {
         const b = e.target.closest("button"); if (!b) return;
         if (b.classList.contains("x")) { this.el.classList.toggle("min"); return; }
@@ -68,7 +71,7 @@ export class Playground {
   }
 
   _chip(text, data, x, y) {
-    const plain = chipTex(text, data.tab ? "tab" : "plain");
+    const plain = chipTex(text, data.action ? "active" : data.tab ? "tab" : "plain"); // (an action tab is red, like a wax seal)
     const on = chipTex(text, data.tab ? "tabOn" : "active");
     const m = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ map: plain, transparent: true, toneMapped: false, depthWrite: false }));
     m.position.set(x, y, 0);
@@ -79,7 +82,7 @@ export class Playground {
 
   _buildItems() {
     for (const m of this.items) { this.group.remove(m); m.material.dispose(); m.userData.plain.dispose(); m.userData.on.dispose(); }
-    const sec = PLAY_SECTIONS.find((s) => s.id === this.tab);
+    const sec = this.sections.find((s) => s.id === this.tab);
     this.items = sec.items.map(([id, label], i) => this._chip(label, { s: sec.id, id }, ((i % 3) - 1) * (CW + GAP), -0.012 - Math.floor(i / 3) * (CH + GAP)));
     this._syncChips();
   }
@@ -115,7 +118,8 @@ export class Playground {
     for (const m of [...this.tabs, ...this.items]) {
       const l = m.worldToLocal(tipWorld.clone());
       if (Math.abs(l.z) > 0.02 || Math.abs(l.x) > CW / 2 || Math.abs(l.y) > CH / 2) continue;
-      if (m.userData.tab) { this.cool = 0.5; this.tab = m.userData.tab; this._buildItems(); }
+      if (m.userData.action) { this.cool = 0.8; this.onPick(m.userData.tab, "go"); }
+      else if (m.userData.tab) { this.cool = 0.5; this.tab = m.userData.tab; this._buildItems(); }
       else this.pick(m.userData.s, m.userData.id);
       return true;
     }
