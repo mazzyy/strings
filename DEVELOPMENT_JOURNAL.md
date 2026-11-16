@@ -368,6 +368,17 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
   - an options panel where each option acts out its hand gesture in an animated icon: **Pinch Lock** (a thumb and finger pinching together, with a spark), **One Hand** (an open hand waving) and **VR Ready** (a headset that blinks). Pinch Lock and One Hand light up when switched on.
   - The same menu opens mid-game, with "Back to the show" and the extras. All the artwork is drawn in code, with nothing downloaded, and motion is turned off for players who prefer reduced motion.
 - **The robot's neck:** a black rod now runs from the ribbed neck up into the helmet, with a dark mounting ring, closing the gap between neck and head.
+- **The start menu, rebuilt to match the developer's mock-up:**
+  - a thick, glowing gold proscenium with marquee bulbs set into its top and bottom border;
+  - an ornate gold crest with the comedy and tragedy masks above the centre;
+  - draped red velvet curtains tied back with gold tassels;
+  - a caped wooden mannequin marionette dancing below its cross bar;
+  - the script title with a flourish and a sparkle;
+  - a **full-width gold Continue bar** with ▶, the chapter name, a chevron, and a picture of that chapter's stage fading in on the right;
+  - "Play Any Chapter" and "+ Start a New Story" side by side, the violet and blue glowing buttons, the gesture-icon options, and a wooden apron beneath.
+
+  It's designed at a fixed size and scaled to fit any window. All the artwork is drawn in code.
+- **Riding the dragon:** Sir Pip used to hang from his strings in his standing pose while Marlo flew under him, so his legs went straight through the dragon. He now takes a **seated riding pose** while flying: leaning forward, thighs forward and apart to straddle Marlo's back, shins down the dragon's sides, hands reaching forward to hold on, legs swinging a little. He still rides wherever your bar puts him, the dragon's wingbeats lift them both, and he's back on his strings when they land.
 ---
 
 ## 4. The story

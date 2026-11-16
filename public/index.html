@@ -53,6 +53,7 @@
     #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #140d0a; z-index: 10; transition: opacity .6s; font: italic 22px ui-serif, Georgia, serif; color: var(--ink); --p: 0; }
     #loading::after { content: ""; position: absolute; left: 50%; top: calc(50% + 34px); width: 220px; height: 2px; transform: translateX(-50%); background: linear-gradient(90deg, var(--accent) calc(var(--p) * 100%), rgba(255,255,255,0.12) 0); }
     #loading.done { opacity: 0; pointer-events: none; }
+    #loading { overflow: hidden; }
     #loading.ready { background: radial-gradient(ellipse at 50% 40%, rgba(60,20,20,0.55), rgba(10,6,5,0.92)); }
     #loading.ready::after { display: none; }
     .open { text-align: center; font-style: normal; }
@@ -60,43 +61,64 @@
     body:not(.devui) #top .card, body:not(.devui) #logwrap, body:not(.devui) #xr-note { display: none !important; }
     body:not(.devui) #top .buttons > button:not(#menubtn):not(#talk):not(.xr) { display: none !important; }
     body:not(.showhelp) #help { display: none; }
-    /* the start menu: a little theatre (proscenium, curtains, marquee bulbs, footlights) */
-    #loading.ready { background: radial-gradient(ellipse at 50% 45%, rgba(40,14,24,0.35), rgba(8,4,6,0.88) 70%); }
-    .open.theatre { position: relative; width: min(760px, calc(100vw - 32px)); padding: 46px 64px 54px; border-radius: 26px 26px 18px 18px;
-      background: radial-gradient(ellipse at 50% 20%, rgba(90,24,40,0.92), rgba(34,10,18,0.96) 70%);
-      border: 3px solid #c8963e; box-shadow: 0 0 0 6px rgba(40,18,8,0.9), 0 0 0 8px rgba(200,150,62,0.45), 0 30px 120px rgba(0,0,0,0.75), inset 0 0 60px rgba(255,150,80,0.12); overflow: hidden; }
-    .open.theatre .curtain { position: absolute; top: 0; bottom: 0; width: 64px; background: repeating-linear-gradient(90deg, #7a0f1c 0 10px, #a51d2c 10px 18px, #7a0f1c 18px 26px); box-shadow: inset -10px 0 20px rgba(0,0,0,0.45); }
-    .open.theatre .curtain.l { left: 0; border-radius: 0 0 60px 0; } .open.theatre .curtain.r { right: 0; border-radius: 0 0 0 60px; transform: scaleX(-1); }
-    .open.theatre .bulbs { position: absolute; left: 70px; right: 70px; display: flex; justify-content: space-between; }
-    .open.theatre .bulbs.top { top: 14px; } .open.theatre .bulbs.foot { bottom: 14px; left: 90px; right: 90px; }
-    .open.theatre .bulbs i { width: 11px; height: 11px; border-radius: 50%; background: #ffe3a0; box-shadow: 0 0 10px 3px rgba(255,200,110,0.75); animation: twinkle 1.4s ease-in-out infinite; }
-    @keyframes twinkle { 50% { opacity: .55; box-shadow: 0 0 4px 1px rgba(255,200,110,0.4); } }
-    .open.theatre h1 { position: relative; font: italic 700 88px/1 "Playball", "Brush Script MT", Georgia, serif; letter-spacing: .01em; margin: 6px 0 6px;
-      background: linear-gradient(#fff2c4, #f2c45e 55%, #c98a2c); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 18px rgba(255,180,70,0.45)); }
-    .open.theatre p { margin: 0 0 24px; color: #f0dcc0; font: italic 18px Georgia, serif; }
-    .open.theatre button i { display: inline-block; width: 20px; height: 20px; vertical-align: -4px; margin-right: 10px; }
+    /* the start menu: a little theatre (gold proscenium with set-in bulbs, crest, drapes, apron) */
+    #loading.ready { background: radial-gradient(ellipse at 50% 42%, rgba(40,14,24,0.25), rgba(6,3,5,0.86) 72%); }
+    .theatre-wrap { position: relative; display: flex; flex-direction: column; align-items: center; transform-origin: 50% 50%; padding-top: 70px; }
+    .open.theatre { position: relative; box-sizing: border-box; width: 1000px; padding: 46px 92px 44px; border-radius: 36px; border: 7px solid transparent;
+      background: radial-gradient(ellipse at 50% 18%, #5a1626, #2c0812 62%, #1e050c) padding-box, linear-gradient(160deg, #fff2c0, #f2bc52 30%, #b0701e 60%, #f6cc6a 85%, #a8661a) border-box;
+      box-shadow: 0 0 0 2px rgba(255,226,150,0.55), 0 0 38px 6px rgba(255,170,60,0.55), 0 40px 120px rgba(0,0,0,0.75), inset 0 0 0 3px rgba(70,24,8,0.85), inset 0 0 90px rgba(255,110,60,0.16); }
+    .open.theatre .crest { position: absolute; top: -84px; left: 50%; width: 380px; transform: translateX(-50%); z-index: 3; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5)) drop-shadow(0 0 10px rgba(255,190,80,0.35)); }
+    .open.theatre .bulbs { position: absolute; display: flex; justify-content: space-between; z-index: 3; }
+    .open.theatre .bulbs.top.l { top: -11px; left: 44px; width: 230px; } .open.theatre .bulbs.top.r { top: -11px; right: 44px; width: 230px; }
+    .open.theatre .bulbs.foot { bottom: -11px; left: 74px; right: 74px; }
+    .open.theatre .bulbs i { width: 15px; height: 15px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fffaf0, #ffd780 55%, #e8a030); box-shadow: 0 0 12px 4px rgba(255,200,110,0.8), 0 0 0 2px rgba(120,60,10,0.6); animation: twinkle 1.6s ease-in-out infinite; }
+    @keyframes twinkle { 50% { filter: brightness(.75); box-shadow: 0 0 6px 2px rgba(255,200,110,0.5), 0 0 0 2px rgba(120,60,10,0.6); } }
+    .open.theatre .curtain { position: absolute; top: 0; bottom: 0; width: 150px; overflow: hidden; pointer-events: none; }
+    .open.theatre .curtain.l { left: 0; border-radius: 29px 0 0 29px; } .open.theatre .curtain.r { right: 0; border-radius: 29px 0 0 29px; transform: scaleX(-1); }
+    .open.theatre .curtain svg { width: 100%; height: 100%; display: block; }
+    .open.theatre .puppet { position: absolute; left: 132px; top: 22px; width: 150px; height: 212px; z-index: 2; pointer-events: none; filter: drop-shadow(0 8px 14px rgba(0,0,0,0.45)); }
+    .open.theatre .titlebox { position: relative; width: 520px; margin: 0 auto 26px; padding-left: 70px; }
+    .open.theatre h1 { position: relative; font: 400 112px/1 "Playball", "Brush Script MT", Georgia, serif; margin: 0; letter-spacing: .005em;
+      background: linear-gradient(#fff6d0, #f6c85a 50%, #c98426 80%, #f0b44a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 rgba(90,30,0,0.55)) drop-shadow(0 0 22px rgba(255,180,70,0.5)); }
+    .open.theatre .sparkle { position: absolute; right: 0; top: 34px; width: 30px; filter: drop-shadow(0 0 8px #ffe7a0); animation: twinkle 2.2s ease-in-out infinite; }
+    .open.theatre .flourish { position: absolute; left: 70px; top: 94px; width: 430px; }
+    .open.theatre .titlebox p { margin: 26px -60px 0 0; color: #f6e6d0; font: italic 23px Georgia, serif; text-align: center; white-space: nowrap; }
+    .open.theatre button i { display: inline-block; flex: none; width: 24px; height: 24px; }
     .open.theatre button i svg { width: 100%; height: 100%; display: block; }
-    .open.theatre .cta { font: 700 22px Georgia, serif; padding: 16px 46px; border-radius: 16px; color: #2a1606; background: linear-gradient(#ffe08a, #f0b43c 60%, #d48f22); border: 2px solid #fff0c0; box-shadow: 0 0 0 3px rgba(255,200,90,0.25), 0 0 34px rgba(255,190,80,0.6); }
-    .open.theatre .cta:hover { filter: brightness(1.07); }
-    .open.theatre .more { margin-top: 14px; }
-    .open.theatre .outline, .open.theatre .more button { font: 600 16px Georgia, serif; color: #f6e2b8; background: rgba(20,6,10,0.45); border: 1.5px solid #c8963e; border-radius: 14px; padding: 10px 26px; box-shadow: none; }
-    .open.theatre .duo { display: flex; gap: 14px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
-    .open.theatre .duo button { font: 600 16px Georgia, serif; color: #fff; border-radius: 14px; padding: 11px 22px; background: rgba(20,6,30,0.55); box-shadow: none; }
-    .open.theatre .violet { border: 1.5px solid #b56cff; box-shadow: 0 0 16px rgba(181,108,255,0.45) !important; }
-    .open.theatre .azure { border: 1.5px solid #4fc8ff; box-shadow: 0 0 16px rgba(79,200,255,0.45) !important; }
-    /* the options, each with an animated hand gesture */
-    .open.theatre .opts { display: grid; grid-template-columns: repeat(3, 1fr); margin: 22px 0 6px; border: 1px solid rgba(200,150,62,0.55); border-radius: 14px; background: rgba(12,4,8,0.45); overflow: hidden; }
-    .open.theatre .opt { display: flex; align-items: center; gap: 10px; padding: 12px 14px; text-align: left; cursor: pointer; border-left: 1px solid rgba(200,150,62,0.3); transition: background .15s; }
-    .open.theatre .opt:first-child { border-left: 0; }
+    /* the big gold bar: play, where you'll be, a chevron, and a picture of the chapter */
+    .open.theatre .cta { position: relative; display: flex; align-items: center; gap: 22px; width: 100%; height: 86px; padding: 0 34px; box-sizing: border-box; overflow: hidden; border-radius: 999px;
+      font: 700 25px Georgia, serif; color: #2a1404; text-align: left; white-space: nowrap; background: linear-gradient(#ffe896, #f6c04a 48%, #e09a28); border: 3px solid #fff1c2;
+      box-shadow: 0 0 0 3px rgba(150,80,10,0.55), 0 0 30px rgba(255,190,80,0.65), inset 0 3px 0 rgba(255,255,255,0.5); }
+    .open.theatre .cta .pl { width: 30px; height: 30px; color: #1e0e02; }
+    .open.theatre .cta > span:not(.thumb) { position: relative; z-index: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .open.theatre .cta .ch { position: relative; z-index: 1; margin-left: auto; margin-right: 150px; width: 28px; height: 28px; color: #fff6dc; }
+    .open.theatre .cta .thumb { position: absolute; right: 0; top: 0; bottom: 0; width: 230px; background-size: cover; background-position: center; -webkit-mask-image: linear-gradient(90deg, transparent, #000 38%); mask-image: linear-gradient(90deg, transparent, #000 38%); }
+    .open.theatre .cta:hover { filter: brightness(1.06); }
+    .open.theatre .pair { display: flex; gap: 26px; justify-content: center; margin-top: 24px; }
+    .open.theatre .outline { display: inline-flex; align-items: center; gap: 12px; white-space: nowrap; font: 600 21px Georgia, serif; color: #f8e6c0; background: rgba(24,6,10,0.55); border: 2px solid #d8a446; border-radius: 999px; padding: 12px 32px; box-shadow: 0 0 12px rgba(255,180,70,0.18); }
+    .open.theatre .outline i.gold { color: #f2c45e; }
+    .open.theatre .duo { display: flex; gap: 32px; justify-content: center; margin-top: 22px; }
+    .open.theatre .duo button { display: inline-flex; align-items: center; gap: 14px; white-space: nowrap; font: 600 21px Georgia, serif; color: #fff; border-radius: 999px; padding: 14px 40px; }
+    .open.theatre .violet { background: linear-gradient(#3a1660, #24103e); border: 2.5px solid #c46cff; box-shadow: 0 0 22px rgba(196,108,255,0.6), inset 0 0 14px rgba(196,108,255,0.25) !important; }
+    .open.theatre .azure { background: linear-gradient(#0e2a5a, #0a1a3a); border: 2.5px solid #4fb8ff; box-shadow: 0 0 22px rgba(79,184,255,0.6), inset 0 0 14px rgba(79,184,255,0.25) !important; }
+    .open.theatre .azure i.blue { color: #6ec8ff; } .open.theatre .violet i { color: #e0c8ff; }
+    /* the options, each acting out its hand gesture */
+    .open.theatre .opts { display: grid; grid-template-columns: 1fr 1fr 1.3fr; margin: 30px 0 4px; border: 2px solid rgba(216,164,70,0.75); border-radius: 22px; background: rgba(14,4,8,0.5); overflow: hidden; box-shadow: 0 0 14px rgba(255,170,60,0.15); }
+    .open.theatre .opt { position: relative; display: flex; align-items: center; gap: 14px; padding: 16px 18px; text-align: left; cursor: pointer; transition: background .15s; }
+    .open.theatre .opt + .opt::before { content: ""; position: absolute; left: 0; top: 18%; bottom: 18%; width: 1px; background: rgba(216,164,70,0.5); }
     .open.theatre .opt input { position: absolute; opacity: 0; pointer-events: none; }
-    .open.theatre .opt .ic { flex: 0 0 40px; height: 40px; color: #f2c45e; }
+    .open.theatre .opt .ic { flex: 0 0 50px; height: 50px; color: #f2c45e; }
     .open.theatre .opt .ic svg { width: 100%; height: 100%; overflow: visible; }
-    .open.theatre .opt b { display: block; font: 600 15px Georgia, serif; color: #f6e2b8; }
-    .open.theatre .opt small { display: block; margin: 2px 0 0; font: 12px ui-sans-serif, system-ui, sans-serif; color: #cdb8a0; }
+    .open.theatre .opt b { display: block; white-space: nowrap; font: 600 21px Georgia, serif; color: #f8e6c0; }
+    .open.theatre .opt small { display: block; margin: 3px 0 0; white-space: nowrap; font: 13.5px ui-sans-serif, system-ui, sans-serif; color: #e2d0bc; line-height: 1.35; }
     .open.theatre label.opt:hover { background: rgba(255,200,100,0.07); }
-    .open.theatre label.opt:has(input:checked) { background: rgba(255,190,80,0.16); box-shadow: inset 0 0 0 1.5px #f2c45e; }
-    .open.theatre label.opt:has(input:checked) b::after { content: " · on"; color: #ffd98a; font-size: 12px; }
+    .open.theatre label.opt:has(input:checked) { background: rgba(255,190,80,0.16); box-shadow: inset 0 0 0 2px #f2c45e; }
+    .open.theatre label.opt:has(input:checked) b::after { content: " · on"; color: #ffd98a; font-size: 14px; }
     .open.theatre .opt.info { cursor: default; }
+    /* the wooden stage apron under the frame */
+    .theatre-wrap .apron { width: 940px; height: 74px; margin-top: -2px; border-radius: 0 0 16px 16px; background: linear-gradient(#5a2c16, #3a1a0c 55%, #24100a);
+      border-top: 3px solid #c8903e; box-shadow: inset 0 10px 18px rgba(0,0,0,0.45), 0 20px 40px rgba(0,0,0,0.6);
+      background-image: radial-gradient(ellipse 120px 26px at 50% 50%, rgba(200,144,62,0.35), transparent 70%), linear-gradient(#5a2c16, #3a1a0c 55%, #24100a); }
     .anim-pinch .idx { transform-origin: 20px 22px; animation: pinchIdx 1.6s ease-in-out infinite; }
     .anim-pinch .thb { transform-origin: 33px 26px; animation: pinchThb 1.6s ease-in-out infinite; }
     .anim-pinch .spark { opacity: 0; transform-origin: 26px 14px; animation: pinchSpark 1.6s ease-in-out infinite; }
@@ -108,23 +130,20 @@
     @keyframes handWave { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(12deg); } }
     @keyframes waveLines { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
     .anim-vr .eye { animation: vrEyes 3s ease-in-out infinite; } @keyframes vrEyes { 0%, 90%, 100% { opacity: 1; } 95% { opacity: .1; } }
-    /* the marionette swinging beside the title */
-    .open.theatre .puppet { position: absolute; left: 78px; top: 20px; width: 118px; height: 196px; pointer-events: none; }
-    .open.theatre .puppet .swing { transform-origin: 60px 4px; animation: pupSwing 3.2s ease-in-out infinite; }
-    .open.theatre .puppet .arm-l { transform-origin: 42px 78px; animation: pupArm 1.6s ease-in-out infinite; }
-    .open.theatre .puppet .arm-r { transform-origin: 78px 78px; animation: pupArm 1.6s ease-in-out infinite reverse; }
-    .open.theatre .puppet .leg-l { transform-origin: 54px 114px; animation: pupLeg 1.6s ease-in-out infinite; }
-    .open.theatre .puppet .leg-r { transform-origin: 66px 114px; animation: pupLeg 1.6s ease-in-out infinite reverse; }
-    .open.theatre .puppet .cape { transform-origin: 47px 76px; animation: pupCape 1.6s ease-in-out infinite; }
-    @keyframes pupSwing { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
-    @keyframes pupArm { 0%, 100% { transform: rotate(-24deg); } 50% { transform: rotate(18deg); } }
-    @keyframes pupLeg { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
-    @keyframes pupCape { 0%, 100% { transform: skewY(-6deg); } 50% { transform: skewY(8deg); } }
+    .open.theatre .puppet .swing { transform-origin: 90px 6px; animation: pupSwing 3.4s ease-in-out infinite; }
+    .open.theatre .puppet .arm-r { transform-origin: 106px 100px; animation: pupArm 1.7s ease-in-out infinite; }
+    .open.theatre .puppet .arm-l { transform-origin: 74px 100px; animation: pupArm 1.7s ease-in-out infinite reverse; }
+    .open.theatre .puppet .leg-l { transform-origin: 82px 142px; animation: pupLeg 1.7s ease-in-out infinite; }
+    .open.theatre .puppet .leg-r { transform-origin: 98px 140px; animation: pupLeg 1.7s ease-in-out infinite reverse; }
+    .open.theatre .puppet .cape { transform-origin: 80px 94px; animation: pupCape 1.7s ease-in-out infinite; }
+    @keyframes pupSwing { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+    @keyframes pupArm { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(12deg); } }
+    @keyframes pupLeg { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+    @keyframes pupCape { 0%, 100% { transform: skewY(-5deg) scaleX(1); } 50% { transform: skewY(6deg) scaleX(1.06); } }
     .open .extras-t { margin-top: 18px; font: 600 12px ui-sans-serif, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: rgba(243,223,176,0.6); }
-    .open .extras { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px auto 0; max-width: 600px; }
+    .open .extras { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px auto 0; max-width: 640px; }
     .open .extras button { font: 600 13px ui-sans-serif, system-ui, sans-serif; background: rgba(255,255,255,0.06); color: #e8d8b8; border: 1px solid rgba(216,172,79,0.35); padding: 8px 12px; box-shadow: none; border-radius: 999px; }
     .open small { display: block; color: #cdb8a0; font: 12px ui-sans-serif, system-ui, sans-serif; }
-    @media (max-width: 760px) { .open.theatre { padding: 40px 22px 50px; } .open.theatre .puppet, .open.theatre .curtain { display: none; } .open.theatre .opts { grid-template-columns: 1fr; } .open.theatre h1 { font-size: 64px; } }
     @media (prefers-reduced-motion: reduce) { .open.theatre * { animation: none !important; } }
     /* "what do I do next" chip */
     #hint { position: fixed; left: 50%; bottom: 92px; transform: translate(-50%, 12px); display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: rgba(10, 24, 32, 0.86); border: 1px solid rgba(127, 243, 255, 0.7); box-shadow: 0 0 24px rgba(41, 230, 255, 0.25); color: #eafcff; font: 15px ui-sans-serif, system-ui, sans-serif; opacity: 0; transition: opacity .35s, transform .35s; pointer-events: none; white-space: nowrap; }
