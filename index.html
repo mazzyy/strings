@@ -104,6 +104,17 @@
     #playground button[data-s]:hover { background: #fff3d6; }
     #playground button[data-s].on, #playground button[data-s].on:hover { background: #c0303a; color: #fff8e8; border-color: #c0303a; }
     body.free-play #mindcard { display: none; }
+    #storymaker { position: fixed; inset: 0; z-index: 30; display: none; place-items: center; background: rgba(8,4,3,0.72); }
+    #storymaker.on { display: grid; }
+    #storymaker .card { position: relative; width: min(620px, calc(100vw - 32px)); padding: 26px 28px; border-radius: 18px; background: #f3e6c4; color: #2a1a10; border: 6px double #7a5a32; box-shadow: 0 30px 90px rgba(0,0,0,0.6); font-family: Georgia, serif; }
+    #storymaker h2 { margin: 0 0 4px; color: #7a1d22; font-size: 26px; }
+    #storymaker p { margin: 0 0 12px; color: #4a3020; }
+    #storymaker textarea { width: 100%; box-sizing: border-box; min-height: 92px; font: 18px Georgia, serif; padding: 12px; border-radius: 10px; border: 2px solid #c9a14a; background: #fffaf0; color: #2a1a10; resize: vertical; }
+    #storymaker .sum { margin: 10px 0 12px; font-size: 15px; color: #3a5a7a; min-height: 20px; }
+    #storymaker .ideas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    #storymaker .ideas button { font: 13px Georgia, serif; color: #3a2414; background: #fff; border: 1.5px solid #d8b878; border-radius: 999px; padding: 6px 10px; cursor: pointer; text-align: left; }
+    #storymaker .go { font: 600 18px Georgia, serif; color: #ffe8c8; background: radial-gradient(circle at 35% 35%, #c0303a, #7a1018); border: 2px solid rgba(255,200,170,0.55); border-radius: 999px; padding: 12px 26px; cursor: pointer; }
+    #storymaker .x { position: absolute; top: 10px; right: 14px; border: 0; background: none; font-size: 22px; color: #7a1d22; cursor: pointer; }
     #phrases { position: fixed; right: 16px; top: 50%; transform: translate(20px, -50%); width: 210px; padding: 14px; border-radius: 16px; background: rgba(255,248,232,0.95); border: 3px solid #c9a14a; box-shadow: 0 16px 50px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; z-index: 5; display: grid; gap: 8px; }
     #phrases.on { opacity: 1; pointer-events: auto; transform: translate(0, -50%); }
     #phrases .t { font: 600 16px Georgia, serif; color: #7a1d22; }
@@ -233,6 +244,20 @@
     <div class="more"><button id="credits-again">Play the story again</button><button id="credits-theatre">Visit the Grand Theatre</button></div>
   </div></div>
   <div id="phrases"></div>
+  <div id="storymaker"><div class="card"><button class="x" aria-label="Close">×</button>
+    <h2>Make your own story</h2>
+    <p>Write what happens, in your own words. The theatre will stage it, with Sir Pip as the hero.</p>
+    <textarea placeholder="The dragon kidnapped the princess and took her to his cave. Sir Pip must rescue her!"></textarea>
+    <div class="sum"></div>
+    <div class="ideas">
+      <button>The dragon kidnapped the princess and took her to his cave. Sir Pip must rescue her!</button>
+      <button>A grumpy troll stole the kingdom's treasure and hid under the bridge.</button>
+      <button>The clockwork robot locked the princess in his tower.</button>
+      <button>A lonely wizard in the forest just wants a friend.</button>
+      <button>Pirates captured the King! Sir Pip must fight the captain.</button>
+    </div>
+    <button class="go">Stage my story ›</button>
+  </div></div>
   <div id="playground"></div>
   <div id="mindcard"></div>
   <div id="storybook"><div class="bookwrap"><button class="skip">Skip · start the show ›</button></div></div>

@@ -502,8 +502,8 @@ function dodge(spec, c, done) {
           if (dodged >= spec.count) {
             finished = true;
             c.hideHint();
-            c.guestSay("overheat");
-            c.coach(TASK_LINES.overheat);
+            if (!spec.winLine) c.guestSay("overheat");
+            c.coach(spec.winLine || TASK_LINES.overheat);
             c.ai.react("faint", { force: true });
             c.confetti("smoke");
             setTimeout(() => c.guestSay("defeated"), 2500);
