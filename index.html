@@ -106,15 +106,29 @@
     body.free-play #mindcard { display: none; }
     #storymaker { position: fixed; inset: 0; z-index: 30; display: none; place-items: center; background: rgba(8,4,3,0.72); }
     #storymaker.on { display: grid; }
-    #storymaker .card { position: relative; width: min(620px, calc(100vw - 32px)); padding: 26px 28px; border-radius: 18px; background: #f3e6c4; color: #2a1a10; border: 6px double #7a5a32; box-shadow: 0 30px 90px rgba(0,0,0,0.6); font-family: Georgia, serif; }
-    #storymaker h2 { margin: 0 0 4px; color: #7a1d22; font-size: 26px; }
-    #storymaker p { margin: 0 0 12px; color: #4a3020; }
-    #storymaker textarea { width: 100%; box-sizing: border-box; min-height: 92px; font: 18px Georgia, serif; padding: 12px; border-radius: 10px; border: 2px solid #c9a14a; background: #fffaf0; color: #2a1a10; resize: vertical; }
-    #storymaker .sum { margin: 10px 0 12px; font-size: 15px; color: #3a5a7a; min-height: 20px; }
-    #storymaker .ideas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-    #storymaker .ideas button { font: 13px Georgia, serif; color: #3a2414; background: #fff; border: 1.5px solid #d8b878; border-radius: 999px; padding: 6px 10px; cursor: pointer; text-align: left; }
-    #storymaker .go { font: 600 18px Georgia, serif; color: #ffe8c8; background: radial-gradient(circle at 35% 35%, #c0303a, #7a1018); border: 2px solid rgba(255,200,170,0.55); border-radius: 999px; padding: 12px 26px; cursor: pointer; }
-    #storymaker .x { position: absolute; top: 10px; right: 14px; border: 0; background: none; font-size: 22px; color: #7a1d22; cursor: pointer; }
+    #storymaker .sp { position: relative; width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow-y: auto; padding: 22px 26px; border-radius: 18px; background: radial-gradient(ellipse at 50% 0%, #3a2350, #1c1228); color: #f3e6d0; border: 2px solid #8a6ac0; box-shadow: 0 30px 90px rgba(0,0,0,0.6); font-family: Georgia, serif; }
+    #storymaker .sp.wide { width: min(1180px, calc(100vw - 32px)); }
+    #storymaker h2 { margin: 0 0 4px; color: #ffd98a; font-size: 26px; }
+    #storymaker p { margin: 0 0 12px; color: #d8c8e8; }
+    #storymaker .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 10px; }
+    #storymaker .sec { background: rgba(255,255,255,0.05); border: 1px solid rgba(200,170,255,0.25); border-radius: 14px; padding: 10px 12px 12px; }
+    #storymaker h3 { margin: 0 0 8px; font-size: 17px; color: #ffe8c8; } #storymaker h3 small { color: #b8a8d0; font-weight: normal; font-size: 13px; }
+    #storymaker .cards { display: flex; flex-wrap: wrap; gap: 8px; }
+    #storymaker .card { position: relative; width: 94px; padding: 0 0 6px; border-radius: 12px; border: 2px solid rgba(200,170,255,0.3); background: rgba(20,10,30,0.6); color: #f3e6d0; cursor: pointer; font: 600 12px Georgia, serif; overflow: hidden; }
+    #storymaker .card img { display: block; width: 100%; height: 58px; object-fit: cover; margin-bottom: 5px; }
+    #storymaker .card:hover { border-color: #c8a8ff; }
+    #storymaker .card.on { border-color: #b58cff; box-shadow: 0 0 0 3px rgba(181,140,255,0.45); }
+    #storymaker .card.on::after { content: "✓"; position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; background: #8a5ad8; color: #fff; font-size: 13px; line-height: 20px; }
+    #storymaker .row { display: flex; gap: 10px; justify-content: flex-end; align-items: center; margin: 14px -26px -22px; padding: 12px 26px 16px; flex-wrap: wrap; position: sticky; bottom: -22px; background: linear-gradient(rgba(28,18,40,0.85), #1c1228 40%); border-top: 1px solid rgba(200,170,255,0.2); }
+    #storymaker .go { font: 600 18px Georgia, serif; color: #fff; background: linear-gradient(#8a5ad8, #5a2ea8); border: 2px solid rgba(255,220,255,0.4); border-radius: 12px; padding: 12px 26px; cursor: pointer; }
+    #storymaker .ghost { font: 600 15px Georgia, serif; color: #e8dcff; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(200,170,255,0.35); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
+    #storymaker .ghost.back, #storymaker .ghost.write { margin-right: auto; }
+    #storymaker .poster canvas { display: block; width: 100%; height: auto; border-radius: 14px; }
+    #storymaker textarea { width: 100%; box-sizing: border-box; min-height: 92px; font: 18px Georgia, serif; padding: 12px; border-radius: 10px; border: 2px solid #8a6ac0; background: #fffaf0; color: #2a1a10; resize: vertical; }
+    #storymaker .sum { margin: 10px 0 12px; font-size: 15px; color: #c8b8ff; min-height: 20px; }
+    #storymaker .ideas { display: flex; flex-wrap: wrap; gap: 6px; }
+    #storymaker .ideas button { font: 13px Georgia, serif; color: #f3e6d0; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(200,170,255,0.35); border-radius: 999px; padding: 6px 10px; cursor: pointer; text-align: left; }
+    #storymaker .x { position: absolute; top: 10px; right: 14px; border: 0; background: none; font-size: 24px; color: #ffd98a; cursor: pointer; }
     #phrases { position: fixed; right: 16px; top: 50%; transform: translate(20px, -50%); width: 210px; padding: 14px; border-radius: 16px; background: rgba(255,248,232,0.95); border: 3px solid #c9a14a; box-shadow: 0 16px 50px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; z-index: 5; display: grid; gap: 8px; }
     #phrases.on { opacity: 1; pointer-events: auto; transform: translate(0, -50%); }
     #phrases .t { font: 600 16px Georgia, serif; color: #7a1d22; }
@@ -245,20 +259,7 @@
     <div class="more"><button id="credits-again">Play the story again</button><button id="credits-theatre">Visit the Grand Theatre</button></div>
   </div></div>
   <div id="phrases"></div>
-  <div id="storymaker"><div class="card"><button class="x" aria-label="Close">×</button>
-    <h2>Make your own story</h2>
-    <p>Write what happens, in your own words. The theatre will stage it, with Sir Pip as the hero.</p>
-    <textarea placeholder="The dragon kidnapped the princess and took her to his cave. Sir Pip must rescue her!"></textarea>
-    <div class="sum"></div>
-    <div class="ideas">
-      <button>The dragon kidnapped the princess and took her to his cave. Sir Pip must rescue her!</button>
-      <button>A grumpy troll stole the kingdom's treasure and hid under the bridge.</button>
-      <button>The clockwork robot locked the princess in his tower.</button>
-      <button>A lonely wizard in the forest just wants a friend.</button>
-      <button>Pirates captured the King! Sir Pip must fight the captain.</button>
-    </div>
-    <button class="go">Stage my story ›</button>
-  </div></div>
+  <div id="storymaker"></div>
   <div id="playground"></div>
   <div id="mindcard"></div>
   <div id="storybook"><div class="bookwrap"><button class="skip">Skip · start the show ›</button></div></div>
