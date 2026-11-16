@@ -349,6 +349,10 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
   - every **setting** card is illustrated with its landmark: glowing green crystals in the cave, a ship under sail, a clock tower, a moonlit pine forest with fireflies, a stone arch bridge, a castle with purple turrets, a crescent moon over clouds;
   - character cards have a soft vignette, and the layout fits one screen (conflict, who, villain on top; a wide setting row and the twists below).
 - **Robot fixes:** the eyes now sit just proud of the visor glass with a gentler angle (one eye's edge was dipping behind the glass and looked cut off). A leftover face-plate shell that poked through as thin "hair-like" slivers is gone. Floating motes of light are now soft round specks instead of squares.
+- **The robot's face, final version (a screen face):** the visor band was replaced by a large rounded **black glass screen** set into a thick white rim with a fine seam. All three are oval patches projected onto the curve of the head, so the corners are smooth, not cut from a sphere. On the screen:
+  - **two tall glowing oval eyes** (pale cyan-white with a cyan edge) that blink, and turn gold for a moment when the guest remembers something;
+  - **a sound-wave mouth:** 19 bars, tallest in the middle and tapering to dots, that rise and ripple with his voice and settle into a calm dotted line when he's quiet (one instanced mesh, one draw call).
+  - **Head:** ear pods with cyan light rings, and a small cyan light on the brow.
 ---
 
 ## 4. The story
