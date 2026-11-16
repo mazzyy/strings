@@ -193,6 +193,7 @@ function simon(spec, c, done) {
         if (since < 1.6 || (idx > 0 && ev.type === seq[idx - 1])) return;
         phase = "wrong";
         c.guestSay("wrong");
+        setTimeout(() => c.oops?.(), 1200); // the co-star turns the mistake into theatre
         setTimeout(watch, 1800);
       }
     },
@@ -262,6 +263,7 @@ function duel(spec, c, done) {
             c.sfx("sword", c.pip.group, { volume: 0.8 });
             c.sfx("thud", c.pip.group, { volume: 0.6 });
             c.guestSay("gotYou");
+            setTimeout(() => c.oops?.(), 1200); // the co-star turns the mistake into theatre
             if (me <= 0) { me = 3; c.coach(TASK_LINES.again); } else c.coach(TASK_LINES.ouch);
             hearts();
             next(1.6);
@@ -407,6 +409,7 @@ function sneak(spec, c, done) {
         c.sfx("alarm", g.group, { volume: 0.6 });
         c.guestSay(caught === 1 ? "intruder" : "seeYou");
         c.coach(TASK_LINES.caught);
+        setTimeout(() => c.oops?.(), 1200); // the co-star turns the mistake into theatre
         c.emote("marlo", "!", () => g.get("head"), "INTRUDER!", 1.6);
         setTimeout(() => c.movePipTo(start.x, start.z), 500);
       }
@@ -489,6 +492,7 @@ function dodge(spec, c, done) {
             c.knockPip(zap.dir, 0.015);
             c.sfx("snap", c.pip.group, { volume: 0.5 });
             c.coach(TASK_LINES.zapped);
+            setTimeout(() => c.oops?.(), 1200); // the co-star turns the mistake into theatre
             c.showHint("dodge");
           }
         }

@@ -72,7 +72,7 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
 - **Draw calls:** static meshes merged to keep the count down.
 
 ### Phase 3: a human voice
-- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 526 lines, about 14 MB, each loaded only when spoken). Each character has their own voice and pace:
+- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 541 lines, about 14 MB, each loaded only when spoken). Each character has their own voice and pace:
 
   | Character | Voice |
   |---|---|
@@ -238,6 +238,25 @@ An analysis of what judges and Meta reward (written up in `WOW_EXPERIMENT.md`) f
 - **No mystery "gold button".** Unlocking a fun mode used to announce itself ("press the gold button") right at the finale, drowning out the request to clap. Unlocks are no longer announced during the finale (a toast appears later instead), and the line now says *"the gold Modes button on the front of the stage"*.
 - **Every apron button has a little sign above it:** Record, Replay, Talk, Modes, Map, Free Marlo, Pinch lock.
 
+
+### Phase 17: a scene partner, a guided first minute, one-hand play
+Prompted by outside feedback (and a comparison with *Make with Puppet*, which restricts freedom to make hand-tracked puppetry fun):
+- **Marlo saves the scene.** When something goes wrong, the co-star turns the mistake into theatre instead of a failure. Mistakes include Sir Pip falling, a wrong spell, a sword hit in the duel, being caught by the searchlight, or getting zapped. Marlo picks one of these:
+  - **a double pratfall:** he falls over too, and the narrator says *"Down they both go! A classic double pratfall"*; the audience laughs and claps;
+  - **"ta-da!":** a cheer pose and a line as if it was planned (each guest has their own: Bramble *"Behold! Exactly as I planned."*, Pegg *"Arr! We meant to do that!"*, Grumble *"Hrm. That was part of show."*, Clank *"Error. I mean... ta-da."*);
+  - **a dramatic gasp,** and getting back up earns *"Up again! What a trouper. Bravo!"* and a cheer;
+  - during tasks (when the task directs his moves): *"Never mind! The audience loves a trier"* or *"Oh, the drama!"* with applause.
+
+  It doesn't happen every time (so it never feels like a routine), and at most once every 14 seconds.
+- **The audience reacts to every move:** a short burst of real applause for a bow, a jump, a spin or a wave (snippets cut from the recording with a fade-out; at most every 3.5 s), so even half a minute of playing around is rewarded.
+- **The guided first minute:** for first-time players, after the curtain rises, there are three tiny steps, each rewarded at once:
+  1. lift Sir Pip (a ripple of applause, and Marlo waves);
+  2. tip him into a bow (applause, and Marlo bows back);
+  3. walk him over to Marlo (who says hello, and the crowd cheers).
+
+  The narrator says each step and an arrow shows the motion. A step never waits more than 15 to 20 seconds. Then the storyteller and the book begin.
+- **One-hand mode** (an orange "One hand" button on the apron, or a checkbox on the start menu, remembered between visits): no second hand needed. The arm bar rides along with the main bar, and **rolling the wrist** raises Sir Pip's arms (roll back and forth to wave; high fives work too). Hints change to *"Roll your wrist to raise his arms"*.
+- 15 new voice lines (541 in total).
 ---
 
 ## 4. The story
@@ -367,7 +386,7 @@ There's no headset, so testing used:
 ## 9. Hosting and deployment
 
 - `main` holds the code. The site is `public/`, published by pushing `git subtree split --prefix public` to the `gh-pages` branch. Pages builds from that branch (Actions is unavailable).
-- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`.
+- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`.
 
 ---
 

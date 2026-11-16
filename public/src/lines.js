@@ -98,11 +98,21 @@ export const COACH = {
   replay: "Here comes your shadow. Perform alongside it.",
   shared: "Someone has sent you a performance. Watch their shadow, then join in.",
   storyIntro: "Ah, there you are! Welcome, welcome. Come closer, and let me tell you a story.",
+  rescueDouble: "Down they both go! A classic double pratfall, and the audience adores it.",
+  rescueGasp: "Gasp! Is our hero hurt? Up you get!",
+  rescueBravo: "Up again! What a trouper. Bravo!",
+  rescueTrier: "Never mind! The audience loves a trier.",
+  rescueDrama: "Oh, the drama! The crowd is on the edge of its seats.",
   audienceClaps: "Listen to that! The whole audience is clapping for Marlo.",
   freePlay: "Free play! No story tonight. Pick who you'd like to be, who plays with you, and which stage. Then just have fun.",
+  oneHandOn: "One-hand mode is on. No second hand needed: roll your wrist to raise Sir Pip's arms.",
+  oneHandOff: "One-hand mode is off. Use your other hand for the small arm bar.",
+  hintWave1: "Roll your wrist to one side, and his arms go up. Roll back and forth to wave.",
   lockOn: "Pinch lock is on. Pinch once to pick up a bar, and pinch again to put it down. No need to hold on.",
   lockOff: "Pinch lock is off. Hold your pinch to hold the bar.",
   deskAR: "Psst. The stage is sitting on your real desk. Sir Pip can step right off the front of it, and walk about on your table.",
+  warmupBow: "Lovely! Now tip him forward, and he'll take a bow.",
+  warmupWalk: "Bravo! Now walk him over, and say hello to Marlo.",
   warmupXR: "That's Sir Pip! Pinch the glowing bar above him, and lift him up.",
   warmupDesk: "That's Sir Pip! Click and hold the glowing bar above him, and move him about.",
   welcomeBack: "Welcome back! Now, where were we?",
@@ -281,13 +291,13 @@ export const MARLO_TALK = {
 export const GUESTS = {
   marlo: {
     name: "Marlo", title: "Marlo the dragon", says: MARLO_SAYS, talk: MARLO_TALK,
-    task: { showOff: "Watch this, Sir Pip! A loop the loop!", shy: "Oh! Um. Hello. I'm a little shy with new knights.", peek: "Is it safe? Come closer. But slowly.", notShy: "You're gentle. I like you!", highFive: "Give me a high five, Sir Pip!", highFived: "Ha! Best high fives in the whole kingdom!", together: "Let's jump together! On my count!", missJump: "Almost! Jump right when I say jump.", fireworks: "Fireworks! We did it together!", gems: "The jewels! The music box can play again!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had.", mount: "Hold on tight, Sir Pip!", fly: "Woo-hoo! We're flying!", spot: "There he is! After him!", finale: "Best adventure ever!", free: "I'm free! Wheeee!", warm: "Your hand is so warm!", home: "Back to my strings. See you at the next show!" },
+    task: { taDa: "Ta-da! All part of the show!", showOff: "Watch this, Sir Pip! A loop the loop!", shy: "Oh! Um. Hello. I'm a little shy with new knights.", peek: "Is it safe? Come closer. But slowly.", notShy: "You're gentle. I like you!", highFive: "Give me a high five, Sir Pip!", highFived: "Ha! Best high fives in the whole kingdom!", together: "Let's jump together! On my count!", missJump: "Almost! Jump right when I say jump.", fireworks: "Fireworks! We did it together!", gems: "The jewels! The music box can play again!", thankYou: "Thank you, Sir Pip. You're the best friend a dragon ever had.", mount: "Hold on tight, Sir Pip!", fly: "Woo-hoo! We're flying!", spot: "There he is! After him!", finale: "Best adventure ever!", free: "I'm free! Wheeee!", warm: "Your hand is so warm!", home: "Back to my strings. See you at the next show!" },
     personality: { joy: 0.55, trust: 0.45, energy: 0.85, sword: "wary", sulkAfter: 40, patience: 9 },
   },
   wizard: {
     name: "Bramble", title: "Old Bramble the wizard",
     personality: { joy: 0.6, trust: 0.75, energy: 0.5, sword: "wary", sulkAfter: 70, patience: 6 },
-    task: { watch: "Watch my spell carefully.", yourTurn: "Now you. Repeat my spell.", wrong: "Not quite. Watch again, young knight.", spellDone: "Splendid! The spell works! You have the gift!", fireflies: "My fireflies! Bless you, young knight!", owl: "My owls know the way. Listen for their call.", owlDone: "The path to the tower! Clever knight.", bloomed: "Look! The whole forest is awake again!", finale: "Splendid! Simply splendid!" },
+    task: { taDa: "Behold! Exactly as I planned.", watch: "Watch my spell carefully.", yourTurn: "Now you. Repeat my spell.", wrong: "Not quite. Watch again, young knight.", spellDone: "Splendid! The spell works! You have the gift!", fireflies: "My fireflies! Bless you, young knight!", owl: "My owls know the way. Listen for their call.", owlDone: "The path to the tower! Clever knight.", bloomed: "Look! The whole forest is awake again!", finale: "Splendid! Simply splendid!" },
     says: {
       copyMe: "Copy me, young knight!", yourTurn: "Now you try. Just as I did.", yay: "Splendid! Truly splendid!", yay2: "Ho! A natural!",
       aww: "Never mind. Magic takes practice.", careful: "Steady with that blade, young one.", forMe: "For me? How very kind.",
@@ -306,7 +316,7 @@ export const GUESTS = {
   pirate: {
     name: "Captain Pegg", title: "Captain Pegg the pirate",
     personality: { joy: 0.65, trust: 0.5, energy: 0.95, sword: "duel", sulkAfter: 35, patience: 9 },
-    task: { enGarde: "En garde, little knight!", high: "High!", low: "Low!", hitMe: "Argh! Ye got me!", gotYou: "Ha har! Got ye!", surrender: "Arr! I surrender! Ye're the finest swordsman on the seven puddles!", finale: "Three cheers for Sir Pip! Hip hip, hooray!" },
+    task: { taDa: "Arr! We meant to do that!", enGarde: "En garde, little knight!", high: "High!", low: "Low!", hitMe: "Argh! Ye got me!", gotYou: "Ha har! Got ye!", surrender: "Arr! I surrender! Ye're the finest swordsman on the seven puddles!", finale: "Three cheers for Sir Pip! Hip hip, hooray!" },
     says: {
       copyMe: "Arr! Copy me, matey!", yourTurn: "Yer turn! Show me what ye've got!", yay: "Ha har! That's the spirit!", yay2: "Shiver me timbers, perfect!",
       aww: "Bah! Next time, matey.", careful: "A sword! Ha! En garde!", forMe: "For me? Ye've got a pirate's heart!",
@@ -325,7 +335,7 @@ export const GUESTS = {
   troll: {
     name: "Grumble", title: "Grumble the troll",
     personality: { joy: 0.2, trust: 0.15, energy: 0.6, sword: "angry", sulkAfter: 25, patience: 11 },
-    task: { right: "Hmph! Correct. Grumble is impressed.", wrongAns: "Wrong! Ha! Grumble asks again.", finale: "Grumble is happy. Don't tell anyone." },
+    task: { taDa: "Hrm. That was part of show.", right: "Hmph! Correct. Grumble is impressed.", wrongAns: "Wrong! Ha! Grumble asks again.", finale: "Grumble is happy. Don't tell anyone." },
     says: {
       copyMe: "Hmph. Copy Grumble. If you can.", yourTurn: "Your turn. Go on then.", yay: "Huh. Not bad. Not bad at all.", yay2: "Grumble likes that!",
       aww: "Hmph. Too slow.", careful: "Put that sword down! Grumble doesn't like swords.", forMe: "A flower? For Grumble? Nobody ever gives Grumble flowers.",
@@ -358,7 +368,7 @@ export const GUESTS = {
       name: "I am Clank, keeper of the Clockwork Tower.", sorry: "Apology logged.", fire: "Clank does not breathe fire. Clank zaps.",
       unknown: "Unknown command. Beep.",
     },
-    task: { intruder: "Intruder detected!", seeYou: "I see you!", zap: "Zap!", overheat: "Overheating! Overheating!", defeated: "Clank needs a little sit down.", steal: "Catch me if you can!", gears: "Gear bombs away!", caught: "No! You caught me!", sad: "I only wanted to hear the music too. Nobody ever played music for Clank.", thanks: "Thank you. Friend.", finale: "Clank is happy. Beep! Very, very happy!" },
+    task: { taDa: "Error. I mean... ta-da.", intruder: "Intruder detected!", seeYou: "I see you!", zap: "Zap!", overheat: "Overheating! Overheating!", defeated: "Clank needs a little sit down.", steal: "Catch me if you can!", gears: "Gear bombs away!", caught: "No! You caught me!", sad: "I only wanted to hear the music too. Nobody ever played music for Clank.", thanks: "Thank you. Friend.", finale: "Clank is happy. Beep! Very, very happy!" },
   },
   king: {
     name: "The King", title: "The King",
