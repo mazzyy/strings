@@ -10,6 +10,7 @@ export const HINTS = {
   walk:        { target: "mainBar",  motion: "sideways", desk: [["Hold click", "Move mouse ←  →"], "Carry Sir Pip across the stage"], xr: "Keep pinching and move your hand sideways", voice: "hintWalk" },
   bow:         { target: "mainBar",  motion: "tip",      desk: [["W"], "Tip forward to bow"], xr: "Tip your wrist forward", voice: "hintBow" },
   wave:        { target: "handsBar", motion: "up",       desk: [["Shift", "Move mouse ↑"], "Lift the small arm bar to wave"], xr: "Pinch the small bar with your other hand, then lift", voice: "hintWave" },
+  wave1:       { target: "mainBar",  motion: "twist",    desk: [["Q", "E"], "Roll the bar to raise his arms"], xr: "Roll your wrist to raise his arms", voice: "hintWave1" },
   jump:        { target: "mainBar",  motion: "up",       desk: [["Space"], "Flick up to jump"], xr: "Flick your hand up quickly", voice: "jump" },
   turn:        { target: "mainBar",  motion: "twist",    desk: [["A", "D"], "Twist to turn around"], xr: "Twist your wrist", voice: "turn" },
   takeFlower:  { target: "prop:flower",  motion: "pinch", desk: [["Click the flower"], "Hand it to Sir Pip"], xr: "Pinch the flower, bring it to the knight's hand", voice: "takeProp" },
@@ -125,6 +126,7 @@ export class Hints {
 
   // name: key of HINTS. xr: whether a headset is in use
   show(name, xr) {
+    name = this.alias?.(name) || name;
     const h = HINTS[name];
     if (!h) return;
     if (this.current === name && this.xr === xr) return;

@@ -247,7 +247,8 @@ export class Sfx {
   }
   has(name) { return !!this.F[name]?.length; }
 
-  play(name, at = null, { volume = 1, rate = 1 } = {}) {
+  // dur/offset: play just a snippet (e.g. a short burst of applause), fading out at the end
+  play(name, at = null, { volume = 1, rate = 1, dur = 0, offset = 0 } = {}) {
     if (!this.enabled || this.ctx.state !== "running") return;
     const real = this.F[name];
     const buf = real && real.length ? real[Math.floor(Math.random() * real.length)] : this.B[name];
@@ -267,8 +268,13 @@ export class Sfx {
       src = new THREE.Audio(this.listener);
     }
     src.setBuffer(buf);
+    const g = src.gain.gain, now = this.ctx.currentTime;
+    g.cancelScheduledValues(now);
     src.setVolume(volume);
     src.setPlaybackRate((real && real.length ? Math.min(1.25, Math.max(0.8, rate)) : rate) * (0.94 + Math.random() * 0.12));
+    src.offset = Math.min(offset, Math.max(0, buf.duration - 0.2));
+    src.duration = dur > 0 ? dur : undefined;
+    if (dur > 0) { g.setValueAtTime(volume, now + Math.max(0.05, dur - 0.35)); g.linearRampToValueAtTime(0.0001, now + dur); }
     src.play();
   }
 }

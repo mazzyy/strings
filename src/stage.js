@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { withRepeat } from "./assets.js";
 
-const KNOB_LABELS = { record: "Record", replay: "Replay", talk: "Talk", mode: "Modes", map: "Map", free: "Free Marlo", lock: "Pinch lock" };
+const KNOB_LABELS = { record: "Record", replay: "Replay", talk: "Talk", mode: "Modes", map: "Map", free: "Free Marlo", lock: "Pinch lock", hand: "One hand" };
 export const STAGE = { width: 0.86, depth: 0.42, base: 0.075 };
 
 const gold = () => new THREE.MeshStandardMaterial({ color: 0xd8ac4f, metalness: 1, roughness: 0.24 });
@@ -303,7 +303,12 @@ export function buildStage(assets) {
   lockKnob.position.set(-0.06, 0.004, D / 2 - 0.05);
   root.add(lockKnob);
 
-  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob, map: mapKnob, free: freeKnob, lock: lockKnob }, shadowCatcher, curtains, cord };
+  // the "one hand" knob (orange): the arm bar follows the main bar; roll your wrist to raise the arms
+  const handKnob = makeKnob(0xe07a3a, "hand");
+  handKnob.position.set(-0.01, 0.004, D / 2 - 0.05);
+  root.add(handKnob);
+
+  return { root, knobs: { record: recKnob, replay: playKnob, talk: talkKnob, mode: modeKnob, map: mapKnob, free: freeKnob, lock: lockKnob, hand: handKnob }, shadowCatcher, curtains, cord };
 }
 
 // ---------------------------------------------------------------------------

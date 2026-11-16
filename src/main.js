@@ -88,7 +88,7 @@ const { root: stageRoot, knobs, shadowCatcher, curtains, cord } = buildStage(ass
 stageRoot.position.set(0, STAGE_Y, 0);
 scene.add(stageRoot);
 // batch static geometry into one mesh per material (Quest needs few draw calls)
-let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, knobs.map, knobs.free, knobs.lock, shadowCatcher, curtains.group, cord.group]);
+let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, knobs.map, knobs.free, knobs.lock, knobs.hand, shadowCatcher, curtains.group, cord.group]);
 saved += mergeStatic(desk);
 saved += mergeStatic(room, [desk]);
 
@@ -567,12 +567,46 @@ function raiseCurtain() {
 
 // the first moments on stage: "pinch the glowing bar and lift him", then Marlo bounds over
 let storyPending = false;
-const warmup = { on: false, t: 0, moved: 0, last: new THREE.Vector3(), greeted: false, next: null };
+// The guided first minute (first-time players, right after the curtain rises): three tiny
+// steps, each rewarded at once, so the controls are learned by doing, with nothing to read.
+//   1. lift Sir Pip (a ripple of applause, Marlo notices)
+//   2. tip him into a bow (applause, Marlo bows back)
+//   3. walk him over to Marlo (who says hello)
+const warmup = { on: false, step: "", t: 0, moved: 0, last: new THREE.Vector3(), next: null };
 function startWarmup(next) {
-  Object.assign(warmup, { on: true, t: 0, moved: 0, greeted: false, next });
+  Object.assign(warmup, { on: true, step: "lift", t: 0, moved: 0, next });
   warmup.last.copy(pip.get("pelvis"));
+  mind.taskBusy = true; // the guide directs Marlo for now (his memory still works)
   narrator.coach(xrMode ? "warmupXR" : "warmupDesk");
-  setTimeout(() => { if (warmup.on && !pip.main.held) hints.show("grab", !!xrMode); }, 2500);
+  setTimeout(() => { if (warmup.on && warmup.step === "lift" && !pip.main.held) hints.show("grab", !!xrMode); }, 2500);
+}
+function warmupStep(step, line, hint) {
+  warmup.step = step; warmup.t = 0;
+  if (hints.current) hints.hide();
+  setTimeout(() => {
+    if (!warmup.on || warmup.step !== step) return;
+    if (line) narrator.coach(line);
+    if (hint) setTimeout(() => { if (warmup.on && warmup.step === step) hints.show(hint, !!xrMode); }, 1800);
+  }, 900);
+}
+function warmupHear(ev) {
+  if (!warmup.on) return;
+  if (warmup.step === "bow" && ev.type === "bow") {
+    clapBurst(2, 0.4);
+    sfx.play("chime", null, { volume: 0.4, rate: 1.2 });
+    setTimeout(() => ai.react("bow", { force: true }), 500); // Marlo bows back
+    emotes.pop("pip", "♥", () => pip.get("head"), "Bravo!", 1.6);
+    warmupStep("walk", "warmupWalk", "walk");
+  } else if (warmup.step === "walk" && ev.type === "approach") warmupGreet();
+}
+function warmupGreet() {
+  if (warmup.step === "greet" || warmup.step === "end") return;
+  warmup.step = "greet"; warmup.t = 0;
+  if (hints.current) hints.hide();
+  ai.react("approach", { force: true }); ai.react("wave", { force: true });
+  setTimeout(() => marloSay(GUESTS.marlo.talk.hello), 500);
+  emotes.pop("marlo", "♥", () => marlo.get("head"), "Hello!", 2.2);
+  setTimeout(() => sfx.play("cheer", null, { volume: 0.3 }), 900);
 }
 function updateWarmup(dt) {
   if (!warmup.on) return;
@@ -580,15 +614,21 @@ function updateWarmup(dt) {
   const p = pip.get("pelvis");
   if (pip.main.held) warmup.moved += p.distanceTo(warmup.last);
   warmup.last.copy(p);
-  // he's been lifted and moved (or we've waited long enough): Marlo comes to say hello
-  if (!warmup.greeted && (warmup.moved > 0.08 || warmup.t > 14)) {
-    warmup.greeted = true; warmup.t = 0;
-    if (hints.current === "grab") hints.hide();
-    ai.react("approach", { force: true }); ai.react("wave", { force: true });
-    setTimeout(() => marloSay(GUESTS.marlo.talk.hello), 500);
-    emotes.pop("marlo", "♥", () => marlo.get("head"), "Hello!", 2.2);
-  } else if (warmup.greeted && warmup.t > 4.5 && !narrator.speaking && !marloLines.length) {
-    warmup.on = false;
+  if (warmup.step === "lift") {
+    // lifted and moved a little (or a long wait): a ripple of applause, on to the bow
+    if (warmup.moved > 0.06 || warmup.t > 15) {
+      if (warmup.moved > 0.06) { clapBurst(1.4, 0.3); emotes.pop("pip", "✦", () => pip.get("head"), "That's it!", 1.4); ai.react("wave", { force: true }); }
+      warmupStep("bow", "warmupBow", "bow");
+    }
+  } else if (warmup.step === "bow") {
+    if (warmup.t > 18) warmupStep("walk", "warmupWalk", "walk"); // never stuck
+  } else if (warmup.step === "walk") {
+    const near = Math.hypot(p.x - marlo.get("chest").x, p.z - marlo.get("chest").z) < 0.18;
+    if (near || warmup.t > 20) warmupGreet(); // (or Marlo comes over himself)
+  } else if (warmup.step === "greet" && warmup.t > 4.5 && !narrator.speaking && !marloLines.length) {
+    warmup.step = "end"; warmup.on = false;
+    mind.taskBusy = false;
+    if (hints.current) hints.hide();
     warmup.next?.();
   }
 }
@@ -624,15 +664,64 @@ function updateShowHud() {
   $("bills").textContent = `Playbills (${playbills.list().length})`;
 }
 
+// ---- the audience, and a co-star who saves the scene ------------------------------------
+// The crowd reacts a little to every move (a smattering of claps for a bow, a jump, a spin).
+let crowdCool = 0;
+const crowdWatching = () => showStarted && !preshow && (["act", "between", "intro"].includes(show.state) || freePlay || warmup.on);
+const clapBurst = (secs, vol) => sfx.play("applause", null, { volume: vol, dur: secs, offset: 0.5 + Math.random() * 3 });
+function crowdReacts(ev) {
+  if (!crowdWatching() || elapsed < crowdCool) return;
+  const R = { bow: [1.6, 0.32, 1], jump: [1.1, 0.22, 0.7], turn: [1.1, 0.2, 0.6], wave: [1.2, 0.2, 0.6] }[ev.type];
+  if (!R || Math.random() > R[2]) return;
+  crowdCool = elapsed + 3.5;
+  setTimeout(() => clapBurst(R[0], R[1]), 250);
+}
+// When something goes wrong (a fall, a wrong spell, getting caught), the co-star turns the
+// mistake into a bit of theatre: a matching pratfall, a "ta-da!" as if it was planned, or a
+// dramatic gasp, and the audience laughs and applauds instead of groaning.
+let rescueCool = 0, awaitRise = 0;
+const pickOne = (xs) => xs[Math.floor(Math.random() * xs.length)];
+function saveTheScene(kind) {
+  if (elapsed < rescueCool || storyLock() || !crowdWatching() || unbound.busy) return false;
+  const free = !mind.taskBusy && marlo.group.visible && !ai.suspended && !flying;
+  if (kind === "fall" && Math.random() < 0.35) return false; // not every time: then it's a routine
+  rescueCool = elapsed + 14;
+  const bit = pickOne(kind === "fall" && free ? ["double", "double", "tada", "gasp"] : ["tada", "trier", "drama"]);
+  if (bit === "double") {
+    setTimeout(() => ai.react("pratfall", { force: true }), 450);
+    narrator.coach("rescueDouble");
+    setTimeout(() => { sfx.play("laugh", null, { volume: 0.34 }); clapBurst(2, 0.35); }, 1600);
+    emotes.pop("marlo", "♪", marloHead, "Me too!", 1.8);
+  } else if (bit === "tada") {
+    if (free) ai.react("cheer", { force: true });
+    const line = GUESTS[guestId].task?.taDa;
+    if (line) marloSay(line, null, true);
+    emotes.pop("marlo", "★", marloHead, "Ta-da!", 1.8);
+    setTimeout(() => clapBurst(2.2, 0.4), 900);
+  } else if (bit === "gasp") {
+    narrator.coach("rescueGasp");
+    emotes.pop("marlo", "!", marloHead, null, 1.6);
+    awaitRise = elapsed + 9; // getting back up earns a cheer
+  } else {
+    narrator.coach(bit === "trier" ? "rescueTrier" : "rescueDrama");
+    setTimeout(() => clapBurst(1.6, 0.3), 700);
+  }
+  return true;
+}
+
 let laughCool = 0;
 detector.on((ev) => {
   if (storyLock()) return; // the story is being told: no reactions, no commentary
   show.hear(ev);
-  if (ev.type === "fall" && show.state === "act" && elapsed > laughCool) { laughCool = elapsed + 9; setTimeout(() => sfx.play("laugh", null, { volume: 0.28 }), 350); }
+  warmupHear(ev);
+  if (!warmup.on) crowdReacts(ev);
+  const rescued = ev.type === "fall" && saveTheScene("fall");
+  if (ev.type === "fall" && !rescued && show.state === "act" && elapsed > laughCool) { laughCool = elapsed + 9; setTimeout(() => sfx.play("laugh", null, { volume: 0.28 }), 350); }
+  if (ev.type === "rise" && elapsed < awaitRise) { awaitRise = 0; narrator.coach("rescueBravo"); clapBurst(2.4, 0.42); sfx.play("cheer", null, { volume: 0.3 }); }
   if (ev.type === "jump") sfx.play("clink", pip.group, { volume: 0.35 });
   if (["jump", "approach", "fall", "give", "wave"].includes(ev.type)) mind.wakeIfNapping();
   const r = mind.hear(ev, { t: elapsed });
-  if (r) ai.react(r);
+  if (r && !rescued) ai.react(r);
   if (playerId === "knight") narrator.hear(ev);
   checkSync(ev.type, lastPipMove, lastGhostMove);
   log(`${describe(ev).replace("Sir Pip", playerName())} → ${GUESTS[guestId].name} ${r ? r : "watches"} (${mind.moodName})`);
@@ -684,6 +773,23 @@ function addTether(a, b, strength) {
   C.set(c, k); C.set(c, k + 3);
   tetherN++;
 }
+
+// accessibility: one-hand mode (the arm bar follows the main bar; a wrist roll raises the arms)
+const _ohE = new THREE.Euler(), _ohQ = new THREE.Quaternion(), _ohV = new THREE.Vector3(), _ohL = new THREE.Vector3(), _ohUp = new THREE.Vector3(0, 1, 0);
+// where the arm bar rests relative to the main bar, in the main bar's own (yaw) frame
+const handsOff = pip.hands.position.clone().sub(pip.main.position).applyQuaternion(new THREE.Quaternion().setFromAxisAngle(_ohUp, -new THREE.Euler().setFromQuaternion(pip.main.quaternion, "YXZ").y));
+let oneHand = (() => { try { return localStorage.getItem("strings.oneHand") === "1"; } catch { return false; } })();
+function setOneHand(on, quiet = false) {
+  oneHand = on;
+  try { localStorage.setItem("strings.oneHand", on ? "1" : "0"); } catch { /* private mode */ }
+  knobs.hand.userData.cap.material.emissiveIntensity = on ? 1.2 : 0.35;
+  const box = $("onehand"); if (box) box.checked = on;
+  if (!on && !taken(pip.hands)) pip.hands.held = false;
+  if (!quiet) { narrator.coach(on ? "oneHandOn" : "oneHandOff"); sfx.play("chime", null, { volume: 0.35, rate: on ? 1.3 : 0.9 }); }
+}
+// hints follow the mode: "lift the arm bar" becomes "roll your wrist"
+hints.alias = (n) => (oneHand && (n === "wave" || n === "highfive") ? "wave1" : n);
+setTimeout(() => setOneHand(oneHand, true), 0);
 
 // accessibility: pinch lock (no sustained pinch needed), remembered between visits
 let pinchLock = (() => { try { return localStorage.getItem("strings.pinchLock") === "1"; } catch { return false; } })();
@@ -804,6 +910,18 @@ function handleHands(hands, desktop) {
       }
     }
   }
+  // one-hand mode: no second hand needed. Roll the wrist that holds the main bar and his
+  // arms rise (roll back and forth to wave); the arm bar rides along with the main bar.
+  if (oneHand && pip.main.held && !taken(pip.hands)) {
+    _ohE.setFromQuaternion(pip.main.quaternion, "YXZ");
+    const lift = THREE.MathUtils.clamp((Math.abs(_ohE.z) - 0.16) / 0.32, 0, 1);
+    _ohQ.setFromAxisAngle(_ohUp, _ohE.y);
+    _ohV.copy(handsOff).add(_ohL.set(0, lift * 0.17, lift * 0.05)).applyQuaternion(_ohQ).add(pip.main.position);
+    pip.hands.held = true;
+    pip.hands.position.lerp(_ohV, Math.min(1, _dtNow * 12));
+    pip.hands.quaternion.slerp(_ohQ, Math.min(1, _dtNow * 12));
+    near.set(pip.hands, Math.max(near.get(pip.hands), 0.3 + lift * 0.5));
+  } else if (oneHand && !pip.main.held && !taken(pip.hands)) pip.hands.held = false;
   tetherGeo.setDrawRange(0, tetherN * 2);
   tetherGeo.attributes.position.needsUpdate = true;
   tetherGeo.attributes.color.needsUpdate = true;
@@ -1213,6 +1331,7 @@ const taskCtx = {
   music: () => music.play(),
   stageKnighting,
   bloom: bloomForest,
+  oops: () => saveTheScene("task"), // a task went wrong: the co-star rescues the moment
 };
 show.makeTask = (spec, done) => {
   mind.taskBusy = true;
@@ -1597,6 +1716,7 @@ if (loadingEl) {
       : `<button id="begin">Begin the story</button><div class="more"><button id="chapters">Play any chapter · all unlocked</button></div>`) +
     `<div class="more"><button id="freeplay">Free play · no story, just fun</button></div>` +
     `<label class="lockopt"><input type="checkbox" id="pinchlock"> Pinch lock: no need to hold a pinch</label>` +
+    `<label class="lockopt"><input type="checkbox" id="onehand"> One hand: no second hand needed</label>` +
     `<small>Best with sound on · works with Quest hand tracking</small></div>`;
   loadingEl.classList.add("ready");
   const enter = () => { loadingEl.classList.add("done"); unlockAudio(); };
@@ -1607,6 +1727,7 @@ if (loadingEl) {
     startPreshow();
   };
   $("begin").onclick = begin;
+  if ($("onehand")) { $("onehand").checked = oneHand; $("onehand").onchange = (e) => setOneHand(e.target.checked, true); }
   if ($("pinchlock")) { $("pinchlock").checked = pinchLock; $("pinchlock").onchange = (e) => setPinchLock(e.target.checked, true); }
   if ($("newstory")) $("newstory").onclick = () => {
     if (!confirm("Start the tale of Sir Pip again from the beginning? Your playbills are kept.")) return;
@@ -1899,7 +2020,7 @@ function updatePlacement(dt, frame, hands) {
 }
 
 // poke the apron knobs with a fingertip (XR), and hold two empty pinches to re-place the stage
-const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0, free: 0, lock: 0 };
+const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0, free: 0, lock: 0, hand: 0 };
 let recenterHold = 0;
 function xrGestures(dt, hands, t) {
   // poke the floating storybook map
@@ -1920,6 +2041,7 @@ function xrGestures(dt, hands, t) {
       else if (name === "map") toggleMap();
       else if (name === "free") { if (!unbound.busy) unbound.free(); }
       else if (name === "lock") setPinchLock(!pinchLock);
+      else if (name === "hand") setOneHand(!oneHand);
       else player.playing ? stopReplay() : startReplay();
     }
   }
@@ -2114,4 +2236,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, setRealDesk, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
