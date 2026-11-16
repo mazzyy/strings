@@ -360,6 +360,14 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
   - a **wide cyan sound-wave mouth** of 21 rounded bars that ripple with his voice and rest as a row of dots;
   - **tall rounded ear pods** with a vertical cyan light strip on the front edge, and a short cyan light on the shell above the frame.
   - **Fixed:** when the robot looked down, thin white lines showed along the frame, because its back wall was a one-sided surface and steep angles saw through it. The frame now renders from both sides, and it curves back closer to the helmet. Checked from the front, above, both upper corners, the side and below.
+- **The start menu, as a little theatre:**
+  - a gold-trimmed proscenium with velvet curtains, marquee bulbs that twinkle along the top, and footlights along the bottom;
+  - the title in a glowing gold script (the Playball font, open licence);
+  - a little wooden marionette swinging from its bar, arms and legs dangling (an original drawing, animated in CSS);
+  - a big gold **Begin the Story** button, an outlined **Play Any Chapter · All Unlocked**, and two glowing buttons, violet **Make Your Own Story** and blue **Free Play**;
+  - an options panel where each option acts out its hand gesture in an animated icon: **Pinch Lock** (a thumb and finger pinching together, with a spark), **One Hand** (an open hand waving) and **VR Ready** (a headset that blinks). Pinch Lock and One Hand light up when switched on.
+  - The same menu opens mid-game, with "Back to the show" and the extras. All the artwork is drawn in code, with nothing downloaded, and motion is turned off for players who prefer reduced motion.
+- **The robot's neck:** a black rod now runs from the ribbed neck up into the helmet, with a dark mounting ring, closing the gap between neck and head.
 ---
 
 ## 4. The story
