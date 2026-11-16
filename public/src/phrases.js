@@ -20,11 +20,15 @@ function chipTexture(text) {
   const c = document.createElement("canvas");
   c.width = 440; c.height = 136;
   const g = c.getContext("2d");
-  g.fillStyle = "rgba(255,248,232,0.96)";
-  g.strokeStyle = "#c9a14a"; g.lineWidth = 8;
+  // the theatre's own look: deep red velvet, a gold rim, cream lettering
+  const bg = g.createLinearGradient(0, 6, 0, 116); bg.addColorStop(0, "#8a222a"); bg.addColorStop(1, "#4a0f16");
+  g.fillStyle = bg; g.strokeStyle = "#f0c860"; g.lineWidth = 7;
+  g.beginPath(); g.moveTo(70, 112); g.lineTo(58, 134); g.lineTo(100, 112); g.closePath(); g.fill(); g.stroke(); // the speech tail
   g.beginPath(); g.roundRect(6, 6, 428, 110, 50); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(70, 112); g.lineTo(58, 134); g.lineTo(100, 112); g.closePath(); g.fill(); // the speech tail
-  g.fillStyle = "#3a2414"; g.font = "600 44px Georgia, serif"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.strokeStyle = "rgba(255,226,150,0.45)"; g.lineWidth = 2; g.beginPath(); g.roundRect(17, 17, 406, 88, 40); g.stroke();
+  const hi = g.createLinearGradient(0, 10, 0, 60); hi.addColorStop(0, "rgba(255,255,255,0.16)"); hi.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = hi; g.beginPath(); g.roundRect(14, 12, 412, 50, 40); g.fill();
+  g.fillStyle = "#ffeecb"; g.font = "600 44px Georgia, serif"; g.textAlign = "center"; g.textBaseline = "middle";
   g.fillText(text, 220, 62);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;

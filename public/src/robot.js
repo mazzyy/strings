@@ -18,7 +18,7 @@ export class Robot {
   constructor() {
     this.group = new THREE.Group();
     // an ivory porcelain shell, black rubber joints, polished brass trim
-    const shell = new THREE.MeshPhysicalMaterial({ color: 0xe9e6df, roughness: 0.28, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.12, sheen: 0.3, sheenColor: new THREE.Color(0xb8c8ff) });
+    const shell = new THREE.MeshPhysicalMaterial({ color: 0xf0ede6, roughness: 0.22, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.08, sheen: 0.35, sheenColor: new THREE.Color(0xb8c8ff), envMapIntensity: 1.3 });
     const face = new THREE.MeshPhysicalMaterial({ color: 0xf1efe9, roughness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.18 });
     const joint = new THREE.MeshStandardMaterial({ color: 0x23252a, roughness: 0.55, metalness: 0.35 });
     const mech = new THREE.MeshStandardMaterial({ color: 0x3a3d44, roughness: 0.4, metalness: 0.75 });
@@ -100,6 +100,19 @@ export class Robot {
     // a panel seam down the chest
     add(G, new THREE.BoxGeometry(0.0022, 0.05, 0.003), dark, [0, 0.352, 0.067], [-0.25, 0, 0]);
     add(G, new THREE.BoxGeometry(0.0022, 0.07, 0.003), dark, [0, 0.215, 0.083], [0.12, 0, 0]);
+    // a ring of light round the clock: his "heart", which beats with his voice
+    const ring = add(this.clock, new THREE.TorusGeometry(0.0405, 0.0022, 10, 56), this.accentMat, [0, 0, -0.001]); ring.castShadow = false;
+    add(this.clock, new THREE.TorusGeometry(0.0445, 0.0026, 10, 56), brass, [0, 0, -0.003]);
+    // chest plates: a brass trim line under the collar bones, vents with a light in each
+    for (const s of [-1, 1]) {
+      add(G, new THREE.CapsuleGeometry(0.0022, 0.05, 4, 10), brass, [s * 0.066, 0.352, 0.052], [0.2, 0, s * 1.18]);
+      for (let k = 0; k < 3; k++) add(G, new THREE.BoxGeometry(0.022, 0.0032, 0.003), dark, [s * 0.078, 0.268 - k * 0.011, 0.058], [0.05, s * 0.62, 0]);
+      add(G, new THREE.CapsuleGeometry(0.0014, 0.016, 4, 8), this.accentMat, [s * 0.078, 0.279, 0.0585], [0, s * 0.62, Math.PI / 2]).castShadow = false;
+      // side seams running down the shell
+      add(G, new THREE.BoxGeometry(0.002, 0.11, 0.003), dark, [s * 0.047, 0.2, 0.0775], [0.13, s * 0.5, s * 0.1]);
+    }
+    // a brass maker's plate on the belly
+    add(G, new THREE.BoxGeometry(0.03, 0.012, 0.003), brass, [0, 0.168, 0.0675], [0.2, 0, 0]);
 
     // neck: black ribbed segments
     this.neck = new THREE.Group();
@@ -186,12 +199,25 @@ export class Robot {
     // a short cyan light on the shell above the frame, and two panel seams rising from its corners
     add(this.head, new THREE.CapsuleGeometry(0.0017, 0.009, 4, 10), this.accentMat, [0, HC + 0.0565, 0.0415], [0.95, 0, Math.PI / 2]).castShadow = false;
 
+    // a slim brass band over the crown of the helmet
+    add(this.head, new THREE.TorusGeometry(0.0745, 0.0022, 8, 64, Math.PI), brass, [0, HC, -0.006], [0, Math.PI / 2, 0]).scale.set(0.98, 0.95, 1.07);
+    // an antenna that wobbles when he moves or speaks, with a light at its tip
+    this.antenna = new THREE.Group();
+    this.antenna.position.set(0.034, HC + 0.064, -0.012);
+    this.head.add(this.antenna);
+    add(this.antenna, new THREE.CylinderGeometry(0.007, 0.009, 0.008, 16), brass, [0, 0.002, 0]);
+    add(this.antenna, new THREE.CylinderGeometry(0.0012, 0.0016, 0.05, 8), mech, [0, 0.03, 0]);
+    add(this.antenna, new THREE.SphereGeometry(0.0052, 16, 12), this.accentMat, [0, 0.058, 0]).castShadow = false;
+    this._ant = { x: 0, z: 0, vx: 0, vz: 0 };
     // ear pods: tall rounded cups at the sides, with a cyan light strip on the front edge
     for (const s of [-1, 1]) {
       const pod = add(this.head, new THREE.SphereGeometry(0.03, 32, 24), face, [s * 0.075, HC - 0.004, -0.004]);
       pod.scale.set(0.42, 1.0, 0.78);
       const strip = add(this.head, new THREE.CapsuleGeometry(0.0018, 0.03, 4, 10), this.accentMat, [s * 0.082, HC - 0.004, 0.0195], [0, 0, 0]);
       strip.rotation.y = s * 0.5; strip.castShadow = false;
+      // a brass dial on the outside of each pod
+      add(this.head, new THREE.CylinderGeometry(0.012, 0.012, 0.004, 24), brass, [s * 0.0885, HC - 0.004, -0.004], [0, 0, Math.PI / 2]);
+      add(this.head, new THREE.CylinderGeometry(0.006, 0.006, 0.005, 16), dark, [s * 0.0895, HC - 0.004, -0.004], [0, 0, Math.PI / 2]);
     }
 
     // arms
@@ -204,6 +230,17 @@ export class Robot {
       const elbow = add(G, new THREE.SphereGeometry(0.026, 20, 16), mech);
       const lower = add(G, new THREE.CylinderGeometry(0.025, 0.02, 1, 20), shell);
       const wrist = add(G, new THREE.CylinderGeometry(0.016, 0.016, 0.018, 14), joint);
+      // (the arm tubes are 1 long and stretched to length; their trim is squashed back by 1 / length)
+      const trim = (tube, len, geo, mat, y, r = [Math.PI / 2, 0, 0], x = 0, z = 0) => { const m = add(tube, geo, mat, [x, y, z], r); m.scale.y = r[0] ? 1 : 1 / len; if (r[0]) m.scale.z = 1 / len; return m; };
+      trim(upper, 0.21, new THREE.TorusGeometry(0.0318, 0.0028, 8, 28), brass, 0.3);
+      trim(upper, 0.21, new THREE.TorusGeometry(0.0285, 0.0028, 8, 28), dark, -0.4);
+      trim(lower, 0.2, new THREE.TorusGeometry(0.0248, 0.0026, 8, 28), brass, 0.36);
+      trim(lower, 0.2, new THREE.TorusGeometry(0.0212, 0.003, 8, 28), brass, -0.42);
+      // a strip of light along the outside of the forearm
+      const glowStrip = add(lower, new THREE.BoxGeometry(0.004, 0.4, 0.003), this.accentMat, [s * 0.0218, -0.02, 0.006]); glowStrip.castShadow = false;
+      // a brass cap on the shoulder and on the elbow
+      add(G, new THREE.CylinderGeometry(0.017, 0.017, 0.006, 24), brass, [shoulder.x + s * 0.041, shoulder.y, 0], [0, 0, Math.PI / 2]);
+      add(elbow, new THREE.CylinderGeometry(0.012, 0.012, 0.056, 18), brass, [0, 0, 0], [0, 0, Math.PI / 2]);
       // hand: palm + curled fingers + thumb, built pointing along -Y (wrist at origin)
       const hand = new THREE.Group();
       hand.scale.setScalar(0.72);
@@ -226,6 +263,13 @@ export class Robot {
     this.talk = 0;
     this.t = 0;
     this.blink = 0;
+    this._look = new THREE.Quaternion();     // where the head is turned, before the little gestures
+    this._gest = new THREE.Quaternion(); this._ge = new THREE.Euler();
+    this._tilt = 0; this._tiltTo = 0; this._tiltT = 2;
+    this._gaze = 0; this._gazeTo = 0; this._gazeT = 1;
+    this._happy = 0;
+    this.eyeBase = this.eyes.map((e) => e.position.clone());
+    this._lastHead = new THREE.Vector3();
   }
 
   // the sound-wave mouth: amp 0 is a calm dotted line, 1 is full speech
@@ -247,8 +291,11 @@ export class Robot {
   update(dt, leftGrip, rightGrip, lookAt) {
     this.t += dt;
     const parent = this.group.parent;
-    // idle breathing
+    // idle breathing, and a slow sway of the whole body (the hands stay on the bars: they're solved after)
     this.neck.position.y = 0.385 + Math.sin(this.t * 1.5) * 0.002;
+    this.group.rotation.z = Math.sin(this.t * 0.55) * 0.012;
+    this.group.rotation.x = Math.sin(this.t * 0.8 + 1) * 0.008;
+    const speaking = this.talk > 0;
     // head turns to look at the action
     if (lookAt && parent) {
       const target = parent.localToWorld(lookAt.clone());
@@ -256,11 +303,30 @@ export class Robot {
       const m = new THREE.Matrix4().lookAt(target, headW, UP);
       const q = new THREE.Quaternion().setFromRotationMatrix(m);
       const parentQ = this.neck.getWorldQuaternion(new THREE.Quaternion()).invert();
-      this.head.quaternion.slerp(parentQ.multiply(q), Math.min(1, dt * 2.5));
+      this._look.slerp(parentQ.multiply(q), Math.min(1, dt * 2.5));
     }
+    // little gestures on top of the look: a nod on each phrase while he speaks, a curious tilt
+    // of the head now and then, a quick bob when something delights him
+    this._tiltT -= dt;
+    if (this._tiltT <= 0) { this._tiltT = 2.5 + Math.random() * 4; this._tiltTo = (Math.random() - 0.5) * (speaking ? 0.2 : 0.34); }
+    this._tilt += (this._tiltTo - this._tilt) * Math.min(1, dt * 3);
+    const amp = this._amp || 0;
+    const nod = amp * (Math.sin(this.t * 3.1) * 0.05 + Math.sin(this.t * 7.3) * 0.018) + Math.min(1, this.cheer || 0) * Math.sin(this.t * 13) * 0.06; // (cheer: seconds of delight, set by the show)
+    this.head.quaternion.copy(this._look).multiply(this._gest.setFromEuler(this._ge.set(nod, Math.sin(this.t * 0.9) * 0.02, this._tilt)));
+    // the antenna is a little spring: it lags behind the head and quivers with his voice
+    const hw = this.head.getWorldPosition(this._hw || (this._hw = new THREE.Vector3()));
+    const A = this._ant, k = Math.min(dt, 0.033);
+    A.vx += (-(hw.x - this._lastHead.x) * 900 - A.x * 60 - A.vx * 5) * k + amp * Math.sin(this.t * 31) * 0.5 * k;
+    A.vz += (-(hw.z - this._lastHead.z) * 900 - A.z * 60 - A.vz * 5) * k;
+    A.x = THREE.MathUtils.clamp(A.x + A.vx * k, -0.6, 0.6); A.z = THREE.MathUtils.clamp(A.z + A.vz * k, -0.6, 0.6);
+    this.antenna.rotation.set(A.z, 0, -A.x - this._tilt * 0.6);
+    this._lastHead.copy(hw);
     // eyes: blink now and then, brighten and pulse while speaking
     this.blink -= dt;
     if (this.blink < -3 - Math.random() * 3) this.blink = 0.12;
+    // (sometimes a quick double blink)
+    if (this.blink > 0 && this.blink < 0.02 && !this._dbl && Math.random() < 0.02) { this._dbl = 0.16; }
+    if (this._dbl) { this._dbl -= dt; if (this._dbl <= 0) { this._dbl = 0; this.blink = 0.1; } }
     const lid = this.blink > 0 ? 0.15 : 1;
     this.talk = Math.max(0, this.talk - dt);
     const glow = (this.talk > 0 ? 1.6 + Math.abs(Math.sin(this.t * 11)) * 0.8 : 1.4) * (1 + (this.excite || 0) * 0.9);
@@ -280,7 +346,22 @@ export class Robot {
     const now = new Date();
     this.minuteHand.rotation.z = -((now.getMinutes() + now.getSeconds() / 60) / 60) * Math.PI * 2;
     this.hourHand.rotation.z = -(((now.getHours() % 12) + now.getMinutes() / 60) / 12) * Math.PI * 2;
-    this.eyes.forEach((e) => (e.scale.y = lid));
+    // the eyes are alive: they glance about, widen at a surprise, and squint into happy arcs
+    this._gazeT -= dt;
+    if (this._gazeT <= 0) { this._gazeT = 0.8 + Math.random() * 2.6; this._gazeTo = Math.random() < 0.35 ? 0 : (Math.random() - 0.5) * 2; }
+    this._gaze += (this._gazeTo - this._gaze) * Math.min(1, dt * 9);
+    this.cheer = Math.max(0, (this.cheer || 0) - dt);
+    this._happy += (Math.min(1, this.cheer * 2) - this._happy) * Math.min(1, dt * 6);
+    const wide = 1 + f * 0.25 + amp * 0.06 * Math.sin(this.t * 6.2), happy = this._happy;
+    this.eyes.forEach((e, i) => {
+      e.scale.y = lid * wide * (1 - happy * 0.5);
+      e.scale.x = 1 + happy * 0.22 + f * 0.1;
+      e.position.x = this.eyeBase[i].x + this._gaze * 0.0034;
+      e.position.y = this.eyeBase[i].y + happy * 0.003 + Math.abs(this._gaze) * -0.0006;
+    });
+    // his lights (ears, forearms, antenna, the ring round the clock) beat with his voice
+    const beat = 0.7 + 0.3 * Math.sin(this.t * 2.2) + amp * (0.5 + 0.5 * Math.abs(Math.sin(this.t * 9))) + f * 1.2;
+    this.accentMat.color.setRGB((0.42 + 0.9 * f) * beat, 0.9 * beat, (1.0 - 0.6 * f) * beat);
 
     const grips = [leftGrip, rightGrip];
     this.arms.forEach((arm, i) => {

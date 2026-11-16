@@ -2,6 +2,7 @@
 // (the room is hidden in passthrough AR, where your real desk takes its place).
 import * as THREE from "three";
 import { withRepeat } from "./assets.js";
+import { paintBackdrop } from "./backdrops.js";
 
 const KNOB_LABELS = { record: "Record", replay: "Replay", talk: "Talk", mode: "Modes", map: "Map", free: "Free Marlo", lock: "Pinch lock", hand: "One hand", menu: "Menu" };
 export const STAGE = { width: 0.86, depth: 0.42, base: 0.075 };
@@ -321,22 +322,18 @@ function wallpaperTexture() {
   const c = document.createElement("canvas");
   c.width = c.height = 256;
   const g = c.getContext("2d");
-  g.fillStyle = "#5b3a26";
-  g.fillRect(0, 0, 256, 256);
-  g.fillStyle = "rgba(240, 200, 140, 0.09)";
-  const motif = (x, y) => {
-    g.save(); g.translate(x, y);
-    for (let i = 0; i < 6; i++) {
-      g.rotate(Math.PI / 3);
-      g.beginPath(); g.ellipse(0, -22, 9, 22, 0, 0, Math.PI * 2); g.fill();
-    }
-    g.beginPath(); g.arc(0, 0, 7, 0, Math.PI * 2); g.fill();
-    g.restore();
-  };
-  motif(64, 64); motif(192, 192); motif(192, 64 - 128); motif(64, 192 + 0);
-  motif(192, 64); motif(64, 192);
-  g.strokeStyle = "rgba(0,0,0,0.12)";
-  for (let x = 0; x < 256; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke(); }
+  // a quiet damask: an ogee lattice with a small fleur at each crossing, gold on deep plum
+  const bg = g.createLinearGradient(0, 0, 256, 0); bg.addColorStop(0, "#3c2230"); bg.addColorStop(0.5, "#462838"); bg.addColorStop(1, "#3c2230");
+  g.fillStyle = bg; g.fillRect(0, 0, 256, 256);
+  g.strokeStyle = "rgba(226,184,110,0.16)"; g.lineWidth = 2.2;
+  for (const [ox, oy] of [[0, 0], [128, 128], [-128, 128], [128, -128], [256, 0], [0, 256], [256, 256], [0, -256 + 256]]) {
+    g.beginPath(); g.moveTo(ox + 64, oy - 64); g.bezierCurveTo(ox + 116, oy - 20, ox + 116, oy + 20, ox + 64, oy + 64); g.bezierCurveTo(ox + 12, oy + 20, ox + 12, oy - 20, ox + 64, oy - 64); g.stroke();
+    g.beginPath(); g.moveTo(ox + 64, oy + 64); g.bezierCurveTo(ox + 116, oy + 108, ox + 116, oy + 148, ox + 64, oy + 192); g.bezierCurveTo(ox + 12, oy + 148, ox + 12, oy + 108, ox + 64, oy + 64); g.stroke();
+  }
+  g.fillStyle = "rgba(226,184,110,0.14)";
+  const fleur = (x, y, s) => { g.save(); g.translate(x, y); g.scale(s, s); g.beginPath(); g.ellipse(0, -9, 4, 11, 0, 0, Math.PI * 2); g.fill(); for (const d of [-1, 1]) { g.beginPath(); g.ellipse(d * 8, -2, 3.4, 9, d * 0.7, 0, Math.PI * 2); g.fill(); } g.fillRect(-9, 6, 18, 3); g.beginPath(); g.ellipse(0, 13, 3, 5, 0, 0, Math.PI * 2); g.fill(); g.restore(); };
+  for (const [x, y] of [[64, 0], [192, 0], [64, 128], [192, 128], [64, 256], [192, 256], [0, 64], [128, 64], [256, 64], [0, 192], [128, 192], [256, 192]]) fleur(x, y, 1.15);
+  for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${i % 2 ? "255,230,190" : "0,0,0"},${0.03 * Math.random()})`; g.fillRect(Math.random() * 256, Math.random() * 256, 1.5, 6); }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;
@@ -393,7 +390,7 @@ export function buildRoom(assets, deskTop) {
   const floorMat = new THREE.MeshStandardMaterial({ color: 0x6b4c38, roughness: 0.7, ...withRepeat(T.stagefloor, 5, 5) });
   const walnut = new THREE.MeshStandardMaterial({ color: 0x7a4f33, roughness: 0.6, ...withRepeat(T.walnut, 1, 1) });
   const wallMat = new THREE.MeshStandardMaterial({ map: wallpaperTexture(), roughness: 0.95 });
-  wallMat.map.repeat.set(10, 4);
+  wallMat.map.repeat.set(13, 5.2);
   const add = (geo, mat, pos, parent = room) => {
     const m = new THREE.Mesh(geo, mat);
     m.position.set(...pos);
@@ -479,7 +476,15 @@ export function buildRoom(assets, deskTop) {
   add(new THREE.BoxGeometry(1.14, 0.05, 0.38), walnut, [0, 2.1, 0], shelf);
   // books on shelves (instanced)
   const count = 120;
-  const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ roughness: 0.65 }), count);
+  // (every book shares one spine design: gilt bands and a title label, tinted by its own leather colour)
+  const spine = (() => { const c = document.createElement("canvas"); c.width = 64; c.height = 256; const g = c.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, 64, 256);
+    const sh = g.createLinearGradient(0, 0, 64, 0); sh.addColorStop(0, "rgba(0,0,0,0.35)"); sh.addColorStop(0.3, "rgba(0,0,0,0)"); sh.addColorStop(0.7, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,0,0.4)"); g.fillStyle = sh; g.fillRect(0, 0, 64, 256);
+    g.fillStyle = "#f0d48a"; for (const y of [18, 26, 200, 208, 232]) g.fillRect(0, y, 64, 3);
+    g.fillStyle = "rgba(20,10,6,0.55)"; g.fillRect(8, 60, 48, 46); g.strokeStyle = "#f0d48a"; g.lineWidth = 2; g.strokeRect(8, 60, 48, 46);
+    g.fillStyle = "#f0d48a"; for (const y of [72, 82, 92]) g.fillRect(16, y, 32, 3);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ roughness: 0.6, map: spine }), count);
   const dummy = new THREE.Object3D();
   const col = new THREE.Color();
   let n = 0;
@@ -505,9 +510,14 @@ export function buildRoom(assets, deskTop) {
 
   // framed sketches on the wall
   [[-0.55, 1.75, 0], [0.15, 1.85, 1]].forEach(([x, yy, kind]) => {
-    const frame = add(new THREE.BoxGeometry(0.42, 0.52, 0.03), walnut, [x, yy, backZ + 0.02]);
+    // gilt-framed paintings of the kingdom (the same scenes the story visits)
+    const frame = add(new THREE.BoxGeometry(0.44, 0.54, 0.03), goldMat, [x, yy, backZ + 0.02]);
     frame.castShadow = true;
-    add(new THREE.PlaneGeometry(0.34, 0.44), new THREE.MeshStandardMaterial({ map: sketchTexture(kind), roughness: 0.9 }), [x, yy, backZ + 0.036]);
+    add(new THREE.BoxGeometry(0.38, 0.48, 0.032), walnut, [x, yy, backZ + 0.021]);
+    const pc = document.createElement("canvas"); pc.width = 340; pc.height = 440;
+    paintBackdrop(kind ? "ship" : "courtyard", pc.getContext("2d"), 340, 440);
+    const pt = new THREE.CanvasTexture(pc); pt.colorSpace = THREE.SRGBColorSpace;
+    add(new THREE.PlaneGeometry(0.34, 0.44), new THREE.MeshStandardMaterial({ map: pt, roughness: 0.8, emissive: 0xffffff, emissiveMap: pt, emissiveIntensity: 0.18 }), [x, yy, backZ + 0.038]);
   });
 
   return { room, desk, lampLight: bulb };

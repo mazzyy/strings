@@ -404,6 +404,16 @@ The storybook pictures and several stage backdrops (the crystal cave most of all
 - **Cost:** about 5 to 14 more draw calls per frame depending on the set; a set's textures are built the first time it is shown.
 - **Tested:** `tools/headless-tests/t58.mjs` (every set and chapter loads with no errors, the cage and flight hooks still work, the drift layer moves); `shots.mjs` and `cards.mjs` capture every set, every storybook page and every card for checking by eye. Not tested on a real headset.
 
+### Phase 27: the play view, the menu backdrop, the headset boards and a livelier robot
+- **Play view:** the desktop camera sits closer, so the puppets (not the room) fill the picture; a soft vignette rests the eye on the stage; the "Tonight" card moved to the top right, clear of the robot's face and the puppets.
+- **The room:** damask wallpaper in deep plum and gold replaces the big flower stamps; the two line sketches on the wall became gilt-framed paintings of the castle and the sea (the same painted scenes the story visits); every book on the shelf has gilt bands and a title label.
+- **Start menu:** two warm spotlights sway slowly behind the theatre, and the room shows through more.
+- **Headset boards:** the menu and speech bubbles are now red velvet with a gold rim and cream lettering, matching the theatre.
+- **Robot, detail:** a glossier shell; a ring of light round the chest clock; brass trim lines, vents with a light in each, side seams and a maker's plate on the chest; brass bands and a strip of light on the arms; brass caps on shoulders and elbows; a brass band over the helmet, dials on the ear pods, and an antenna with a lit tip.
+- **Robot, life:** the body sways a little; the head nods on each phrase while he speaks and tilts curiously now and then; the eyes glance about, double-blink, widen when he remembers something and squint into happy arcs when a show ends or a playbill is won (with a bob of the head); the antenna is a small spring that lags behind his head and quivers with his voice; all his lights beat with his speech.
+- **Tested:** `tools/headless-tests/views.mjs` captures the menu, the play view, the robot from three angles and the headset view in the emulator; `t57` and `t58` still pass. Not tested on a real headset.
+
+
 
 ---
 
