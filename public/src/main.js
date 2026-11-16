@@ -1636,7 +1636,11 @@ function playStory(story) {
   // whoever needs rescuing waits on stage (in the tower, the princess is in the cage)
   setTimeout(() => {
     if (story.captive === "princess" && !story.princess) { princessOn(true); princessDrv.pos.set(0.3, 0.5, -0.12); }
-    if (story.captive === "king") { const K = extra("king"); K.show(true); K.mode = "idle"; K.target.set(0.33, 0.5, -0.13); K.yaw = -0.5; }
+    if (story.captive === "king") { const K = extra("king"); K.show(true); K.mode = "sad"; K.target.set(0.33, 0.5, -0.13); K.yaw = -0.5; }
+    // any other character can be the captive too (Marlo, Bramble, Pegg, Grumble, Clank): waiting, sad
+    if (story.captive && !["princess", "king"].includes(story.captive) && story.captive !== guestId) {
+      const E = extra(story.captive); E.show(true); E.mode = "sad"; E.target.set(0.34, 0.5, -0.12); E.yaw = -0.6;
+    }
   }, 1800);
 }
 // story cards (in the headset, where there's no keyboard): pick a villain, who needs help,
@@ -1674,6 +1678,8 @@ function storyHappyEnding() {
   const c = chapter.captive;
   if (c === "princess") { princessOn(true); princessDrv.state = "happy"; princessDrv.pos.set(0.24, 0.5, 0.06); }
   if (c === "king") { const K = extra("king"); K.show(true); K.mode = "dance"; }
+  if (c && !["princess", "king"].includes(c) && c !== guestId) { const E = extra(c); if (!E.on) E.show(true); E.mode = "dance"; E.phase = 1.2; }
+  if (chapter.custom?.friendly) setTimeout(() => ai.react("dance", { force: true }), 800); // friends now: the villain dances too
   for (let i = 0; i < 4; i++) setTimeout(() => { confetti.burst(["grace", "drama", "slapstick"][i % 3]); sfx.play("pop", null, { volume: 0.5, rate: 0.7 + i * 0.15 }); }, 600 + i * 500);
 }
 // the "make your own story" dialog (on the flat page: the headset has no keyboard, so

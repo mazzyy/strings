@@ -72,7 +72,7 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
 - **Draw calls:** static meshes merged to keep the count down.
 
 ### Phase 3: a human voice
-- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 652 lines, about 17 MB, each loaded only when spoken). Each character has their own voice and pace:
+- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 687 lines, about 18 MB, each loaded only when spoken). Each character has their own voice and pace:
 
   | Character | Voice |
   |---|---|
@@ -294,6 +294,20 @@ Prompted by outside feedback (and a comparison with *Make with Puppet*, which re
 - **Friendship stories** now include **giving the flower** as a present (gentle hello, the flower, a dance, a bow).
 - **Fixed:** opening the menu during the opening warm-up or the storyteller could let the old opening carry on afterwards. Switching modes now cancels any opening in progress.
 - 6 new voice lines (652 in total).
+
+### Phase 21: stories that follow what you wrote
+Feedback: "Pirates captured the dragon! Sir Pip must fight the captain." showed only the pirate, because the reader took the first character as the villain and only knew two captives. The reader now understands roles:
+- **Who does what to whom:**
+  - "X captured / kidnapped / took / stole / trapped / locked up / chased / cursed Y" makes X the villain and Y the captive;
+  - "Y was captured by X" (the passive form) works too;
+  - "Sir Pip must rescue / save / free / help / find Y" marks Y as the one to rescue.
+- **Anyone can be the captive:** Marlo, Bramble, Pegg, Grumble, Clank, the princess or the King. They wait sadly on stage during the show and dance when they're freed. Titles follow the story (*"The Rescue of Marlo the Dragon"*), and the book says *"One day, the pirate captain captured Marlo the dragon."* The story cards gained these captives too.
+- **More variety from your words:**
+  - up to **two challenges** in the order you wrote them ("find the jewels and fight the robot");
+  - **extra acts** for words that ask for them: treasure (find the jewels), a gift or flower, a high five, dancing or jumping, the dark (the lantern and fireflies);
+  - **a friendship ending** when the story says they become friends or forgive each other: a bow together, and the villain dances too.
+- The spelling corrector no longer "fixes" real verb forms (it had turned "cursed" into "curse", losing the captive).
+- 35 new voice lines (687 in total): every villain capturing every possible captive, and every rescue title.
 ---
 
 ## 4. The story
@@ -425,7 +439,7 @@ There's no headset, so testing used:
 ## 9. Hosting and deployment
 
 - `main` holds the code. The site is `public/`, published by pushing `git subtree split --prefix public` to the `gh-pages` branch. Pages builds from that branch (Actions is unavailable).
-- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`, `story-cards`.
+- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`, `story-cards`, `story-roles`.
 
 ---
 

@@ -28,9 +28,20 @@ export const PLACES = {
   sky: { phrase: "high above the clouds", kw: /\b(sky|cloud|clouds|moon|stars?|fly|flying|air)\b/ },
 };
 
+// who can be captured (anyone but the villain), as named in the story
+export const CAPTIVES = {
+  princess: { name: "Princess Juniper", title: "Princess Juniper", pron: "her", kw: /\b(princess|juniper)\b/ },
+  king: { name: "the King", title: "the King", pron: "him", kw: /\b(king|queen|prince)\b/ },
+  marlo: { name: "Marlo the dragon", title: "Marlo the Dragon", pron: "him" },
+  wizard: { name: "Old Bramble the wizard", title: "Old Bramble", pron: "him" },
+  pirate: { name: "Captain Pegg", title: "Captain Pegg", pron: "him" },
+  troll: { name: "Grumble the troll", title: "Grumble the Troll", pron: "him" },
+  clank: { name: "Clank the clockwork robot", title: "Clank", pron: "him" },
+};
+
 // what happened (page two)
 const PLOT = {
-  kidnap: (V, cap) => (cap === "king" ? `One day, ${V.the} carried off the King.` : `One day, ${V.the} carried off Princess Juniper.`),
+  kidnap: (V, cap) => (cap === "king" ? `One day, ${V.the} carried off the King.` : cap === "princess" || !CAPTIVES[cap] ? `One day, ${V.the} carried off Princess Juniper.` : `One day, ${V.the} captured ${CAPTIVES[cap].name}.`),
   steal: (V) => `One day, ${V.the} stole the kingdom's treasure.`,
   lonely: (V) => `But ${V.the} was terribly lonely, and nobody ever came to visit.`,
   trouble: (V) => `One day, ${V.the} began to cause terrible trouble.`,
@@ -39,6 +50,7 @@ const PLOT = {
 const QUEST = {
   her: "Only one hero was brave enough to rescue her: Sir Pip. And so, the adventure began.",
   him: "Only one hero was brave enough to rescue him: Sir Pip. And so, the adventure began.",
+  rescue: "Only one hero was brave enough to come to the rescue: Sir Pip. And so, the adventure began.",
   treasure: "Only one hero was brave enough to win it back: Sir Pip. And so, the adventure began.",
   friend: "Only one hero thought to bring a little kindness: Sir Pip. And so, the adventure began.",
   trouble: "Only one hero was brave enough to set things right: Sir Pip. And so, the adventure began.",
@@ -58,6 +70,8 @@ const ACT = {
   flower: (V) => ({ goal: `Next, give ${V.the} the flower, as a present.`, check: "give:flower", hint: "takeFlower" }),
   dance: () => ({ goal: "Next, jump together, right on the count.", task: { type: "together", count: 3 }, hint: "together" }),
   unlock: () => ({ goal: "Next, take the key, and unlock the cage.", task: { type: "unlock" }, hint: "takeKey" }),
+  lantern: () => ({ goal: "It's dark in here. Give Sir Pip the lantern.", check: "hold:lantern", hint: "takeLantern" }),
+  fireflies: () => ({ goal: "Next, catch five fireflies with the lantern.", task: { type: "collect", count: 5, look: "firefly", needs: "lantern" }, hint: "collect" }),
   saved: () => ({ goal: "Last of all, take a bow. The kingdom is saved!", check: "bow", hint: "bow" }),
   friends: () => ({ goal: "Last of all, take a bow together. A brand new friendship!", check: "bow", hint: "bow" }),
 };
@@ -68,6 +82,15 @@ const CHALLENGE_KW = [
   ["dodge", /\b(escape|dodge|run|fire|fireballs?|zaps?|chase|lightning|cannon\w*)\b/],
   ["dance", /\b(dance|dancing|party|show|sing)\b/],
 ];
+// story words that add an act of their own
+const EXTRA_KW = {
+  find: /\b(treasure|jewels?|gems?|gold|crown|music box|loot)\b/,
+  flower: /\b(flower|flowers|gift|present|rose)\b/,
+  highfive: /\b(high five|high-five|highfive|five)\b/,
+  dance: /\b(dance|dancing|party|jump|jumping|celebrate)\b/,
+  dark: /\b(dark|darkness|night|lantern|fireflies|firefly|light)\b/,
+};
+const FRIEND_END = /\b(friend|friends|forgive\w*|kind|kindness|hug|peace|make up|made up|sorry|befriend)\b/;
 const DEFAULT_CHALLENGE = { marlo: "dodge", troll: "riddle", pirate: "duel", wizard: "spell", clank: "dodge" };
 const DEFAULT_PLACE = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower" };
 const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -77,7 +100,12 @@ const VOCAB = ("dragon marlo troll ogre giant pirate pirates captain wizard witc
   "castle courtyard palace kingdom village forest woods jungle ship ocean island bridge river tower clock cave cavern " +
   "mountain dungeon sky cloud clouds moon stars princess juniper prince king queen kidnap kidnapped captured carried " +
   "stole steal stolen trapped prisoner rescue treasure jewels gems gold crown lonely friend friends kindness befriend " +
-  "fight duel battle defeat sword riddle trick clever puzzle spell magic curse escape dodge fireballs chase dance party").split(" ");
+  "fight duel battle defeat sword riddle trick clever puzzle spell magic curse escape dodge fireballs chase dance party " +
+  "captured capture locked caught grabbed snatched imprisoned flower present lantern fireflies forgive " +
+  // (real verb forms, so they're never "corrected" into something else)
+  "cursed curses chased chases attacked attacks captures kidnaps kidnapping steals stealing rescued rescues saved saves " +
+  "frees freed helps helped found finds dances danced dancing jumped jumps fought fights fighting battles hides hidden " +
+  "takes taken locks trapping carries carried dragons trolls robots wizards witches kings friendly").split(" ");
 function editDistance(a, b) {
   // (Damerau: a swap of neighbouring letters, "lonley", counts as one slip)
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
@@ -98,52 +126,118 @@ function correct(word) {
   return best;
 }
 
-// read a story written in plain words
+// read a story written in plain words: who does what to whom
+const CHAR_KW = { ...Object.fromEntries(Object.entries(VILLAINS).map(([k, v]) => [k, v.kw])), princess: CAPTIVES.princess.kw, king: CAPTIVES.king.kw };
+const CAPTURE = /\b(captur\w*|kidnap\w*|took|taken|take|takes|stole|steal\w*|stolen|trapp?\w*|locked|locks|lock|caught|catch\w*|carried|carry|carries|imprison\w*|grabb?\w*|snatch\w*|hid|hidden|chased|attack\w*|cursed)\b/g;
+const RESCUE = /\b(rescue\w*|save\w*|saving|free|frees|freed|help\w*|find|finds|found)\b/g;
+function mentionsIn(sentence) {
+  const out = [];
+  for (const [id, re] of Object.entries(CHAR_KW)) {
+    const g = new RegExp(re.source, "g");
+    let m; while ((m = g.exec(sentence))) out.push({ id, i: m.index, end: m.index + m[0].length });
+  }
+  return out.sort((a, b) => a.i - b.i);
+}
+function rolesIn(t) {
+  let villain = null, captive = null;
+  for (const sentence of t.split(/[.!?;]+/)) {
+    const ms = mentionsIn(sentence);
+    if (!ms.length) continue;
+    let m; const cap = new RegExp(CAPTURE.source, "g");
+    while ((m = cap.exec(sentence))) {
+      const v = m.index, after = sentence.slice(m.index + m[0].length);
+      const before = ms.filter((x) => x.end <= v), next = ms.filter((x) => x.i > v);
+      const passive = /\b(was|were|is|are|been|got|get|gets|being)\s+(\w+\s+)?$/.test(sentence.slice(0, v)) || /^\s*(away\s+)?by\b/.test(after);
+      if (passive) {
+        // "the dragon was captured by the pirates"
+        const agent = next.find((x) => VILLAINS[x.id]);
+        if (!captive && before.length) captive = before[before.length - 1].id;
+        if (!villain && agent) villain = agent.id;
+      } else {
+        // "the pirates captured the dragon"
+        const subj = [...before].reverse().find((x) => VILLAINS[x.id]);
+        if (!villain && subj) villain = subj.id;
+        if (!captive && next.length && next[0].id !== villain) captive = next[0].id;
+      }
+    }
+    const res = new RegExp(RESCUE.source, "g");
+    while ((m = res.exec(sentence))) {
+      const obj = ms.find((x) => x.i > m.index && x.id !== villain);
+      if (!captive && obj) captive = obj.id; // "Sir Pip must rescue the wizard"
+    }
+  }
+  return { villain, captive };
+}
 export function parseStory(text) {
-  const t = ` ${String(text || "").toLowerCase().replace(/[a-z]+/g, correct)} `;
+  const raw = String(text || "");
+  const t = ` ${raw.toLowerCase().replace(/[a-z]+/g, correct)} `;
   const find = (table) => Object.entries(table).map(([k, v]) => [k, t.search(v.kw)]).filter(([, i]) => i >= 0).sort((a, b) => a[1] - b[1]).map(([k]) => k);
-  const villains = find(VILLAINS);
-  const villain = villains[0] || "marlo";
+  let { villain, captive } = rolesIn(t);
   const places = find(PLACES);
+  // no villain named? the first villain-type character who isn't the captive, or whoever lives there
+  if (!villain) villain = mentionsIn(t).map((x) => x.id).find((id) => VILLAINS[id] && id !== captive) || null;
+  if (!villain) villain = Object.entries({ cave: "marlo", bridge: "troll", ship: "pirate", forest: "wizard", tower: "clank" }).find(([pl]) => pl === places[0])?.[1] || (captive === "marlo" ? "pirate" : "marlo");
+  if (captive === villain) captive = null;
   const place = places[0] || DEFAULT_PLACE[villain];
-  const captive = /\b(princess|juniper)\b/.test(t) ? "princess" : /\b(king|queen|prince)\b/.test(t) ? "king" : null;
   let plot;
-  if (captive && /\b(kidnap\w*|took|taken|captur\w*|carried|stole|steal\w*|locked|trapped|prisoner|rescue|save|free)\b/.test(t)) plot = "kidnap";
-  else if (/\b(treasure|jewels?|gems?|gold|crown|music box|stole|steal\w*|thief|loot)\b/.test(t)) plot = "steal";
+  if (captive) plot = "kidnap";
+  else if (EXTRA_KW.find.test(t) || /\b(stole|steal\w*|thief)\b/.test(t)) plot = "steal";
   else if (/\b(lonely|sad|friend\w*|kind|kindness|befriend|hug|cry\w*|alone)\b/.test(t)) plot = "lonely";
-  else plot = captive ? "kidnap" : "trouble";
-  let challenge = CHALLENGE_KW.find(([, re]) => re.test(t))?.[0] || DEFAULT_CHALLENGE[villain];
-  if (challenge === "riddle" && villain !== "troll") challenge = "spell"; // (the riddles are the troll's)
+  else plot = "trouble";
+  // the challenges, in the order you wrote them (up to two)
+  const asked = CHALLENGE_KW.map(([k, re]) => [k, t.search(re)]).filter(([, i]) => i >= 0).sort((a, b) => a[1] - b[1]).map(([k]) => k);
+  let challenges = asked.filter((c) => c !== "dance").slice(0, 2).map((c) => (c === "riddle" && villain !== "troll" ? "spell" : c));
+  challenges = [...new Set(challenges)];
+  if (!challenges.length) challenges = [DEFAULT_CHALLENGE[villain]];
+  const extras = Object.entries(EXTRA_KW).filter(([, re]) => re.test(t)).map(([k]) => k);
   const twist = /\b(night|midnight|dark)\b/.test(t) ? "night" : null;
-  return { villain, place, captive: plot === "kidnap" ? captive || "princess" : null, plot, challenge, twist, text: String(text || "").trim() };
+  const friendly = FRIEND_END.test(t);
+  return { villain, place, captive, plot, challenge: challenges[0], challenges, extras, friendly, twist, text: raw.trim() };
 }
 
 // a full chapter (storybook pages + acts) from a parsed story
 export function buildStory(p) {
   const V = VILLAINS[p.villain];
-  const title = `Sir Pip and ${V.title}`;
+  const C = p.captive ? CAPTIVES[p.captive] : null;
+  const title = C ? `The Rescue of ${C.title}` : `Sir Pip and ${V.title}`;
   const pages = [
     `Once upon a time, ${V.np} lived ${PLACES[p.place].phrase}.`,
     PLOT[p.plot](V, p.captive),
-    p.plot === "kidnap" ? (p.captive === "king" ? QUEST.him : QUEST.her) : p.plot === "steal" ? QUEST.treasure : p.plot === "lonely" ? QUEST.friend : QUEST.trouble,
+    p.plot === "kidnap" ? (p.captive === "princess" ? QUEST.her : p.captive === "king" ? QUEST.him : QUEST.rescue) : p.plot === "steal" ? QUEST.treasure : p.plot === "lonely" ? QUEST.friend : QUEST.trouble,
   ];
   const villainFig = p.villain;
   const art = [
     { set: p.place, cast: [[villainFig, 0.5]] },
-    { set: p.place, night: p.plot !== "lonely", cast: p.captive ? [[villainFig, 0.32], [p.captive, 0.7, true]] : p.plot === "steal" ? [[villainFig, 0.4], ["musicbox", 0.7]] : [[villainFig, 0.5]] },
+    { set: p.place, night: p.plot !== "lonely", cast: p.captive ? [[villainFig, 0.32], [p.captive === "marlo" ? "marlo" : p.captive, 0.7, true]] : p.plot === "steal" ? [[villainFig, 0.4], ["musicbox", 0.7]] : [[villainFig, 0.5]] },
     { set: "courtyard", cast: [["pip", 0.5]] },
   ];
   const acts = [];
+  const ex = new Set(p.extras || []);
   if (p.plot === "lonely") {
-    acts.push(ACT.gentle(V), ACT.flower(V), ACT.dance(), ACT.friends());
+    acts.push(ACT.gentle(V));
+    if (ex.has("dark")) acts.push(ACT.lantern(), ACT.fireflies());
+    acts.push(ACT.flower(V));
+    acts.push(ex.has("highfive") ? ACT.highfive(V) : ACT.dance());
+    acts.push(ACT.friends());
   } else {
+    if (ex.has("dark")) acts.push(ACT.lantern());
     acts.push(ACT.meet(V));
-    if (p.challenge === "duel") acts.push(ACT.sword(), ACT.duel());
-    else acts.push(ACT[p.challenge](V));
-    if (p.plot === "steal") acts.push(ACT.find());
+    for (const c of p.challenges || [p.challenge]) {
+      if (c === "duel") acts.push(ACT.sword(), ACT.duel());
+      else acts.push(ACT[c](V));
+    }
+    if (ex.has("dark") && acts.length < 4) acts.push(ACT.fireflies());
+    if (p.plot === "steal" || (ex.has("find") && acts.length < 5)) acts.push(ACT.find());
     if (p.captive === "princess" && p.place === "tower") acts.push(ACT.unlock());
-    acts.push(ACT.saved());
+    // making friends at the end: the gift, the high five or the dance you wrote about
+    if (p.friendly) {
+      if (ex.has("flower")) acts.push(ACT.flower(V));
+      if (ex.has("highfive")) acts.push(ACT.highfive(V));
+      if (ex.has("dance") || (!ex.has("flower") && !ex.has("highfive"))) acts.push(ACT.dance());
+    } else if (ex.has("dance") && acts.length < 5) acts.push(ACT.dance());
+    acts.push(p.friendly ? ACT.friends() : ACT.saved());
   }
+  while (acts.length > 6) acts.splice(acts.length - 2, 1); // (a show is never too long)
   return {
     id: "custom", custom: p, set: p.place, guest: p.villain, title,
     intro: `Tonight's story: ${title}.`,
@@ -160,12 +254,13 @@ export function allStoryLines() {
   const out = new Set();
   for (const V of Object.values(VILLAINS)) {
     for (const P of Object.values(PLACES)) out.add(`Once upon a time, ${V.np} lived ${P.phrase}.`);
-    out.add(PLOT.kidnap(V, "princess")); out.add(PLOT.kidnap(V, "king"));
+    for (const c of Object.keys(CAPTIVES)) out.add(PLOT.kidnap(V, c));
     out.add(PLOT.steal(V)); out.add(PLOT.lonely(V)); out.add(PLOT.trouble(V));
     out.add(`Tonight's story: Sir Pip and ${V.title}.`);
     for (const a of Object.values(ACT)) out.add(a(V).goal);
   }
   Object.values(QUEST).forEach((l) => out.add(l));
+  for (const C of Object.values(CAPTIVES)) out.add(`Tonight's story: The Rescue of ${C.title}.`);
   out.add("Well dodged! They're all out of puff.");
   return [...out];
 }
@@ -174,7 +269,7 @@ export function allStoryLines() {
 // from cards instead of written.
 export const CARD_SECTIONS = [
   { id: "villain", title: "Villain", items: [["marlo", "Marlo"], ["clank", "Clank"], ["troll", "Grumble"], ["pirate", "Pegg"], ["wizard", "Bramble"]] },
-  { id: "captive", title: "Who needs help", items: [["princess", "The princess"], ["king", "The King"], ["treasure", "The treasure"], ["none", "Nobody"]] },
+  { id: "captive", title: "Who needs help", items: [["princess", "The princess"], ["king", "The King"], ["marlo", "Marlo"], ["wizard", "Bramble"], ["troll", "Grumble"], ["treasure", "The treasure"], ["none", "Nobody"]] },
   { id: "place", title: "Setting", items: [["cave", "Dragon cave"], ["ship", "Pirate ship"], ["tower", "Clock tower"], ["forest", "Forest"], ["bridge", "Troll bridge"], ["courtyard", "Castle"], ["sky", "Night sky"]] },
   { id: "challenge", title: "Challenge", items: [["dodge", "Dodge attacks"], ["duel", "Sword duel"], ["riddle", "Riddle"], ["spell", "Magic spell"], ["dance", "Dance-off"], ["befriend", "Make friends"]] },
   { id: "twist", title: "Twist", items: [["none", "No twist"], ["moon", "Moon gravity"], ["fragile", "Fragile strings"], ["night", "At night"]] },
@@ -182,11 +277,11 @@ export const CARD_SECTIONS = [
 ];
 export function storyFromCards(c) {
   const villain = c.villain || "marlo";
-  let plot = c.captive === "princess" || c.captive === "king" ? "kidnap" : c.captive === "treasure" ? "steal" : "trouble";
+  let plot = CAPTIVES[c.captive] && c.captive !== villain ? "kidnap" : c.captive === "treasure" ? "steal" : "trouble";
   let challenge = c.challenge || DEFAULT_CHALLENGE[villain];
   if (challenge === "befriend") { plot = "lonely"; challenge = DEFAULT_CHALLENGE[villain]; }
   if (challenge === "riddle" && villain !== "troll") challenge = "spell"; // (the riddles are the troll's)
-  return { villain, place: c.place || DEFAULT_PLACE[villain], captive: plot === "kidnap" ? c.captive : null, plot, challenge, twist: c.twist && c.twist !== "none" ? c.twist : null, text: "" };
+  return { villain, place: c.place || DEFAULT_PLACE[villain], captive: plot === "kidnap" ? c.captive : null, plot, challenge, challenges: [challenge], extras: [], friendly: plot === "lonely", twist: c.twist && c.twist !== "none" ? c.twist : null, text: "" };
 }
 
 export const STORY_EXAMPLES = [
