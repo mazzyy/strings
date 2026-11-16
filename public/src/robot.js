@@ -30,7 +30,8 @@ export class Robot {
     this.irisMat = new THREE.MeshBasicMaterial({ color: 0x3fc8f0, toneMapped: false, transparent: true, opacity: 0.55 });
     const visorMat = new THREE.MeshPhysicalMaterial({ color: 0x06080b, roughness: 0.16, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.12, envMapIntensity: 0.6 });
     const glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.04, metalness: 0, transparent: true, opacity: 0.16, clearcoat: 1, depthWrite: false });
-    this.voiceMat = new THREE.MeshBasicMaterial({ color: 0x4fe0ff, toneMapped: false, side: THREE.DoubleSide });
+    this.voiceMat = new THREE.MeshBasicMaterial({ color: 0x4fe0ff, toneMapped: false });
+    this.haloMat = new THREE.MeshBasicMaterial({ color: 0x2fa8e0, toneMapped: false, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false });
     this.accentMat = new THREE.MeshBasicMaterial({ color: 0x8fe6ff, toneMapped: false });
     const add = (parent, geo, mat, pos, rot) => {
       const o = new THREE.Mesh(geo, mat);
@@ -107,60 +108,84 @@ export class Robot {
     add(this.neck, new THREE.CylinderGeometry(0.02, 0.024, 0.075, 18), mech, [0, 0.035, 0]);
     for (let i = 0; i < 5; i++) add(this.neck, new THREE.TorusGeometry(0.023 - i * 0.0006, 0.0055, 8, 24), i % 2 ? dark : joint, [0, 0.008 + i * 0.014, 0], [Math.PI / 2, 0, 0]);
 
-    // head: a smooth porcelain dome
+    // head: a wide, smooth helmet with a big screen for a face
     this.head = new THREE.Group();
     this.head.position.set(0, 0.075, 0.005);
     this.neck.add(this.head);
-    const skull = add(this.head, new THREE.SphereGeometry(0.075, 48, 36), shell, [0, 0.078, -0.004]);
-    skull.scale.set(0.97, 1.0, 0.95);
-    // the face is a screen: a big glossy black pane set into a raised white rim
-    // (a rounded oval patch that hugs the curve of the head: a disc projected onto the shell)
-    const surfaceZ = (r, x, y) => -0.004 + r * 0.95 * Math.sqrt(Math.max(0, 1 - (x / (r * 0.97)) ** 2 - ((y - 0.078) / r) ** 2));
-    const oval = (rx, ry, cy, r, mat) => {
-      const g = new THREE.RingGeometry(0.0001, 1, 72, 10);
-      const pos = g.attributes.position;
-      for (let i = 0; i < pos.count; i++) { const x = pos.getX(i) * rx, y = pos.getY(i) * ry + cy; pos.setXYZ(i, x, y, surfaceZ(r, x, y)); }
-      g.computeVertexNormals();
-      const m = add(this.head, g, mat); m.castShadow = false; return m;
-    };
-    const SCREEN_R = 0.0768;
-    oval(0.0605, 0.0525, 0.0735, 0.0753, dark);       // a fine seam round the rim
-    oval(0.0585, 0.0505, 0.0735, 0.0760, face);       // the white rim
-    oval(0.0495, 0.0415, 0.0735, SCREEN_R, visorMat); // the screen
-    const onScreen = (x, y) => surfaceZ(SCREEN_R, x, y) + 0.0006;
-    // eyes: two tall glowing ovals (they blink, and flash gold when the guest remembers something)
-    const ovalG = new THREE.CircleGeometry(0.0088, 40); ovalG.scale(0.66, 1, 1);
+    const HC = 0.08;                                   // the helmet's centre height
+    const skull = add(this.head, new THREE.SphereGeometry(0.075, 56, 40), shell, [0, HC, -0.006]);
+    skull.scale.set(1.07, 0.95, 0.98);                 // wider than tall, like a helmet
+
+    // the face frame and screen: a rounded-square oval ("squircle"), bent to a gentle curve
+    const FY = 0.0765, R = 0.115, Z0 = 0.0775;          // face centre, curvature, front of the frame
+    const sq = (A, B, t, n = 2.6) => { const c = Math.cos(t), s = Math.sin(t); return [A * Math.sign(c) * Math.abs(c) ** (2 / n), B * Math.sign(s) * Math.abs(s) ** (2 / n)]; };
+    const bend = (x, y) => -(x * x + (y - FY) * (y - FY)) / (2 * R); // how far the curve falls back
+    const outline = (A, B, n) => { const pts = []; for (let i = 0; i < 96; i++) pts.push(sq(A, B, (i / 96) * Math.PI * 2, n)); return pts; };
+    // the raised white frame: a smooth rounded rim swept round the squircle (a profile from the
+    // screen's edge, up over a soft rounded top, and back down into the helmet), bent onto the curve
+    const OUT = [0.0625, 0.0545], IN = [0.0505, 0.0425];
+    const PROF = [[0, -0.0055], [0.015, -0.0028], [0.06, -0.0004], [0.16, 0.0014], [0.32, 0.0024], [0.5, 0.0027], [0.68, 0.0024], [0.84, 0.0014], [0.94, -0.0004], [0.985, -0.003], [1, -0.007], [1.004, -0.055]]; // (the back wall runs deep, so it always meets the shell)
+    const SEG = 160, frameG = new THREE.BufferGeometry(), fp = [], fi = [];
+    for (let i = 0; i <= SEG; i++) {
+      const t = (i / SEG) * Math.PI * 2, [ix, iy] = sq(IN[0], IN[1], t, 2.6), [ox, oy] = sq(OUT[0], OUT[1], t, 2.7);
+      for (const [k, dz] of PROF) { const x = ix + (ox - ix) * k, y = iy + (oy - iy) * k + FY; fp.push(x, y, Z0 + dz + bend(x, y)); }
+    }
+    const NP = PROF.length;
+    for (let i = 0; i < SEG; i++) for (let j = 0; j < NP - 1; j++) { const a = i * NP + j, b = (i + 1) * NP + j; fi.push(a, b, a + 1, b, b + 1, a + 1); }
+    frameG.setAttribute("position", new THREE.Float32BufferAttribute(fp, 3));
+    frameG.setIndex(fi);
+    frameG.computeVertexNormals();
+    const frame = add(this.head, frameG, face); frame.castShadow = false;
+    // the screen: black glass, recessed a little inside the frame
+    const scrG = new THREE.RingGeometry(0.0001, 1, 128, 14);
+    { const p = scrG.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const u = p.getX(i), v = p.getY(i), r = Math.hypot(u, v), t = Math.atan2(v, u);
+        const [x0, y0] = sq(IN[0] + 0.0008, IN[1] + 0.0008, t, 2.6), x = x0 * r, y = y0 * r + FY;
+        p.setXYZ(i, x, y, Z0 - 0.005 + bend(x, y));
+      }
+      scrG.computeVertexNormals(); }
+    add(this.head, scrG, visorMat).castShadow = false;
+    // a point on the screen, and which way it faces (for the eyes and the mouth)
+    const onScreen = (x, y) => Z0 - 0.005 + bend(x, y) + 0.0006;
+    const faceTilt = (x, y) => [-Math.atan((y - FY) / R), Math.atan(x / R)];
+
+    // eyes: big tall glowing ovals with a soft cyan glow (they blink, and flash gold on a memory)
+    const ovalG = new THREE.CircleGeometry(0.0102, 48); ovalG.scale(0.62, 1, 1);
     this.eyes = [-1, 1].map((s) => {
       const eye = new THREE.Group();
-      const x = s * 0.0205, y = 0.0855;
+      const x = s * 0.0185, y = FY + 0.0075;
+      const [rx, ry] = faceTilt(x, y);
       eye.position.set(x, y, onScreen(x, y));
-      eye.rotation.set(-0.08, s * 0.29, 0);
+      eye.rotation.set(rx, ry, 0);
       this.head.add(eye);
-      const o = add(eye, ovalG, this.eyeMat, [0, 0, 0.0002]); o.castShadow = false;
-      const rim = add(eye, ovalG, this.irisMat, [0, 0, 0]); rim.scale.setScalar(1.18); rim.castShadow = false; // (a soft edge)
+      add(eye, ovalG, this.eyeMat, [0, 0, 0.0003]).castShadow = false;
+      const glow = add(eye, ovalG, this.irisMat, [0, 0, 0.0001]); glow.scale.setScalar(1.1); glow.castShadow = false;
+      for (const [k, z] of [[1.3, -0.00005], [1.6, -0.0001]]) { const halo = add(eye, ovalG, this.haloMat, [0, 0, z]); halo.scale.setScalar(k); halo.castShadow = false; }
       return eye;
     });
-    // the mouth: sound-wave bars that move with his voice (one instanced mesh)
-    this.waveN = 19;
-    this.mouthY = 0.0575;
-    const bars = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), this.voiceMat, this.waveN);
-    bars.position.set(0, this.mouthY, onScreen(0, this.mouthY) + 0.0002);
-    bars.rotation.x = 0.27;
+    // the mouth: a wide cyan sound wave that moves with his voice (one instanced mesh)
+    this.waveN = 21;
+    this.mouthY = FY - 0.0235;
+    const bars = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.5, 1, 2, 6), this.voiceMat, this.waveN);
+    const [mx] = faceTilt(0, this.mouthY);
+    bars.position.set(0, this.mouthY, onScreen(0, this.mouthY) + 0.0003);
+    bars.rotation.x = mx;
     bars.castShadow = false; bars.frustumCulled = false;
     this.head.add(bars);
     this.mouth = bars;
     this._bm = new THREE.Matrix4(); this._bq = new THREE.Quaternion(); this._bs = new THREE.Vector3(); this._bp = new THREE.Vector3();
     this._setWave(0);
-    // a little cyan light on the brow
-    add(this.head, new THREE.CapsuleGeometry(0.0016, 0.007, 4, 8), this.accentMat, [0, 0.1385, 0.035], [0.5, 0, Math.PI / 2]).castShadow = false;
     this.mouthDark = dark;
+    // a short cyan light on the shell above the frame, and two panel seams rising from its corners
+    add(this.head, new THREE.CapsuleGeometry(0.0017, 0.009, 4, 10), this.accentMat, [0, HC + 0.0565, 0.0415], [0.95, 0, Math.PI / 2]).castShadow = false;
 
-    // ear pods: rounded white cups with a cyan light ring
+    // ear pods: tall rounded cups at the sides, with a cyan light strip on the front edge
     for (const s of [-1, 1]) {
-      const pod = add(this.head, new THREE.SphereGeometry(0.024, 28, 18), face, [s * 0.066, 0.078, -0.004]);
-      pod.scale.set(0.55, 1, 1);
-      add(this.head, new THREE.TorusGeometry(0.0205, 0.0016, 8, 36), this.accentMat, [s * 0.0735, 0.078, -0.004], [0, Math.PI / 2, 0]).castShadow = false;
-      add(this.head, new THREE.CylinderGeometry(0.0145, 0.0145, 0.004, 28), shell, [s * 0.0782, 0.078, -0.004], [0, 0, Math.PI / 2]);
+      const pod = add(this.head, new THREE.SphereGeometry(0.03, 32, 24), face, [s * 0.075, HC - 0.004, -0.004]);
+      pod.scale.set(0.42, 1.0, 0.78);
+      const strip = add(this.head, new THREE.CapsuleGeometry(0.0018, 0.03, 4, 10), this.accentMat, [s * 0.082, HC - 0.004, 0.0195], [0, 0, 0]);
+      strip.rotation.y = s * 0.5; strip.castShadow = false;
     }
 
     // arms
@@ -199,13 +224,14 @@ export class Robot {
 
   // the sound-wave mouth: amp 0 is a calm dotted line, 1 is full speech
   _setWave(amp) {
-    const n = this.waveN, gap = 0.0021, w = 0.0012;
+    const n = this.waveN, gap = 0.0029, w = 0.0015;
     for (let i = 0; i < n; i++) {
       const u = (i - (n - 1) / 2) / ((n - 1) / 2);            // -1 .. 1
       const env = Math.pow(Math.cos(u * Math.PI / 2), 1.6);    // tallest in the middle
       const wob = 0.35 + 0.65 * Math.abs(Math.sin(this.t * (9 + i * 1.7) + i * 2.3));
-      const h = Math.max(w, 0.0012 + env * amp * wob * 0.0155);
-      this._bm.compose(this._bp.set(u * ((n - 1) / 2) * gap, 0, 0), this._bq.identity(), this._bs.set(w, h, 1));
+      // (the unit capsule is 1 wide and 2 tall: scaled to w by h; at rest every bar is a round dot)
+      const h = Math.max(w, 0.0016 + env * amp * wob * 0.0175);
+      this._bm.compose(this._bp.set(u * ((n - 1) / 2) * gap, 0, 0), this._bq.identity(), this._bs.set(w, h / 2, w * 0.3));
       this.mouth.setMatrixAt(i, this._bm);
     }
     this.mouth.instanceMatrix.needsUpdate = true;

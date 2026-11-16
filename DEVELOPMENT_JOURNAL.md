@@ -353,6 +353,12 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
   - **two tall glowing oval eyes** (pale cyan-white with a cyan edge) that blink, and turn gold for a moment when the guest remembers something;
   - **a sound-wave mouth:** 19 bars, tallest in the middle and tapering to dots, that rise and ripple with his voice and settle into a calm dotted line when he's quiet (one instanced mesh, one draw call).
   - **Head:** ear pods with cyan light rings, and a small cyan light on the brow.
+- **The screen face, rebuilt to better proportions** (compared against a style reference several times):
+  - a **wide helmet** (wider than tall);
+  - a **large rounded-square black glass screen**, about two thirds of the head's width, recessed inside a **thick, smooth, raised white frame**. The frame is swept round a squircle with a soft rounded cross-section and bent onto a gentle curve; its back wall runs deep so it meets the shell from every angle. An earlier extruded version showed facets;
+  - **big tall glowing oval eyes** with a soft layered glow;
+  - a **wide cyan sound-wave mouth** of 21 rounded bars that ripple with his voice and rest as a row of dots;
+  - **tall rounded ear pods** with a vertical cyan light strip on the front edge, and a short cyan light on the shell above the frame.
 ---
 
 ## 4. The story
