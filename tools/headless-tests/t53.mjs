@@ -1,0 +1,32 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const logs = [];
+page.on("pageerror", e => logs.push("pageerror " + e.message + " " + (e.stack || "").split("\n")[1]));
+const S = (fn, a) => page.evaluate(fn, a);
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/");
+await page.waitForSelector("#begin", { timeout: 90000 });
+await page.waitForTimeout(2500);
+await page.screenshot({ path: `${out}/menu-start.png` });
+await page.click('label.opt:has(#pinchlock)');
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/menu-start2.png`, clip: { x: 340, y: 560, width: 760, height: 160 } });
+console.log("pinch lock toggled:", await S(() => document.getElementById("pinchlock").checked));
+// mid-game
+await page.click("#freeplay");
+await page.waitForTimeout(1500);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/menu-mid.png` });
+// the robot's neck
+await page.keyboard.press("Escape");
+await S(() => { const s = window.strings, V = s.camera.position.constructor; const h = s.robot.head.getWorldPosition(new V()); s.camera.position.set(h.x + 0.25, h.y + 0.05, h.z + 0.75); s.camera.lookAt(h.x, h.y + 0.02, h.z); });
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/neck.png`, clip: { x: 420, y: 150, width: 600, height: 600 } });
+console.log(logs.join("\n") || "no errors");
+await browser.close();

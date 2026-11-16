@@ -1,0 +1,16 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader","--autoplay-policy=no-user-gesture-required"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+page.on("pageerror", e => console.log("pageerror", e.message)); page.on("console", m => { if (m.type()==="error") console.log("console", m.text()); });
+let narrateCalls = 0; page.on("response", r => { if (r.url().match(/api\/narrate|\.mp3/)) { narrateCalls++; console.log(r.status(), r.url().replace("http://localhost:8090","")); } });
+await page.goto("http://localhost:8090/");
+await page.waitForTimeout(2500);
+await page.keyboard.press("t");
+await page.waitForTimeout(22000);
+const out = await page.evaluate(() => ({ source: document.getElementById("st-narrator").textContent, story: window.strings.narrator.story }));
+console.log(JSON.stringify(out, null, 1), "calls", narrateCalls);
+await page.screenshot({ path: `${process.argv[2]}/qwen.png` });
+await browser.close();

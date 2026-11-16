@@ -1,0 +1,34 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const logs = [];
+page.on("pageerror", e => logs.push("pageerror " + e.message + " " + (e.stack || "").split("\n")[1]));
+const S = (fn, a) => page.evaluate(fn, a);
+const waitFor = (fn, a, ms = 120000) => page.waitForFunction(fn, a, { timeout: ms }).catch(() => "timeout");
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/");
+await page.waitForSelector("#begin", { timeout: 90000 });
+await page.click("#begin");
+await waitFor(() => window.strings?.intro.on, null, 20000);
+await waitFor(() => !window.strings.camTween.on, null, 60000);
+await page.waitForTimeout(1000);
+await page.screenshot({ path: `${out}/n-intro.png` });
+await waitFor(() => window.strings.book.open, null, 120000);
+await page.click("#storybook .skip");
+await S(() => { const s = window.strings; s.raiseCurtain(); s.storyMap.state.unlocked = 7; });
+// the flight pose
+await S(() => { const s = window.strings; s.changeScene(s.storyMap.places.find(p => p.id === "sky")); });
+await waitFor(() => window.strings.book.open && window.strings.book.chapter.id === "sky", null, 60000);
+await S(() => window.strings.book.finish());
+await waitFor(() => window.strings.chapter.id === "sky" && window.strings.show.state === "intro");
+await S(() => { const s = window.strings; s.sim.sticky = true; s.sim._hasMouse = false; s.setFlight(true); s.sim.mainPos.y = 0.62; });
+for (let i = 0; i < 20; i++) { await S(() => { window.strings.sim.mainPos.x += 0.012; }); await page.waitForTimeout(120); }
+await page.waitForTimeout(800);
+await page.screenshot({ path: `${out}/n-fly.png` });
+console.log("flight", await S(() => { const m = window.strings.marlo; const up = m.get("neck").clone().sub(m.get("pelvis")).normalize(); return { flying: window.strings.flying, spineUpY: +up.y.toFixed(2), headAhead: +(m.get("head").distanceTo(m.get("pelvis"))).toFixed(3) }; }));
+console.log(logs.slice(0, 6).join("\n") || "no errors");
+await browser.close();

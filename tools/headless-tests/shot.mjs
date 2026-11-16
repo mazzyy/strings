@@ -1,0 +1,18 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const logs = [];
+page.on("console", m => { if (["error","warning"].includes(m.type()) && !m.text().includes("GL Driver")) logs.push(`[${m.type()}] ${m.text()}`); });
+page.on("pageerror", e => logs.push("pageerror " + e.message));
+await page.goto("http://localhost:8080/" + (process.argv[3] || ""));
+await page.waitForTimeout(6000);
+await page.evaluate(() => { document.getElementById("help")?.classList.add("collapsed"); });
+await page.screenshot({ path: `${process.argv[2]}/v-0.png` });
+await page.keyboard.press("t");
+await page.waitForTimeout(6500);
+await page.screenshot({ path: `${process.argv[2]}/v-1.png` });
+console.log(logs.slice(0, 20).join("\n"));
+await browser.close();

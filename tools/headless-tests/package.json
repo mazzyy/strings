@@ -1,0 +1,10 @@
+{
+  "name": "strings-headless-tests",
+  "version": "1.0.0",
+  "description": "Headless playwright checks for Strings (run with the local server on :8095; see CLAUDE.md)",
+  "dependencies": {
+    "iwer": "^2.8.0",
+    "playwright-core": "^1.48.2"
+  },
+  "private": true
+}

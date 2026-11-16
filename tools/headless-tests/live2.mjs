@@ -1,0 +1,24 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const errs = [], bad = [];
+page.on("pageerror", e => errs.push(e.message));
+page.on("console", m => { if (m.type() === "error") errs.push(m.text()); });
+page.on("response", r => { if (r.status() >= 400 && !r.url().includes("/api/")) bad.push(r.status() + " " + r.url()); });
+await page.goto("https://mazzyy.github.io/strings/");
+await page.waitForSelector("#begin", { timeout: 90000 });
+await page.click("#begin");
+await page.waitForFunction(() => window.strings?.hints.current === "cord", null, { timeout: 60000 });
+const pt = await page.evaluate(() => { const s = window.strings; const v = s.stageRoot.localToWorld(s.cord.handle()).project(s.camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; });
+await page.mouse.move(pt.x, pt.y); await page.mouse.down();
+for (let i = 1; i <= 12; i++) { await page.mouse.move(pt.x, pt.y + i * 10); await page.waitForTimeout(40); }
+await page.mouse.up();
+await page.waitForFunction(() => window.strings.show.state === "intro", null, { timeout: 90000 });
+await page.waitForTimeout(3000);
+const info = await page.evaluate(() => ({ scene: window.strings.show.scene.title, narrator: document.getElementById("st-narrator").textContent, voiceLines: Object.keys(window.strings.narrator.manifest).length, talkHidden: document.getElementById("talk").hidden }));
+await page.screenshot({ path: process.argv[2] });
+console.log(JSON.stringify({ info, errors: errs.slice(0, 5), failed: bad.slice(0, 5) }));
+await browser.close();

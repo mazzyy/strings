@@ -1,0 +1,34 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const logs = [];
+page.on("pageerror", e => logs.push("pageerror " + e.message + " " + (e.stack || "").split("\n")[1]));
+const S = (fn, a) => page.evaluate(fn, a);
+const waitFor = (fn, a, ms = 120000) => page.waitForFunction(fn, a, { timeout: ms }).catch(() => "timeout");
+const fast = () => S(() => { const s = window.strings; if (!s.renderer.__r) s.renderer.__r = s.renderer.render; s.renderer.render = () => {}; });
+const draw = () => S(() => { const s = window.strings; if (s.renderer.__r) s.renderer.render = s.renderer.__r; });
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/?autostart");
+await waitFor(() => window.strings?.show, null, 60000);
+await page.waitForTimeout(1500);
+await S(() => { const s = window.strings; s.storyMap.unlockAll(); s.changeScene(s.storyMap.places.find(p => p.id === "sky")); });
+await waitFor(() => window.strings.book.open, null, 30000);
+await S(() => window.strings.book.finish());
+await fast();
+await S(() => { window.strings.sim.sticky = true; window.strings.sim._hasMouse = false; });
+await waitFor(() => window.strings.show.state === "act", null, 90000);
+for (let i = 0; i < 30 && !["ending", "finale", "done"].includes(await S(() => window.strings.show.state)); i++) { await S(() => window.strings.show.skip()); await page.waitForTimeout(3000); }
+console.log("show", await S(() => window.strings.show.state));
+await waitFor(() => window.strings.unbound.armed, null, 240000);
+console.log("caption at clap time:", await S(() => document.getElementById("caption").textContent));
+// nobody claps: the audience does, and Marlo breaks free
+await waitFor(() => window.strings.unbound.state !== "off", null, 120000);
+console.log("unbound ->", await S(() => window.strings.unbound.state));
+await waitFor(() => window.strings.unbound.state === "loop", null, 60000);
+await draw(); await page.waitForTimeout(800); await page.screenshot({ path: `${out}/end1-free.png` });
+console.log(logs.join("\n") || "no errors");
+await browser.close();

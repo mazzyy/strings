@@ -1,0 +1,47 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const logs = [];
+page.on("console", m => { if ((m.type() === "error" || m.type() === "warning") && !m.text().includes("GL Driver") && !m.text().includes("GPU stall")) logs.push(`[${m.type()}] ${m.text()}`); });
+page.on("pageerror", e => logs.push("pageerror " + e.message));
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/?emulate");
+await page.waitForSelector("#begin", { timeout: 60000 });
+const info = await page.evaluate(() => ({ vr: !document.getElementById("enter-vr").hidden, ar: !document.getElementById("enter-ar").hidden }));
+await page.evaluate(() => document.getElementById("enter-vr").click());
+await page.waitForTimeout(3000);
+const st = () => page.evaluate(() => { const s = window.strings; return { preshow: s.preshow, hint: s.hints.current, pull: +s.cord.pull.toFixed(3), held: s.pip.main.held, grabs: s.grabs.size, bar: s.pip.main.position.toArray().map(v => +v.toFixed(3)), stage: s.stageRoot.position.toArray().map(v => +v.toFixed(2)), cam: s.renderer.xr.getCamera().position.toArray().map(v => +v.toFixed(2)) }; });
+console.log("in VR", JSON.stringify(await st()));
+await page.screenshot({ path: `${out}/x-preshow.png` });
+// reach the cord, pinch, pull down
+await page.evaluate(() => { const s = window.strings; s.sim.sticky = false; s.sim._hasMouse = false; s.sim.mainPos.copy(s.cord.handle()); });
+await page.waitForFunction(() => { const s = window.strings; return s.xrHands.hands.some(h => h.present && h.position.distanceTo(s.cord.handle()) < 0.02); }, null, { timeout: 60000 });
+await page.evaluate(() => { window.strings.sim.sticky = true; });
+await page.waitForTimeout(1000);
+const mids = [];
+for (let i = 0; i < 16; i++) { await page.evaluate(() => window.strings.sim.mainPos.y -= 0.006); await page.waitForTimeout(150); if (i % 5 === 4) mids.push(await page.evaluate(() => +window.strings.cord.pull.toFixed(3))); }
+await page.waitForTimeout(600);
+console.log("pull progress", mids.join(","));
+console.log("pulled", JSON.stringify(await st()));
+await page.evaluate(() => { window.strings.sim.sticky = false; });
+await page.waitForTimeout(3000);
+// lap grab: pinch 18 cm BELOW the bar's grip
+const g0 = await page.evaluate(() => { const s = window.strings; const g = s.pip.main.worldPoint([0, 0.04, -0.03], s.pip.main.position.clone()); s.sim.mainPos.copy(g).add({ x: 0, y: -0.18, z: 0 }); return g.toArray(); });
+await page.waitForTimeout(2500);
+const before = await st();
+await page.evaluate(() => { window.strings.sim.sticky = true; });
+await page.waitForTimeout(1200);
+const grabbed = await st();
+await page.evaluate(() => window.strings.sim.mainPos.y += 0.05);
+await page.waitForTimeout(1500);
+const lifted = await st();
+console.log("lap grab", JSON.stringify({ before: before.bar, grabbed: grabbed.bar, held: grabbed.held, lifted: lifted.bar, dy: +(lifted.bar[1] - grabbed.bar[1]).toFixed(3), tethers: await page.evaluate(() => window.strings.stageRoot.children.find(c => c.isLineSegments && c.geometry.drawRange.count < 100)?.geometry.drawRange.count) }));
+await page.screenshot({ path: `${out}/x-lap.png` });
+console.log("draw", await page.evaluate(async () => { const r = window.strings.renderer; const out = []; for (let i = 0; i < 6; i++) { await new Promise(res => requestAnimationFrame(res)); out.push(r.info.render.calls); } return out.join(","); }));
+console.log("cheap mats in XR", await page.evaluate(() => { let n = 0; window.strings.scene.traverse(o => { if (o.isMesh && o.material?.isMeshPhysicalMaterial) n++; }); return n; }));
+console.log(logs.slice(0, 15).join("\n") || "no errors");
+await browser.close();

@@ -1,0 +1,41 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const logs = [];
+page.on("pageerror", e => logs.push("pageerror " + e.message + " " + (e.stack || "").split("\n")[1]));
+const S = (fn, a) => page.evaluate(fn, a);
+const waitFor = (fn, a, ms = 120000) => page.waitForFunction(fn, a, { timeout: ms }).catch(() => "timeout");
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/?autostart");
+await waitFor(() => window.strings?.show, null, 60000);
+await page.waitForTimeout(1500);
+const draw = () => S(() => { const s = window.strings; if (s.renderer.__r) s.renderer.render = s.renderer.__r; });
+const fast = () => S(() => { const s = window.strings; if (!s.renderer.__r) s.renderer.__r = s.renderer.render; s.renderer.render = () => {}; });
+await fast();
+await S(() => { window.strings.sim.sticky = true; window.strings.sim._hasMouse = false; });
+let n = 0;
+for (const text of ["Pirates captured the dragon! Sir Pip must fight the captain.", "The troll chased the princess into the forest", "A wizard cursed the king. Sir Pip must solve a riddle, then they dance and become friends."]) {
+  n++;
+  await S(async (t) => { const m = await import("/src/storymaker.js"); window.strings.playStory(m.buildStory(m.parseStory(t))); }, text);
+  await waitFor(() => window.strings.book.open, null, 30000);
+  const p2 = await S(() => window.strings.book.chapter.pages[1]);
+  await S(() => window.strings.book.skipAll());
+  await waitFor(() => window.strings.show.state === "act", null, 90000);
+  await page.waitForTimeout(2500);
+  const on = await S(() => ({ set: window.strings.chapter.set, guest: window.strings.guestId, extras: ["marlo", "wizard", "pirate", "troll", "clank", "king"].filter(id => window.strings.extra(id).on && window.strings.extra(id).pup.group.visible).map(id => id + ":" + window.strings.extra(id).mode), princess: window.strings.princessDrv.state }));
+  await draw(); await page.waitForTimeout(700); await page.screenshot({ path: `${out}/roles${n}.png` }); await fast();
+  for (let i = 0; i < 8 && !["ending", "finale", "done"].includes(await S(() => window.strings.show.state)); i++) { await S(() => window.strings.show.skip()); await page.waitForTimeout(2500); }
+  await waitFor(() => ["ending", "finale", "done"].includes(window.strings.show.state), null, 60000);
+  await page.waitForTimeout(1500);
+  const end = await S(() => ({ extras: ["marlo", "wizard", "pirate", "troll", "clank", "king"].filter(id => window.strings.extra(id).on).map(id => id + ":" + window.strings.extra(id).mode), princess: window.strings.princessDrv.state }));
+  console.log(text, "\n   book p2:", p2, "\n   on stage:", JSON.stringify(on), "\n   ending:", JSON.stringify(end));
+  await waitFor(() => window.strings.show.state === "done", null, 60000);
+  await page.waitForTimeout(3500);
+  await S(() => document.getElementById("storymaker").classList.remove("on"));
+}
+console.log(logs.join("\n") || "no errors");
+await browser.close();

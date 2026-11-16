@@ -1,0 +1,17 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const logs = [], bad = [];
+page.on("console", m => { if (m.type() === "error") logs.push(m.text()); });
+page.on("pageerror", e => logs.push("pageerror " + e.message));
+page.on("response", r => { if (r.status() >= 400) bad.push(r.status() + " " + r.url()); });
+await page.goto(process.argv[2], { waitUntil: "load" });
+await page.waitForTimeout(15000);
+await page.waitForTimeout(4000);
+const info = await page.evaluate(() => ({ hasStrings: !!window.strings, status: document.querySelector("#status, .status")?.innerText?.slice(0, 200), loading: document.querySelector("#loading")?.innerText?.slice(0, 80) }));
+await page.screenshot({ path: process.argv[3] });
+console.log(JSON.stringify({ info, errors: logs.slice(0, 8), failed: bad.slice(0, 8) }, null, 1));
+await browser.close();

@@ -1,0 +1,23 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1400, height: 860 }, deviceScaleFactor: 1 });
+const logs = [];
+page.on("pageerror", e => logs.push("pageerror " + e.message + " " + (e.stack || "").split("\n")[1]));
+page.on("console", m => { if (m.type() === "error" && !m.text().includes("Failed to load resource")) logs.push(m.text()); if (m.text().includes("[perf]")) logs.push(m.text()); });
+const S = (fn, a) => page.evaluate(fn, a);
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/?autostart");
+await page.waitForFunction(() => window.strings?.show, null, { timeout: 60000 });
+await page.waitForTimeout(6000);
+await page.screenshot({ path: `${out}/rv-full.png` });
+await S(() => { window.strings.robot.talk = 3; });
+// close-up of the robot
+await S(() => { const s = window.strings; const h = s.robot.head.getWorldPosition(new s.camera.position.constructor()); s.camera.position.set(h.x + 0.05, h.y + 0.14, h.z + 0.55); s.camera.lookAt(h.x, h.y + 0.11, h.z); });
+await page.waitForTimeout(1500);
+await page.screenshot({ path: `${out}/rv-close.png` });
+console.log(logs.slice(0, 8).join("\n") || "no errors");
+await browser.close();

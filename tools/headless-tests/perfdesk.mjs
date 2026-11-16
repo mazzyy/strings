@@ -1,0 +1,12 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+page.on("pageerror", e => console.log("pageerror", e.message));
+page.on("console", m => { if (m.text().includes("[perf]")) console.log(m.text()); });
+await page.goto("http://localhost:8090/");
+await page.waitForTimeout(5000);
+console.log("desktop", JSON.stringify(await page.evaluate(() => { const r = window.strings.renderer; r.info.autoReset = true; return r.info.render; })));
+await browser.close();

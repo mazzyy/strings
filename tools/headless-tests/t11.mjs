@@ -1,0 +1,41 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+const page = await ctx.newPage();
+const logs = [];
+page.on("console", m => { if (m.type() === "error" && !m.text().includes("Failed to load resource")) logs.push(m.text()); });
+page.on("pageerror", e => logs.push("pageerror " + e.message));
+page.on("dialog", d => d.accept());
+const S = (fn, a) => page.evaluate(fn, a);
+const waitFor = (fn, a, ms = 120000) => page.waitForFunction(fn, a, { timeout: ms }).catch(() => "timeout");
+const menu = () => S(() => [...document.querySelectorAll(".open button")].map(b => b.textContent));
+await page.goto("http://localhost:8095/");
+await page.waitForSelector("#begin", { timeout: 90000 });
+await page.click("#begin");
+await waitFor(() => window.strings.book.open, null, 20000);
+// 5) fireflies reachable by walking side to side
+await page.click("#storybook .skip");
+await S(() => { const s = window.strings; s.raiseCurtain(); s.renderer.__r = s.renderer.render; s.renderer.render = () => {}; s.storyMap.state.unlocked = 6; s.changeScene(s.storyMap.places.find(p => p.id === "forest")); });
+await waitFor(() => window.strings.book.open, null, 30000);
+await S(() => window.strings.book.finish());
+await waitFor(() => window.strings.chapter.id === "forest" && window.strings.show.state === "intro");
+await S(() => { const s = window.strings; s.sim.sticky = true; s.sim._hasMouse = false; });
+await waitFor(() => window.strings.show.state === "act");
+await S(() => window.strings.show.skip());
+await waitFor(() => window.strings.show.act >= 1 && window.strings.show.state === "act");
+await S(() => window.strings.props.moveTo("lantern", "pip"));
+for (let i = 0; i < 160; i++) {
+  const t = await S(() => window.strings.currentTask?.target?.()?.x ?? null);
+  if (t === null || await S(() => window.strings.show.act) >= 2) break;
+  const px = await S(() => window.strings.props.position("lantern").x);
+  await S((dx) => { window.strings.sim.mainPos.x += Math.max(-0.012, Math.min(0.012, dx)); }, t - px);
+  await page.waitForTimeout(100);
+}
+console.log("debug", await S(() => JSON.stringify({ task: window.strings.currentTask?.debug?.(), lantern: window.strings.props.position("lantern").toArray().map(x => +x.toFixed(3)), held: window.strings.props.heldBy("pip"), pelvis: window.strings.pip.get("pelvis").toArray().map(x => +x.toFixed(3)), bar: window.strings.pip.main.held })));
+console.log("fireflies by walking ->", await S(() => ({ act: window.strings.show.act, stars: window.strings.show.stars })));
+console.log(logs.slice(0, 10).join("\n") || "no errors");
+await browser.close();

@@ -1,0 +1,32 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const logs = [];
+page.on("pageerror", e => logs.push("pageerror " + e.message + " " + (e.stack || "").split("\n")[1]));
+page.on("console", m => { if (m.type() === "error") logs.push(m.text()); });
+const S = (fn, a) => page.evaluate(fn, a);
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/");
+await page.waitForSelector("#chapters", { timeout: 90000 });
+console.log("menu buttons", await S(() => [...document.querySelectorAll("#loading button")].map(b => b.textContent)));
+await page.click("#chapters");
+await page.waitForTimeout(2500);
+console.log("all unlocked", await S(() => { const m = window.strings.storyMap; return { map: m.open, all: m.places.map(p => m.unlocked(p) ? 1 : 0).join("") }; }));
+await page.screenshot({ path: `${out}/j1-map.png` });
+// voice hook: Marlo laughs with the recorded take
+await S(() => { const s = window.strings; s.__played = []; const orig = s.sfx.play.bind(s.sfx); s.sfx.play = (n, a, o) => { s.__played.push(n); return orig(n, a, o); }; });
+await S(() => { window.strings.storyMap.hide(); window.strings.ai.react("laugh", { force: true }); window.strings.ai.react("dance", { force: true }); });
+await page.waitForTimeout(500);
+console.log("played", JSON.stringify(await S(() => window.strings.__played)), "has", await S(() => window.strings.sfx.has("marlo_laugh")));
+// the ship's sea: lower now
+await S(() => { const s = window.strings; s.changeScene(s.storyMap.places.find(p => p.id === "ship")); });
+await page.waitForTimeout(4000);
+await S(() => window.strings.book.finish());
+await page.waitForTimeout(5000);
+console.log("ship bed", await S(() => window.strings.soundscape ? "" : "(not exposed)"));
+console.log(logs.filter(l => !l.includes("api/status") && !l.includes("404")).slice(0, 8).join("\n") || "no errors");
+await browser.close();

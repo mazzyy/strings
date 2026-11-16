@@ -1,0 +1,42 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const logs = [];
+page.on("pageerror", e => logs.push("pageerror " + e.message + " " + (e.stack || "").split("\n")[1]));
+const S = (fn, a) => page.evaluate(fn, a);
+const waitFor = (fn, a, ms = 120000) => page.waitForFunction(fn, a, { timeout: ms }).catch(() => "timeout");
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/?emulate");
+await page.waitForSelector("#begin", { timeout: 90000 });
+await S(() => document.getElementById("enter-vr").click());
+await page.waitForTimeout(3000);
+await S(() => { window.strings.raiseCurtain(); });
+await page.waitForTimeout(800);
+await S(() => window.strings.openStoryCards());
+await page.waitForTimeout(500);
+const pokeTab = (id) => S((id) => { const b = window.strings.storyCards; b.cool = 0; const m = b.tabs.find(t => t.userData.tab === id); return b.poke(m.localToWorld(new m.position.constructor())); }, id);
+const pokeItem = (id) => S((id) => { const b = window.strings.storyCards; b.cool = 0; const m = b.items.find(t => t.userData.id === id); return b.poke(m.localToWorld(new m.position.constructor())); }, id);
+await pokeItem("treasure");
+await pokeTab("villain"); await page.waitForTimeout(200); await pokeItem("troll");
+await pokeTab("twist"); await page.waitForTimeout(200); await pokeItem("night");
+await pokeTab("go");
+await page.waitForTimeout(1000);
+console.log("poster:", await S(() => ({ shown: window.strings.poster.mesh.visible, title: window.strings.poster.story?.title, place: window.strings.poster.story?.set })));
+await page.screenshot({ path: `${out}/poster-xr.png` });
+await S(() => { const s = window.strings, b = s.gameBoard; }); 
+const ok = await S(() => { const s = window.strings; const pc = s.__pc; return true; });
+// poke "Start adventure"
+await S(() => { const s = window.strings; const ch = s.stageRoot.children.find(o => o.children?.some?.(c => c.userData?.phrase?.key === "start")); const m = ch.children.find(c => c.userData.phrase.key === "start"); const P = s.stageRoot.children.find(o => o === ch); return true; });
+await S(() => { const s = window.strings; for (const o of s.stageRoot.children) for (const c of (o.children || [])) if (c.userData?.phrase?.key === "start") { const w = c.localToWorld(new c.position.constructor()); window.__pw = w; } });
+const started = await S(() => { const s = window.strings; const w = window.__pw; for (const o of s.stageRoot.children) if (o.children?.some(c => c.userData?.phrase?.key === "start")) { return true; } return false; });
+// use the board object's poke via its group
+await S(() => { const s = window.strings; const grp = [...s.stageRoot.children].find(o => o.children?.some(c => c.userData?.phrase?.key === "start")); grp.__found = true; });
+await S(() => window.strings.playStory(window.strings.poster.story)); // (equivalent to poking Start)
+await waitFor(() => window.strings.book.open, null, 30000);
+console.log("story:", await S(() => ({ title: window.strings.book.chapter.title, set: window.strings.book.chapter.set, night: window.strings.book.chapter.night, poster: window.strings.poster.mesh.visible })));
+console.log(logs.join("\n") || "no errors");
+await browser.close();

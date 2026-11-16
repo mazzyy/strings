@@ -1,0 +1,13 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 2 });
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/?autostart");
+await page.waitForFunction(() => window.strings?.show, null, { timeout: 60000 });
+await page.waitForTimeout(6000);
+await page.screenshot({ path: `${out}/knobs.png`, clip: { x: 450, y: 780, width: 700, height: 120 } });
+await browser.close();

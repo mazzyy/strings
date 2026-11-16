@@ -1,0 +1,23 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+await page.goto(process.argv[2]);
+await page.waitForSelector("#begin", { timeout: 90000 });
+await page.evaluate(() => window.strings.raiseCurtain());
+await page.waitForTimeout(3000);
+console.log(await page.evaluate(() => {
+  const s = window.strings;
+  const count = (root) => { let m = 0, c = 0; root.traverseVisible((o) => { if (o.isMesh || o.isLine || o.isPoints || o.isSprite) { m++; if (o.castShadow) c++; } }); return `${m} (${c} cast)`; };
+  const out = {};
+  out.scene = count(s.scene);
+  out.pip = count(s.pip.group); out.marlo = count(s.marlo.group); out.robot = count(s.robot.group);
+  const room = s.scene.children.find(c => c.isGroup && c !== s.stageRoot);
+  out.room = room ? count(room) : "?";
+  let stageOnly = 0; s.stageRoot.children.forEach(c => { if (c !== s.pip.group && c !== s.marlo.group && c !== s.robot.group && c !== s.ghost.group) c.traverseVisible(o => { if (o.isMesh) stageOnly++; }); });
+  out.stageOther = stageOnly;
+  return JSON.stringify(out);
+}));
+await browser.close();

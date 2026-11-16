@@ -1,0 +1,20 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+page.on("pageerror", e => console.log("pageerror", e.message));
+await page.goto("http://localhost:8080/");
+await page.waitForTimeout(1500);
+await page.evaluate(() => {
+  const s = window.strings; window.samples = []; const t0 = performance.now();
+  s.detector.on(ev => window.samples.push(["EV", ((performance.now()-t0)/1000).toFixed(1), ev.type]));
+  setInterval(() => { const up = s.pip.upAxis(); window.samples.push([((performance.now()-t0)/1000).toFixed(1), s.pip.main.pitch().toFixed(2), s.pip.get("head").y.toFixed(3), s.pip.get("pelvis").y.toFixed(3), up.y.toFixed(2)]); }, 250);
+});
+await page.keyboard.press("t");
+await page.waitForTimeout(12000);
+const sm = await page.evaluate(() => window.samples);
+console.log(sm.filter((r,i) => r[0]==="EV" || i%2===0).map(r => r.join(" ")).join("\n"));
+await page.screenshot({ path: `${process.argv[2]}/probe.png` });
+await browser.close();

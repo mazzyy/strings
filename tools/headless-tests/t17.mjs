@@ -1,0 +1,21 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const S = (fn, a) => page.evaluate(fn, a);
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/?emulate");
+await page.waitForSelector("#begin", { timeout: 60000 });
+await S(() => document.getElementById("enter-vr").click());
+await page.waitForTimeout(2500);
+await S(() => { const s = window.strings; if (s.book.open) s.book.skipAll(); s.raiseCurtain(); s.sim.sticky = false; s.sim._hasMouse = false; s.renderer.__r = s.renderer.render; });
+// sample every frame inside the page
+await S(() => { const s = window.strings, u = s.unbound; s.__trace = []; const orig = u._clap.bind(u); u._clap = (dt, hands) => { orig(dt, hands); const h = hands; if (h[0].present && h[1].present) s.__trace.push([+h[0].palm.distanceTo(h[1].palm).toFixed(3), +(u.rush || 0).toFixed(2), u.touching ? 1 : 0, h[0].pinch ? 1 : 0, h[1].pinch ? 1 : 0]); }; });
+await S(() => { const s = window.strings; s.sim.mainPos.set(0.08, 0.45, 0.2); s.sim.otherPos.set(-0.12, 0.45, 0.2); });
+await page.waitForTimeout(2500);
+await S(() => { window.strings.__trace.length = 0; const s = window.strings; const h = s.xrHands.hands; const off = h[0].palm.clone().sub(h[1].palm); s.sim.otherPos.add({ x: off.x, y: off.y, z: off.z }); });
+await page.waitForTimeout(1500);
+console.log(JSON.stringify(await S(() => window.strings.__trace.slice(0, 30))), "claps", await S(() => window.strings.unbound.claps.length));
+await browser.close();

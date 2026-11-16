@@ -1,0 +1,28 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const out = process.argv[2];
+const base = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64`;
+const exe = fs.readdirSync(base).find(f => f.endsWith(".app"));
+const browser = await chromium.launch({ executablePath: `${base}/${exe}/Contents/MacOS/${exe.replace(".app","")}`, args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const logs = [];
+page.on("pageerror", e => logs.push("pageerror " + e.message + " " + (e.stack || "").split("\n")[1]));
+const S = (fn, a) => page.evaluate(fn, a);
+await page.addInitScript(() => localStorage.clear());
+await page.goto("http://localhost:8095/?emulate");
+await page.waitForSelector("#freeplay", { timeout: 90000 });
+await page.click("#freeplay");
+await page.waitForTimeout(800);
+await S(() => document.getElementById("enter-vr").click());
+await page.waitForTimeout(3500);
+console.log("board", await S(() => ({ vis: window.strings.playground.group.visible, story: window.strings.preshow })));
+// poke the "Co-star" tab, then "Grumble"; then "You play" tab and "Juniper"
+const poke = (fn) => S(fn);
+const tab = (i) => S((i) => { const s = window.strings, m = s.playground.tabs[i]; return s.playground.poke(m.localToWorld(new m.position.constructor())); }, i);
+const item = (id) => S((id) => { const s = window.strings, m = s.playground.items.find(x => x.userData.id === id); s.playground.cool = 0; return s.playground.poke(m.localToWorld(new m.position.constructor())); }, id);
+await tab(1); await page.waitForTimeout(600); await item("troll"); await page.waitForTimeout(800);
+await S(() => { window.strings.playground.cool = 0; }); await tab(0); await page.waitForTimeout(600); await item("princess"); await page.waitForTimeout(1000);
+console.log("after pokes", await S(() => ({ guest: window.strings.guestId, you: window.strings.playerId })));
+await page.screenshot({ path: `${out}/fp4-xr.png` });
+console.log(logs.join("\n") || "no errors");
+await browser.close();
