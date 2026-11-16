@@ -55,6 +55,7 @@ const ACT = {
   find: () => ({ goal: "Next, find the three lost jewels.", task: { type: "collect", count: 3, look: "gem" }, hint: "collect" }),
   spell: (V) => ({ goal: `Next, ${V.the} casts a spell. Watch the moves, then copy them in order.`, task: { type: "simon", length: 3 }, hint: "simon" }),
   highfive: (V) => ({ goal: `Next, give ${V.the} a high five.`, task: { type: "highfive", count: 2 }, hint: "highfive" }),
+  flower: (V) => ({ goal: `Next, give ${V.the} the flower, as a present.`, check: "give:flower", hint: "takeFlower" }),
   dance: () => ({ goal: "Next, jump together, right on the count.", task: { type: "together", count: 3 }, hint: "together" }),
   unlock: () => ({ goal: "Next, take the key, and unlock the cage.", task: { type: "unlock" }, hint: "takeKey" }),
   saved: () => ({ goal: "Last of all, take a bow. The kingdom is saved!", check: "bow", hint: "bow" }),
@@ -113,7 +114,8 @@ export function parseStory(text) {
   else plot = captive ? "kidnap" : "trouble";
   let challenge = CHALLENGE_KW.find(([, re]) => re.test(t))?.[0] || DEFAULT_CHALLENGE[villain];
   if (challenge === "riddle" && villain !== "troll") challenge = "spell"; // (the riddles are the troll's)
-  return { villain, place, captive: plot === "kidnap" ? captive || "princess" : null, plot, challenge, text: String(text || "").trim() };
+  const twist = /\b(night|midnight|dark)\b/.test(t) ? "night" : null;
+  return { villain, place, captive: plot === "kidnap" ? captive || "princess" : null, plot, challenge, twist, text: String(text || "").trim() };
 }
 
 // a full chapter (storybook pages + acts) from a parsed story
@@ -133,7 +135,7 @@ export function buildStory(p) {
   ];
   const acts = [];
   if (p.plot === "lonely") {
-    acts.push(ACT.gentle(V), ACT.highfive(V), ACT.dance(), ACT.friends());
+    acts.push(ACT.gentle(V), ACT.flower(V), ACT.dance(), ACT.friends());
   } else {
     acts.push(ACT.meet(V));
     if (p.challenge === "duel") acts.push(ACT.sword(), ACT.duel());
@@ -148,6 +150,8 @@ export function buildStory(p) {
     pages, art, acts,
     princess: p.captive === "princess" && p.place === "tower", // the tower's cage and key
     captive: p.captive,
+    twist: p.twist || null,
+    night: p.twist === "night",
   };
 }
 
@@ -164,6 +168,25 @@ export function allStoryLines() {
   Object.values(QUEST).forEach((l) => out.add(l));
   out.add("Well dodged! They're all out of puff.");
   return [...out];
+}
+
+// The story cards (in the headset, where there's no keyboard): the same story, picked
+// from cards instead of written.
+export const CARD_SECTIONS = [
+  { id: "villain", title: "Villain", items: [["marlo", "Marlo"], ["clank", "Clank"], ["troll", "Grumble"], ["pirate", "Pegg"], ["wizard", "Bramble"]] },
+  { id: "captive", title: "Who needs help", items: [["princess", "The princess"], ["king", "The King"], ["treasure", "The treasure"], ["none", "Nobody"]] },
+  { id: "place", title: "Setting", items: [["cave", "Dragon cave"], ["ship", "Pirate ship"], ["tower", "Clock tower"], ["forest", "Forest"], ["bridge", "Troll bridge"], ["courtyard", "Castle"], ["sky", "Night sky"]] },
+  { id: "challenge", title: "Challenge", items: [["dodge", "Dodge attacks"], ["duel", "Sword duel"], ["riddle", "Riddle"], ["spell", "Magic spell"], ["dance", "Dance-off"], ["befriend", "Make friends"]] },
+  { id: "twist", title: "Twist", items: [["none", "No twist"], ["moon", "Moon gravity"], ["fragile", "Fragile strings"], ["night", "At night"]] },
+  { id: "go", title: "Stage it!", action: true, items: [] },
+];
+export function storyFromCards(c) {
+  const villain = c.villain || "marlo";
+  let plot = c.captive === "princess" || c.captive === "king" ? "kidnap" : c.captive === "treasure" ? "steal" : "trouble";
+  let challenge = c.challenge || DEFAULT_CHALLENGE[villain];
+  if (challenge === "befriend") { plot = "lonely"; challenge = DEFAULT_CHALLENGE[villain]; }
+  if (challenge === "riddle" && villain !== "troll") challenge = "spell"; // (the riddles are the troll's)
+  return { villain, place: c.place || DEFAULT_PLACE[villain], captive: plot === "kidnap" ? c.captive : null, plot, challenge, twist: c.twist && c.twist !== "none" ? c.twist : null, text: "" };
 }
 
 export const STORY_EXAMPLES = [

@@ -14,7 +14,7 @@ import { batchParts } from "./batch.js";
 import { Sfx, Soundscape } from "./audio.js";
 import { Phrases } from "./phrases.js";
 import { Playground } from "./playground.js";
-import { parseStory, buildStory, STORY_EXAMPLES, VILLAINS } from "./storymaker.js";
+import { parseStory, buildStory, storyFromCards, CARD_SECTIONS, STORY_EXAMPLES, VILLAINS } from "./storymaker.js";
 import { Hints } from "./hints.js";
 import { Props } from "./props.js";
 import { Show, playbills, mindCardTexture } from "./show.js";
@@ -1366,7 +1366,7 @@ function playBook(place, then) {
   hints.hide();
   book.play(place, !!xrMode, then);
 }
-const sceneFor = (place) => (place.acts ? { id: place.id, title: place.title, intro: place.intro, acts: place.acts, finale: !!place.finale } : null);
+const sceneFor = (place) => (place.acts ? { id: place.id, title: place.title, intro: place.intro, acts: place.acts, finale: !!place.finale, night: !!place.night } : null);
 function startChapterShow() {
   if (chapter.id === "theatre") narrator.coach(STORY_LINES.theatre);
   show.start(sceneFor(chapter)); // the Grand Theatre (no acts) picks tonight's daily show
@@ -1448,7 +1448,7 @@ show.onDone = () => setTimeout(() => {
     setTimeout(() => { if (unbound.armed) { hints.hide(); narrator.coach("audienceClaps"); unbound.applause(); } }, 10000);
   } else if (chapter.custom) {
     narrator.coach("storyEnd");
-    setTimeout(() => openStoryMaker(), 6000); // another one?
+    setTimeout(() => (xrMode ? openStoryCards() : openStoryMaker()), 6000); // another one?
   } else openMap();
 }, 2500);
 
@@ -1632,12 +1632,43 @@ function playStory(story) {
   if (flying) setFlight(false);
   if (playerId !== "knight") setPlayer("knight"); // the hero is Sir Pip
   changeScene(story);
+  applyTwist(story.twist);
   // whoever needs rescuing waits on stage (in the tower, the princess is in the cage)
   setTimeout(() => {
     if (story.captive === "princess" && !story.princess) { princessOn(true); princessDrv.pos.set(0.3, 0.5, -0.12); }
     if (story.captive === "king") { const K = extra("king"); K.show(true); K.mode = "idle"; K.target.set(0.33, 0.5, -0.13); K.yaw = -0.5; }
   }, 1800);
 }
+// story cards (in the headset, where there's no keyboard): pick a villain, who needs help,
+// the setting, the challenge and a twist, then poke "Stage it!"
+let placeTouched = false;
+const LAIR = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower" };
+const storyCards = new Playground(stageRoot, (section, id) => {
+  unlockAudio();
+  if (section === "go") {
+    storyCards.hide();
+    sfx.play("swish", null, { volume: 0.5 });
+    playStory(buildStory(storyFromCards(storyCards.active)));
+    return;
+  }
+  sfx.play("chime", null, { volume: 0.3, rate: 1.1 + Math.random() * 0.3 });
+  if (section === "place") placeTouched = true;
+  if (section === "villain" && !placeTouched) storyCards.set("place", LAIR[id]); // (the villain's home, unless you chose)
+}, CARD_SECTIONS, null, { villain: "marlo", captive: "princess", place: "cave", challenge: "dodge", twist: "none" });
+storyCards.group.position.set(0, 0.56, 0.18);
+storyCards.group.scale.setScalar(1.15);
+function openStoryCards() {
+  if (!xrMode) { openStoryMaker(); return; }
+  storyCards.show(true);
+  faceViewer(storyCards.group);
+  narrator.coach("storyCards");
+}
+// a twist from the cards (or "at night" in a written story)
+let twistMode = false;
+function applyTwist(t) {
+  if (t === "moon" || t === "fragile") { applyMode(MODES.find((m) => m.id === t), false); twistMode = true; toast(t === "moon" ? "Twist: moon gravity!" : "Twist: fragile strings!"); }
+}
+
 // the curtain call of your story: whoever was rescued celebrates
 function storyHappyEnding() {
   const c = chapter.captive;
@@ -1776,6 +1807,14 @@ function startFreePlay() {
 // leave whatever is going on (free play, a task, the cast of the last scene) cleanly
 function leaveCurrentMode() {
   if (unbound.busy) return false;
+  if (twistMode) { applyMode(MODES[0], false); twistMode = false; } // (a story's twist ends with it)
+  storyCards.hide();
+  // cancel any opening still in progress (the warm-up, the storyteller, a book) so it
+  // can't carry on into the old chapter afterwards
+  if (warmup.on) { warmup.on = false; warmup.step = "end"; warmup.next = null; mind.taskBusy = false; }
+  if (intro.on) { intro.on = false; intro.next = null; intro.leaving = false; sparkles.stop(); robot.excite = 0; if (!xrMode) tweenCam(desktopCam.pos, desktopCam.look, 0.8); }
+  if (book.open) { book.onDone = null; book.finish(); }
+  storyPending = false;
   if (currentTask) currentTask.end?.();
   if (flying) setFlight(false);
   if (freePlay) {
@@ -1847,7 +1886,7 @@ const GAME_MENU = [
   { key: "story", text: "Continue the story" },
   { key: "map", text: "Chapter map" },
   { key: "free", text: "Free play" },
-  { key: "write", text: "Write a story" },
+  { key: "cards", text: "Story cards" },
   { key: "lock", text: "Pinch lock" },
   { key: "hand", text: "One hand" },
 ];
@@ -1856,7 +1895,7 @@ const gameBoard = new Phrases(stageRoot, (it) => {
   if (it.key === "story") { if (leaveCurrentMode()) changeScene(storyMap.current()); }
   else if (it.key === "map") { if (leaveCurrentMode()) { storyMap.unlockAll(); showStarted = true; openMap(); } }
   else if (it.key === "free") { if (leaveCurrentMode()) startFreePlay(); }
-  else if (it.key === "write") { renderer.xr.getSession()?.end(); setTimeout(openStoryMaker, 600); }
+  else if (it.key === "cards") openStoryCards();
   else if (it.key === "lock") setPinchLock(!pinchLock);
   else if (it.key === "hand") setOneHand(!oneHand);
 }, GAME_MENU, null);
@@ -2154,6 +2193,7 @@ function xrGestures(dt, hands, t) {
   if (book.mesh.visible) for (const h of hands) if (h.present && book.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (phrases.group.visible) for (const h of hands) if (h.present && phrases.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (gameBoard.group.visible) for (const h of hands) if (h.present && gameBoard.poke(stageRoot.localToWorld(h.tip.clone()))) break;
+  if (storyCards.group.visible) for (const h of hands) if (h.present && storyCards.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (playground.group.visible) for (const h of hands) if (h.present && playground.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   for (const [name, knob] of Object.entries(knobs)) {
     const kp = knob.position.clone().add(new THREE.Vector3(0, 0.01, 0));
@@ -2282,6 +2322,8 @@ renderer.setAnimationLoop((time, frame) => {
   updateWarmup(dt);
   phrases.update(dt);
   gameBoard.update(dt);
+  storyCards.update(dt);
+  if (xrMode && storyCards.group.visible) faceViewer(storyCards.group);
   if (xrMode && gameBoard.group.visible) faceViewer(gameBoard.group);
   playground.update(dt);
   if (xrMode && playground.group.visible) faceViewer(playground.group); // always square to your eyes
@@ -2366,4 +2408,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, openGameMenu, gameBoard, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, openGameMenu, gameBoard, storyCards, openStoryCards, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
