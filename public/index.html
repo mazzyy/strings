@@ -113,23 +113,44 @@
     body.free-play #mindcard { display: none; }
     #storymaker { position: fixed; inset: 0; z-index: 30; display: none; place-items: center; background: rgba(8,4,3,0.72); }
     #storymaker.on { display: grid; }
-    #storymaker .sp { position: relative; width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow-y: auto; padding: 22px 26px; border-radius: 18px; background: radial-gradient(ellipse at 50% 0%, #3a2350, #1c1228); color: #f3e6d0; border: 2px solid #8a6ac0; box-shadow: 0 30px 90px rgba(0,0,0,0.6); font-family: Georgia, serif; }
-    #storymaker .sp.wide { width: min(1180px, calc(100vw - 32px)); }
-    #storymaker h2 { margin: 0 0 4px; color: #ffd98a; font-size: 26px; }
-    #storymaker p { margin: 0 0 12px; color: #d8c8e8; }
-    #storymaker .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 10px; }
-    #storymaker .sec { background: rgba(255,255,255,0.05); border: 1px solid rgba(200,170,255,0.25); border-radius: 14px; padding: 10px 12px 12px; }
-    #storymaker h3 { margin: 0 0 8px; font-size: 17px; color: #ffe8c8; } #storymaker h3 small { color: #b8a8d0; font-weight: normal; font-size: 13px; }
-    #storymaker .cards { display: flex; flex-wrap: wrap; gap: 8px; }
-    #storymaker .card { position: relative; width: 94px; padding: 0 0 6px; border-radius: 12px; border: 2px solid rgba(200,170,255,0.3); background: rgba(20,10,30,0.6); color: #f3e6d0; cursor: pointer; font: 600 12px Georgia, serif; overflow: hidden; }
-    #storymaker .card img { display: block; width: 100%; height: 58px; object-fit: cover; margin-bottom: 5px; }
-    #storymaker .card:hover { border-color: #c8a8ff; }
-    #storymaker .card.on { border-color: #b58cff; box-shadow: 0 0 0 3px rgba(181,140,255,0.45); }
-    #storymaker .card.on::after { content: "✓"; position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; background: #8a5ad8; color: #fff; font-size: 13px; line-height: 20px; }
-    #storymaker .row { display: flex; gap: 10px; justify-content: flex-end; align-items: center; margin: 14px -26px -22px; padding: 12px 26px 16px; flex-wrap: wrap; position: sticky; bottom: -22px; background: linear-gradient(rgba(28,18,40,0.85), #1c1228 40%); border-top: 1px solid rgba(200,170,255,0.2); }
-    #storymaker .go { font: 600 18px Georgia, serif; color: #fff; background: linear-gradient(#8a5ad8, #5a2ea8); border: 2px solid rgba(255,220,255,0.4); border-radius: 12px; padding: 12px 26px; cursor: pointer; }
-    #storymaker .ghost { font: 600 15px Georgia, serif; color: #e8dcff; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(200,170,255,0.35); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
+    #storymaker .sp { position: relative; width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; padding: 22px 26px; border-radius: 20px; background: radial-gradient(ellipse at 50% -10%, #4a2a66, #24163a 55%, #160e24); color: #f3e6d0; border: 1px solid rgba(214,170,90,0.55); box-shadow: 0 0 0 4px rgba(20,10,30,0.8), 0 0 0 5px rgba(214,170,90,0.35), 0 30px 90px rgba(0,0,0,0.65); font-family: Georgia, serif; }
+    #storymaker .sp.wide { width: min(1120px, calc(100vw - 32px)); }
+    #storymaker h2 { margin: 0 0 2px; color: #ffd98a; font-size: 28px; letter-spacing: .01em; text-shadow: 0 2px 10px rgba(255,190,90,0.25); }
+    #storymaker p { margin: 0 0 14px; color: #d8c8e8; font-size: 15px; }
+    /* conflict | who | villain on top; setting (wide) | twist below */
+    #storymaker .grid { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 12px; }
+    #storymaker .grid .place { grid-column: span 2; }
+    #storymaker .place .card { width: 86px; } #storymaker .place .card img { height: 60px; }
+    #storymaker .sec { position: relative; background: linear-gradient(rgba(255,255,255,0.05), rgba(255,255,255,0.02)); border: 1px solid rgba(214,170,90,0.45); border-radius: 14px; padding: 12px 14px 14px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35), inset 0 0 24px rgba(120,80,200,0.08); }
+    #storymaker .sec::before, #storymaker .sec::after { content: ""; position: absolute; width: 14px; height: 14px; border: 2px solid #d6aa5a; opacity: .85; }
+    #storymaker .sec::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; border-top-left-radius: 12px; }
+    #storymaker .sec::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; border-bottom-right-radius: 12px; }
+    #storymaker h3 { margin: 0 0 10px; font-size: 17px; color: #ffe8c8; } #storymaker h3 small { color: #b8a8d0; font-weight: normal; font-size: 12.5px; }
+    #storymaker .cards { display: flex; flex-wrap: wrap; gap: 9px; }
+    /* picture cards (characters, settings) */
+    #storymaker .card { position: relative; width: 92px; padding: 0 0 7px; border-radius: 11px; border: 2px solid rgba(214,170,90,0.35); background: #1c1228; color: #f3e6d0; cursor: pointer; font: 600 12px Georgia, serif; overflow: hidden; transition: transform .12s, border-color .12s, box-shadow .12s; }
+    #storymaker .card img { display: block; width: 100%; height: 66px; object-fit: cover; margin-bottom: 6px; }
+    #storymaker .card:hover, #storymaker .icard:hover { transform: translateY(-2px); border-color: rgba(240,200,120,0.8); }
+    /* icon cards (the conflict) */
+    #storymaker .icard { position: relative; width: 88px; height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 12px; border: 2px solid rgba(214,170,90,0.35); background: radial-gradient(circle at 50% 35%, #4a2c6e, #24163a 75%); color: #f3e6d0; cursor: pointer; font: 600 12.5px Georgia, serif; transition: transform .12s, border-color .12s, box-shadow .12s; }
+    #storymaker .icard i { width: 50px; height: 50px; display: block; filter: drop-shadow(0 2px 6px rgba(255,200,100,0.35)); }
+    #storymaker .icard svg, #storymaker .pill svg { width: 100%; height: 100%; display: block; }
+    /* pills (the twist) */
+    #storymaker .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    #storymaker .pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; border: 1.5px solid rgba(214,170,90,0.45); background: rgba(255,255,255,0.05); color: #f3e6d0; font: 600 14px Georgia, serif; cursor: pointer; transition: background .12s, border-color .12s; }
+    #storymaker .pill i { width: 18px; height: 18px; display: block; color: #f3c96b; }
+    #storymaker .pill:hover { background: rgba(255,255,255,0.1); }
+    /* the selected choice */
+    #storymaker .card.on, #storymaker .icard.on { border-color: #e8c06a; box-shadow: 0 0 0 2px rgba(232,192,106,0.4), 0 0 18px rgba(181,140,255,0.55); }
+    #storymaker .icard.on { background: radial-gradient(circle at 50% 35%, #6a3fa0, #3a2260 75%); }
+    #storymaker .pill.on { background: linear-gradient(#7a4ac8, #5a2ea8); border-color: #e8c06a; box-shadow: 0 0 14px rgba(181,140,255,0.5); }
+    #storymaker .card.on::after, #storymaker .icard.on::after { content: "✓"; position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(#a57ae8, #7a4ac8); border: 1.5px solid #f3d590; color: #fff; font: 700 12px/18px ui-sans-serif, system-ui, sans-serif; text-align: center; }
+    #storymaker .row { display: flex; gap: 10px; justify-content: flex-end; align-items: center; margin: 16px -26px -22px; padding: 12px 26px 16px; flex-wrap: wrap; position: sticky; bottom: -22px; background: linear-gradient(rgba(22,14,36,0.7), #160e24 45%); border-top: 1px solid rgba(214,170,90,0.25); }
+    #storymaker .go { font: 600 18px Georgia, serif; color: #fff8ec; background: linear-gradient(#9a6ae8, #5a2ea8); border: 2px solid #e8c06a; border-radius: 14px; padding: 12px 28px; cursor: pointer; box-shadow: 0 0 0 3px rgba(232,192,106,0.18), 0 0 22px rgba(180,130,255,0.55); text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+    #storymaker .go:hover { filter: brightness(1.1); }
+    #storymaker .ghost { font: 600 15px Georgia, serif; color: #f0e2c8; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(214,170,90,0.45); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
     #storymaker .ghost.back, #storymaker .ghost.write { margin-right: auto; }
+    @media (max-width: 980px) { #storymaker .grid { grid-template-columns: 1fr 1fr; } #storymaker .grid .place { grid-column: span 2; } }
     #storymaker .poster canvas { display: block; width: 100%; height: auto; border-radius: 14px; }
     #storymaker textarea { width: 100%; box-sizing: border-box; min-height: 92px; font: 18px Georgia, serif; padding: 12px; border-radius: 10px; border: 2px solid #8a6ac0; background: #fffaf0; color: #2a1a10; resize: vertical; }
     #storymaker .sum { margin: 10px 0 12px; font-size: 15px; color: #c8b8ff; min-height: 20px; }

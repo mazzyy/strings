@@ -69,6 +69,17 @@ export class Confetti {
 
 // Magic sparkles: a swirl of gold and cyan motes spiralling up from a point (the
 // storyteller's hands) toward another (where the storybook appears).
+// a soft round dot, so motes of light are glowing specks rather than squares
+let dotTex = null;
+function softDot() {
+  if (dotTex) return dotTex;
+  const c = document.createElement("canvas"); c.width = c.height = 32;
+  const g = c.getContext("2d"), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.3, "rgba(255,255,255,0.8)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
+  return (dotTex = new THREE.CanvasTexture(c));
+}
+
 export class Sparkles {
   constructor(parent, count = 220) {
     this.n = count;
@@ -80,7 +91,7 @@ export class Sparkles {
     geo.setAttribute("color", new THREE.BufferAttribute(this.col, 3));
     const pal = [new THREE.Color(0xffd34a), new THREE.Color(0x7ff3ff), new THREE.Color(0xfff2b0), new THREE.Color(0xb9a2ff)];
     for (let i = 0; i < count; i++) { const c = pal[i % 4]; this.col.set([c.r * 1.6, c.g * 1.6, c.b * 1.6], i * 3); }
-    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.012, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending }));
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.009, map: softDot(), vertexColors: true, transparent: true, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending }));
     this.points.frustumCulled = false;
     this.points.visible = false;
     parent.add(this.points);
@@ -141,7 +152,7 @@ export class Dust {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.006, vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.0055, map: softDot(), vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     this.points.frustumCulled = false;
     parent.add(this.points);
     this.t = 0;

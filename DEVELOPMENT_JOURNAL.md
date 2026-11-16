@@ -342,6 +342,13 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
   - **Materials:** ivory porcelain with clearcoat, polished brass, black rubber.
 - **Atmosphere:** a soft blue glow behind the robot, motes of blue-white and gold light drifting up around him (one draw call), and a stronger cool rim light on the cast.
 - **A clean screen while playing:** only ☰ Menu, Talk and Enter VR/AR stay in the toolbar. The status panel, the event log and the controls panel are hidden. Everything else is in ☰ Menu under "More": story map, playbills, fun modes, record and replay, share link, voice on or off, demo, controls, developer info, reset.
+- **The story picker, restyled** (following a reference mock-up):
+  - gold-trimmed panels with corner ornaments, and a glowing gold-edged "Generate my story" button;
+  - the **conflict** cards have hand-drawn vector icons in gold: a cage, crossed swords, a treasure chest, a riddle stone, a flower. The first version drew emoji onto a canvas, and some browsers left those cards blank;
+  - the **twists** are selectable pill buttons with small icons;
+  - every **setting** card is illustrated with its landmark: glowing green crystals in the cave, a ship under sail, a clock tower, a moonlit pine forest with fireflies, a stone arch bridge, a castle with purple turrets, a crescent moon over clouds;
+  - character cards have a soft vignette, and the layout fits one screen (conflict, who, villain on top; a wide setting row and the twists below).
+- **Robot fixes:** the eyes now sit just proud of the visor glass with a gentler angle (one eye's edge was dipping behind the glass and looked cut off). A leftover face-plate shell that poked through as thin "hair-like" slivers is gone. Floating motes of light are now soft round specks instead of squares.
 ---
 
 ## 4. The story
