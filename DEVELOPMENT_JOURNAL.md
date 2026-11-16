@@ -394,6 +394,17 @@ A review of the build found that the start menu hid the way into the headset, an
 - **Adaptive quality no longer slides to the blurriest tier for nothing:** if a step down doesn't make frames at least 8% faster, something else is setting the pace (a 30 Hz display, a battery saver, a background tab). The game goes back to the better tier and stops stepping.
 - **Tested:** both buttons in the IWER emulator (a VR session with the cord opening; a passthrough session); `tools/headless-tests/t57.mjs` forces every frame to arrive 33 ms apart and checks the game steps down once, steps back and stays, and that `?quality=high` never moves. Not tested on a real headset.
 
+### Phase 26: new art for the stages and the storybook, and things that move
+The storybook pictures and several stage backdrops (the crystal cave most of all) looked crude next to the menu. All of it was redrawn in code.
+- **Backdrops (`backdrops.js`):** all seven scenes repainted with depth, light and texture: the castle with round towers, a gate and banners; a moonlit forest with beams of light; the sea with the sun's glitter; mountains and the far-off clockwork tower; a stone hall with storm windows, brass pipes and dials; the dragon's cave with great crystal clusters, a glowing pool and a hoard of gold; the night sky with the northern lights. Each is painted in layers (far sky, drifting clouds or mist, foreground) at 1536 x 564.
+- **Things that move on stage (`sets.js`):** clouds and mist drift between the layers; stars twinkle; the courtyard flags fly; three rows of theatre waves roll behind the ship's rail; rain streams down the tower windows and lightning flashes (the wall lights up with it); two pairs of brass gears turn on the tower wall; a shooting star crosses the night sky now and then; in the cave the crystals pulse, glints wink on the gold and motes of light drift up.
+- **The crystal cave in 3D:** six-sided crystal shards in seven clusters of four colours, each with a soft halo, plus faceted rocks, stalactites, and the dragon's chest with a heap of coins. The troll's bridge has real stonework.
+- **Storybook (`storybook.js`, `figures.js`):** every character redrawn as a picture-book figure (shading, faces, costumes, props); pages of textured paper with a gilt frame, a ribbon for the chapter's name, a heading flourish and an illuminated first letter that the text flows round (it used to overlap the words); larger text. Illustrations are now cropped to fit, never squashed (they used to be squeezed to less than half their width). The story cards and the poster use the same art, so the crude landmark overlays were removed.
+- **Story:** two pages now plant Clank's loneliness before the ending reveals it (the prologue: "who had never once been invited to listen"; the tower: "No one ever came to visit. Clank had made quite sure of that."). Both were recorded with the narrator's voice; the two old clips were removed.
+- **Cost:** about 5 to 14 more draw calls per frame depending on the set; a set's textures are built the first time it is shown.
+- **Tested:** `tools/headless-tests/t58.mjs` (every set and chapter loads with no errors, the cage and flight hooks still work, the drift layer moves); `shots.mjs` and `cards.mjs` capture every set, every storybook page and every card for checking by eye. Not tested on a real headset.
+
+
 ---
 
 ## 4. The story
