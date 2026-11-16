@@ -1941,7 +1941,7 @@ function renderStartMenu(midGame = false) {
     `<div class="opts">` +
       `<label class="opt"><input type="checkbox" id="pinchlock"><span class="ic">${I.pinch}</span><span class="tx"><b>Pinch Lock</b><small>No need to hold a pinch</small></span></label>` +
       `<label class="opt"><input type="checkbox" id="onehand"><span class="ic">${I.wave}</span><span class="tx"><b>One Hand</b><small>No second hand needed</small></span></label>` +
-      `<div class="opt info"><span class="ic">${I.vr}</span><span class="tx"><b>VR Ready</b><small>Best with sound on ·<br>Works with Quest hand tracking</small></span></div>` +
+      `<div class="opt info"><span class="ic">${I.vr}</span><span class="tx"><b>VR Ready</b><small>Best with sound on ·<br>Works with hand tracking</small></span></div>` +
     `</div>` +
     (midGame
       ? `<div class="pair"><button id="backtoshow" class="outline">× Back to the show</button></div>` +
@@ -2141,6 +2141,7 @@ async function enterXR(mode) {
     xrMode = null;
     hitSource?.cancel?.();
     hitSource = null;
+    dropAnchor();
     placing = false;
     reticle.visible = false;
     scene.background = bg;
@@ -2254,6 +2255,39 @@ function updateBlobs() {
   }
 }
 
+// ---- spatial anchoring (passthrough) -----------------------------------------------------
+// The stage is anchored to the real spot where you set it down (WebXR anchors). Each frame it
+// follows the anchor, so as the headset refines its map of the room the theatre stays on your
+// desk instead of drifting. Where anchors aren't supported, it simply stays where you put it.
+let lastHit = null, stageAnchor = null;
+const lastFwd = new THREE.Vector3(0, 0, -1);
+const _anchM = new THREE.Matrix4(), _anchP = new THREE.Vector3(), _anchLast = new THREE.Vector3(Infinity, 0, 0);
+function anchorStage(hit, fwd) {
+  dropAnchor();
+  if (!hit?.createAnchor) return Promise.resolve(null);
+  const facing = fwd.clone();
+  return hit.createAnchor().then((anchor) => {
+    if (!xrMode) { anchor.delete?.(); return null; }
+    stageAnchor = { anchor, fwd: facing };
+    _anchLast.set(Infinity, 0, 0);
+    log("Stage anchored to your desk");
+    return stageAnchor;
+  }).catch(() => null);
+}
+function dropAnchor() { try { stageAnchor?.anchor.delete?.(); } catch { /* already gone */ } stageAnchor = null; }
+function followAnchor(frame) {
+  if (!stageAnchor || placing || !frame) return false;
+  const { anchor, fwd } = stageAnchor;
+  if (frame.trackedAnchors && !frame.trackedAnchors.has(anchor)) return false; // (lost for now: stay put)
+  const pose = frame.getPose(anchor.anchorSpace, renderer.xr.getReferenceSpace());
+  if (!pose) return false;
+  _anchP.setFromMatrixPosition(_anchM.fromArray(pose.transform.matrix));
+  if (_anchP.distanceToSquared(_anchLast) < 1e-8) return false; // (unchanged: nothing to do)
+  _anchLast.copy(_anchP);
+  setStagePose(_anchP.clone().add(new THREE.Vector3(0, STAGE.base, 0)), fwd);
+  return true;
+}
+
 const prevPinch = new Map();
 function updatePlacement(dt, frame, hands) {
   placeTimer += dt;
@@ -2274,6 +2308,7 @@ function updatePlacement(dt, frame, hands) {
       setStagePose(pos.clone().add(new THREE.Vector3(0, STAGE.base, 0)), fwd);
       found = true;
       lastFoundSurface = true;
+      lastHit = r; lastFwd.copy(fwd);
       break;
     }
   }
@@ -2288,8 +2323,9 @@ function updatePlacement(dt, frame, hands) {
   if ((pinched && (found || placeTimer > 1.5)) || (!hitSource && placeTimer > 2) || placeTimer > 25) {
     placing = false;
     reticle.visible = false;
-    // set down on a real table: the desk in front of the stage becomes part of the play area
-    if (found) { setRealDesk(true); setTimeout(() => narrator.coach("deskAR"), 9000); }
+    // set down on a real table: the desk in front of the stage becomes part of the play area,
+    // and the stage is anchored to that spot so it stays put as the headset learns the room
+    if (found) { setRealDesk(true); anchorStage(lastHit, lastFwd); setTimeout(() => narrator.coach("deskAR"), 9000); }
     if (!showStarted && !book.open && !intro.on && !preshow) { storyPending = true; startPreshow(); }
   }
 }
@@ -2326,7 +2362,11 @@ function xrGestures(dt, hands, t) {
   }
   const both = hands.filter((h) => h.present && h.pinch && !grabs.has(h.id)).length === 2;
   recenterHold = both ? recenterHold + dt : 0;
-  if (recenterHold > 1.5) { placeStageInFront(); recenterHold = 0; toast("Stage moved"); }
+  if (recenterHold > 1.5) {
+    recenterHold = 0;
+    if (xrMode === "immersive-ar" && hitSource) { dropAnchor(); placing = true; placeTimer = 0; narrator.coach("placeAR"); toast("Pinch to set the stage down"); }
+    else { placeStageInFront(); toast("Stage moved"); }
+  }
 }
 
 // In ?emulate mode the desktop simulator steers IWER's tracked hands, so grabbing
@@ -2372,6 +2412,7 @@ renderer.setAnimationLoop((time, frame) => {
     hands = xrHands.update(stageRoot, dt);
     if (placing) updatePlacement(dt, frame, hands);
     else {
+      followAnchor(frame); // (passthrough: the stage stays on the real spot where you set it)
       handleHands(hands, false);
       xrGestures(dt, hands, elapsed);
     }
@@ -2521,4 +2562,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };

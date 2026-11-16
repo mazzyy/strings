@@ -382,6 +382,10 @@ Typing invites stories the theatre can't stage, so the main way to make a story 
 
   It's designed at a fixed size and scaled to fit any window. All the artwork is drawn in code.
 - **Riding the dragon:** Sir Pip used to hang from his strings in his standing pose while Marlo flew under him, so his legs went straight through the dragon. He now takes a **seated riding pose** while flying: leaning forward, thighs forward and apart to straddle Marlo's back, shins down the dragon's sides, hands reaching forward to hold on, legs swinging a little. He still rides wherever your bar puts him, the dragon's wingbeats lift them both, and he's back on his strings when they land.
+
+### Phase 24: submission readiness (checked against the official rules)
+- **No brand names in the experience:** the three visible mentions of the headset's brand ("Works with Quest hand tracking" on the menu, "On Quest: …" in the controls panel, and the credits line) now say "hand tracking", "In the headset" and "for VR".
+- **Spatial anchoring in passthrough:** when you set the stage down on a real surface, it's anchored to that spot with WebXR anchors (created from the hit-test result). Every frame the stage follows the anchor, so as the headset refines its map of the room the theatre stays on your desk instead of drifting. If tracking of the anchor is briefly lost, the stage holds still; where anchors aren't supported, it simply stays where it was set. Re-centring (both hands pinched for 1.5 s) in passthrough now lets you place the stage again on a surface, with a fresh anchor; the anchor is released when the session ends. Tested with stand-in anchors: placement, following a 2 cm correction, holding still while lost, and no support at all.
 ---
 
 ## 4. The story
@@ -417,7 +421,7 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 
 | File | What it does |
 |---|---|
-| `main.js` | The orchestrator: renderer and scene, cast, input and grabs (including pinch lock and the story lock), the flow (start menu → cord → warm-up → storyteller → book → chapters → map, or free play), soundscape cues, tasks context, extras (non-AI puppets), flight, finale, real-desk play and contact shadows, halos, 3D subtitles, the guest's memory display, XR session, adaptive quality, loop |
+| `main.js` | The orchestrator: renderer and scene, cast, input and grabs, passthrough placement and spatial anchoring (including pinch lock and the story lock), the flow (start menu → cord → warm-up → storyteller → book → chapters → map, or free play), soundscape cues, tasks context, extras (non-AI puppets), flight, finale, real-desk play and contact shadows, halos, 3D subtitles, the guest's memory display, XR session, adaptive quality, loop |
 | `puppet.js` | Verlet marionette: physics, strings (tension colour, snapping), gait and bow assists, moon gravity, fragile strings, the flight pose and the seated riding pose, the real-desk floor, batching hook |
 | `skins.js` / `cast.js` | Procedural visuals for every character on the shared rig; control bars (wooden for the robot, glowing for whoever you play); the generic humanoid skin builder |
 | `robot.js` | The storyteller robot puppeteer: helmet head with a black glass screen face (oval eyes that blink and flash gold on a memory, a sound-wave mouth driven by his voice), brass collar, a chest clock that keeps real time, two-bone arm IK onto the guest's bars, jointed fingers |
@@ -523,7 +527,7 @@ There's no headset, so testing used:
 ## 9. Hosting and deployment
 
 - `main` holds the code. The site is `public/`, published by pushing `git subtree split --prefix public` to the `gh-pages` branch. Pages builds from that branch (Actions is unavailable).
-- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`, `story-cards`, `story-roles`, `story-picker`, `robot-visuals`.
+- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`, `story-cards`, `story-roles`, `story-picker`, `robot-visuals`, `submission-prep`.
 
 ---
 
