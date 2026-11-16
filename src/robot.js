@@ -113,16 +113,15 @@ export class Robot {
     this.neck.add(this.head);
     const skull = add(this.head, new THREE.SphereGeometry(0.075, 48, 36), shell, [0, 0.078, -0.004]);
     skull.scale.set(0.97, 1.0, 0.95);
-    const facePlate = add(this.head, new THREE.SphereGeometry(0.0705, 48, 36, -Math.PI * 0.36, Math.PI * 0.72, Math.PI * 0.3, Math.PI * 0.52), face, [0, 0.074, 0.006]);
-    facePlate.scale.set(0.97, 0.99, 0.96);
     // a band of dark glass across the eyes, like a real robot's sensor visor
     const visor = add(this.head, new THREE.SphereGeometry(0.0758, 48, 16, Math.PI * 0.24, Math.PI * 0.52, Math.PI * 0.405, Math.PI * 0.135), visorMat, [0, 0.078, -0.004]);
     visor.scale.set(0.97, 1.0, 0.95); visor.castShadow = false;
     // eyes: lenses behind the glass (a lit iris ring around a bright pupil); they blink with a shutter
     this.eyes = [-1, 1].map((s) => {
       const eye = new THREE.Group();
-      eye.position.set(s * 0.0245, 0.0835, 0.0652);
-      eye.rotation.set(-0.06, s * 0.35, 0);
+      // (sat just proud of the glass and only gently angled, so no edge dips behind it)
+      eye.position.set(s * 0.0245, 0.0835, 0.0672);
+      eye.rotation.set(-0.05, s * 0.22, 0);
       this.head.add(eye);
       add(eye, new THREE.TorusGeometry(0.0068, 0.0012, 8, 32), this.irisMat, [0, 0, 0]).castShadow = false;
       add(eye, new THREE.RingGeometry(0.0036, 0.0054, 32), this.irisMat, [0, 0, 0.0001]).castShadow = false; // (the iris)
