@@ -14,6 +14,7 @@ import { batchParts } from "./batch.js";
 import { Sfx, Soundscape } from "./audio.js";
 import { Phrases } from "./phrases.js";
 import { Playground } from "./playground.js";
+import { parseStory, buildStory, STORY_EXAMPLES, VILLAINS } from "./storymaker.js";
 import { Hints } from "./hints.js";
 import { Props } from "./props.js";
 import { Show, playbills, mindCardTexture } from "./show.js";
@@ -339,7 +340,7 @@ const show = new Show({
   onChange: (sh, entry) => {
     updateShowHud();
     if (entry) {
-      const prog = storyMap.complete(chapter.id, entry);
+      const prog = chapter.custom ? {} : storyMap.complete(chapter.id, entry); // (your own stories aren't map chapters)
       if (chapter.finale) narrator.coach(STORY_LINES.theEnd);
       else if (prog.newChapter) narrator.coach(STORY_LINES.unlocked);
       toast(`New playbill: ${entry.title} ${"★".repeat(entry.stars)}`);
@@ -403,6 +404,7 @@ show.onMindCard = (m) => {
 };
 show.onEnding = (type) => {
   confetti.burst(type);
+  if (chapter.custom) storyHappyEnding();
   emotes.pop("marlo", type === "grace" ? "♥" : type === "slapstick" ? "♪" : "!", marloHead, null, 3);
   sfx.play("applause", null, { volume: 0.5 });
 };
@@ -1444,6 +1446,9 @@ show.onDone = () => setTimeout(() => {
     unbound.armForApplause(toEpilogue);
     // no clap (or the headset missed it)? The audience applauds for you, and he breaks free anyway
     setTimeout(() => { if (unbound.armed) { hints.hide(); narrator.coach("audienceClaps"); unbound.applause(); } }, 10000);
+  } else if (chapter.custom) {
+    narrator.coach("storyEnd");
+    setTimeout(() => openStoryMaker(), 6000); // another one?
   } else openMap();
 }, 2500);
 
@@ -1615,6 +1620,62 @@ function updateIntro(dt) {
 const gripL = new THREE.Vector3(), gripR = new THREE.Vector3();
 let gripInit = false;
 
+// ---- your own story: written in words, staged by the theatre (see storymaker.js) ---------
+function playStory(story) {
+  freePlay = false;
+  document.body.classList.remove("free-play");
+  playground.hide();
+  storyPending = false;
+  showStarted = true; preshow = false;
+  if (flying) setFlight(false);
+  if (playerId !== "knight") setPlayer("knight"); // the hero is Sir Pip
+  changeScene(story);
+  // whoever needs rescuing waits on stage (in the tower, the princess is in the cage)
+  setTimeout(() => {
+    if (story.captive === "princess" && !story.princess) { princessOn(true); princessDrv.pos.set(0.3, 0.5, -0.12); }
+    if (story.captive === "king") { const K = extra("king"); K.show(true); K.mode = "idle"; K.target.set(0.33, 0.5, -0.13); K.yaw = -0.5; }
+  }, 1800);
+}
+// the curtain call of your story: whoever was rescued celebrates
+function storyHappyEnding() {
+  const c = chapter.captive;
+  if (c === "princess") { princessOn(true); princessDrv.state = "happy"; princessDrv.pos.set(0.24, 0.5, 0.06); }
+  if (c === "king") { const K = extra("king"); K.show(true); K.mode = "dance"; }
+  for (let i = 0; i < 4; i++) setTimeout(() => { confetti.burst(["grace", "drama", "slapstick"][i % 3]); sfx.play("pop", null, { volume: 0.5, rate: 0.7 + i * 0.15 }); }, 600 + i * 500);
+}
+// the "make your own story" dialog (on the flat page: the headset has no keyboard, so
+// write it here before entering VR, or pick from the example ideas)
+const NAMES = { marlo: "the dragon", troll: "the troll", pirate: "the pirate captain", wizard: "the wizard", clank: "the clockwork robot" };
+const PLACE_NAMES = { courtyard: "the castle", forest: "the forest", ship: "a pirate ship", bridge: "the troll bridge", tower: "the clockwork tower", cave: "a dark cave", sky: "the sky" };
+const CHALLENGE_NAMES = { duel: "a sword fight", riddle: "a riddle", spell: "copying a magic spell", dodge: "dodging attacks", dance: "dancing together" };
+function storySummary(p) {
+  const what = p.plot === "kidnap" ? `rescue ${p.captive === "king" ? "the King" : "the princess"}` : p.plot === "steal" ? "win back the treasure" : p.plot === "lonely" ? "make a lonely friend smile" : "set things right";
+  return p.plot === "lonely"
+    ? `<b>Starring</b> ${NAMES[p.villain]} · <b>at</b> ${PLACE_NAMES[p.place]} · <b>Sir Pip must</b> ${what} (a gentle hello, high fives, a dance)`
+    : `<b>Villain</b> ${NAMES[p.villain]} · <b>at</b> ${PLACE_NAMES[p.place]} · <b>Sir Pip must</b> ${what} · <b>by</b> ${CHALLENGE_NAMES[p.challenge]}`;
+}
+function openStoryMaker() {
+  const el = $("storymaker");
+  if (!el) return;
+  if (xrMode) { openMap(); return; } // (no keyboard in the headset)
+  el.classList.add("on");
+  const ta = el.querySelector("textarea");
+  const sum = el.querySelector(".sum");
+  const refresh = () => { sum.innerHTML = ta.value.trim() ? storySummary(parseStory(ta.value)) : "Write a sentence or two, or tap an idea below."; };
+  ta.oninput = refresh;
+  el.querySelectorAll(".ideas button").forEach((b) => (b.onclick = () => { ta.value = b.textContent; refresh(); }));
+  el.querySelector(".go").onclick = () => {
+    const text = ta.value.trim() || STORY_EXAMPLES[0];
+    el.classList.remove("on");
+    loadingEl?.classList.add("done");
+    unlockAudio();
+    playStory(buildStory(parseStory(text)));
+  };
+  el.querySelector(".x").onclick = () => el.classList.remove("on");
+  refresh();
+  setTimeout(() => ta.focus(), 50);
+}
+
 // ---- free play: no story, just the theatre and everything in it ------------------------
 const PLAYER_SKINS = { knight: knightSkin, dragon: dragonSkin, wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin, clank: clankSkin, princess: princessSkin, king: kingSkin };
 const PLAYER_NAMES = { knight: "Sir Pip", dragon: "Marlo", wizard: "Bramble", pirate: "Captain Pegg", troll: "Grumble", clank: "Clank", princess: "Juniper", king: "The King" };
@@ -1714,7 +1775,7 @@ if (loadingEl) {
     (resume
       ? `<button id="begin">Continue · ${where}</button><div class="more"><button id="newstory">Start a new story</button><button id="chapters">Play any chapter · all unlocked</button></div>`
       : `<button id="begin">Begin the story</button><div class="more"><button id="chapters">Play any chapter · all unlocked</button></div>`) +
-    `<div class="more"><button id="freeplay">Free play · no story, just fun</button></div>` +
+    `<div class="more"><button id="mystory">✎ Make your own story</button><button id="freeplay">Free play · no story, just fun</button></div>` +
     `<label class="lockopt"><input type="checkbox" id="pinchlock"> Pinch lock: no need to hold a pinch</label>` +
     `<label class="lockopt"><input type="checkbox" id="onehand"> One hand: no second hand needed</label>` +
     `<small>Best with sound on · works with Quest hand tracking</small></div>`;
@@ -1745,6 +1806,7 @@ if (loadingEl) {
     openMap();
   };
   if ($("freeplay")) $("freeplay").onclick = () => { enter(); startFreePlay(); };
+  if ($("mystory")) $("mystory").onclick = () => openStoryMaker();
   if (new URLSearchParams(location.search).has("autostart")) { loadingEl.classList.add("done"); raiseCurtain(); }
 }
 $("enter-vr").addEventListener("click", () => loadingEl?.classList.add("done"));
@@ -2236,4 +2298,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };

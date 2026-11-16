@@ -72,7 +72,7 @@ The project is an entry to the **Meta VR Start Developer Competition 2026** on D
 - **Draw calls:** static meshes merged to keep the count down.
 
 ### Phase 3: a human voice
-- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 541 lines, about 14 MB, each loaded only when spoken). Each character has their own voice and pace:
+- **Kokoro neural TTS (fp16 model):** every built-in line pre-recorded to MP3 (now 646 lines, about 17 MB, each loaded only when spoken). Each character has their own voice and pace:
 
   | Character | Voice |
   |---|---|
@@ -257,6 +257,24 @@ Prompted by outside feedback (and a comparison with *Make with Puppet*, which re
   The narrator says each step and an arrow shows the motion. A step never waits more than 15 to 20 seconds. Then the storyteller and the book begin.
 - **One-hand mode** (an orange "One hand" button on the apron, or a checkbox on the start menu, remembered between visits): no second hand needed. The arm bar rides along with the main bar, and **rolling the wrist** raises Sir Pip's arms (roll back and forth to wave; high fives work too). Hints change to *"Roll your wrist to raise his arms"*.
 - 15 new voice lines (541 in total).
+
+### Phase 18: make your own story
+- **"✎ Make your own story"** on the start menu opens a storybook-style card. Type what happens in your own words (for example *"dragon kidnaped princes in his cave sir pip to rescue"*), or tap one of five example ideas. A live summary shows what the theatre understood: *Villain: the dragon · at a dark cave · Sir Pip must rescue the princess · by dodging attacks*.
+- **How it works without a language model** (`storymaker.js`): the hosted build has no AI server, so the story maker reads key words.
+  - **Spelling slips are fine:** any word one or two letters off a story word (a swap of neighbouring letters counts as one) is corrected first, so "kidnaped princes", "trol", "robbot" and "lonley" all work.
+  - **What it picks out:**
+    - the **villain**: dragon, troll, pirate, wizard or witch, robot;
+    - **who or what needs saving**: the princess, the King, the treasure;
+    - **where**: castle, forest, ship, bridge, tower, cave, sky (otherwise the villain's home);
+    - **the plot**: a kidnapping, a theft, a lonely character, or general trouble;
+    - **the challenge**: a fight, a riddle, a spell, dodging, dancing (otherwise the villain's speciality).
+- **What it builds:**
+  - a 3-page illustrated storybook ("Your Story"), with the villain, the captive or the treasure drawn on the right set;
+  - the villain as the robot's co-star, and the captive waiting on stage (in the tower, the princess is in the real cage, and freeing her with the key becomes an act);
+  - 3 to 4 acts that fit the goal: face the villain, then the challenge (sword plus duel, the troll's riddle, copying a spell, dodging attacks), find the jewels if something was stolen, unlock the cage, and a final bow. A friendship story is instead a gentle hello, high fives and a dance.
+  - At the curtain call, whoever was rescued celebrates with fireworks, the narrator says *"…happily ever after. Shall we make another story?"*, and the card opens again.
+- **Every sentence is voiced:** the story maker only produces sentences from a fixed set of combinations (5 villains × 7 places, 4 plots, 5 quests, every act goal), so all 105 are pre-recorded in the narrator's natural voice (646 lines in total).
+- You write the story on the flat page (the headset has no keyboard), then press "Enter VR" and play it in the headset.
 ---
 
 ## 4. The story
@@ -280,6 +298,7 @@ The **Grand Theatre** (on the map after chapter 1) runs a new three-act show eve
 **Ways in, from the start menu:**
 - **Begin the story** (or **Continue**, which names your chapter) and **Start a new story**.
 - **Play any chapter · all unlocked:** every place on the map can be chosen straight away (for judges, or anyone short of time).
+- **✎ Make your own story:** type a story in your own words and the theatre stages it (Phase 18).
 - **Free play · no story, just fun:** the playground (Phase 15).
 - **Pinch lock** can be switched on right there, before you start.
 
@@ -310,6 +329,7 @@ Everything is in `public/` and runs as a static site; `server.mjs` is optional a
 | `audio.js` | Sound: real CC0 recordings with random variants (procedural sounds as a fallback), the per-chapter soundscape (music and ambience that loop, crossfade, duck under speech and swell), and recorded character emotions |
 | `phrases.js` | Talking without a microphone: speech bubbles to poke or click |
 | `playground.js` | The free-play menu: a desktop panel, and a board of tabs to poke in the headset |
+| `storymaker.js` | Make your own story: a typo-tolerant key-word reader and a builder that turns it into storybook pages and acts; lists every sentence it can say for the voice builder |
 | `unbound.js` | Marlo breaking free, flying around your head, landing on your palm; clap detection |
 | `public/audio/` | 42 converted CC0 sound files, plus `voices/` for recorded character emotions (`index.json` lists them) |
 | `perf.js` | Static mesh merging |
@@ -386,7 +406,7 @@ There's no headset, so testing used:
 ## 9. Hosting and deployment
 
 - `main` holds the code. The site is `public/`, published by pushing `git subtree split --prefix public` to the `gh-pages` branch. Pages builds from that branch (Actions is unavailable).
-- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`.
+- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`.
 
 ---
 

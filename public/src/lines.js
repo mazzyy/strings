@@ -1,4 +1,5 @@
-// Every line the built-in narrator can say. Kept import-free so the voice
+import { allStoryLines } from "./storymaker.js";
+// Every line the built-in narrator can say. Kept free of browser-only imports so the voice
 // builder (tts/build_voice.py via tts/export_lines.mjs) can read it in Node and
 // pre-record each one with a natural voice.
 //
@@ -103,6 +104,7 @@ export const COACH = {
   rescueBravo: "Up again! What a trouper. Bravo!",
   rescueTrier: "Never mind! The audience loves a trier.",
   rescueDrama: "Oh, the drama! The crowd is on the edge of its seats.",
+  storyEnd: "And they all lived happily ever after. The end! Shall we make another story?",
   audienceClaps: "Listen to that! The whole audience is clapping for Marlo.",
   freePlay: "Free play! No story tonight. Pick who you'd like to be, who plays with you, and which stage. Then just have fun.",
   oneHandOn: "One-hand mode is on. No second hand needed: roll your wrist to raise Sir Pip's arms.",
@@ -583,6 +585,7 @@ export const STORY_LINES = {
 export function allLines() {
   const out = new Map();
   const say = (text, who = "narrator") => out.set(text, who);
+  allStoryLines().forEach((l) => say(l)); // every sentence the story maker can produce
   for (const list of Object.values(LINES)) {
     for (const l of list) {
       for (const name of GUEST_NAMES) {
