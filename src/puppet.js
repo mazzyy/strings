@@ -57,6 +57,14 @@ const tmpA = new THREE.Vector3();
 const tmpB = new THREE.Vector3();
 const tmpC = new THREE.Vector3();
 // flying: the body is posed (not simulated) — stretched out like a diving superhero
+// the rider's pose (relative to the pelvis, facing +z): leaning forward a little, thighs
+// forward and apart to straddle a dragon's back, shins down its sides, hands forward holding on
+const SEAT = {
+  head: [0, 0.104, 0.02], neck: [0, 0.075, 0.012], lS: [-0.032, 0.067, 0.01], rS: [0.032, 0.067, 0.01],
+  chest: [0, 0.043, 0.02], pelvis: [0, 0, 0], lH: [-0.019, -0.006, 0.004], rH: [0.019, -0.006, 0.004],
+  lE: [-0.042, 0.03, 0.03], rE: [0.042, 0.03, 0.03], lW: [-0.026, 0.008, 0.058], rW: [0.026, 0.008, 0.058],
+  lK: [-0.04, -0.016, 0.042], rK: [0.04, -0.016, 0.042], lF: [-0.046, -0.066, 0.03], rF: [0.046, -0.066, 0.03],
+};
 const FLY = { q: new THREE.Quaternion(), e: new THREE.Euler(), v: new THREE.Vector3(), PIVOT: [0, 0.158, 0.014] };
 const FRAME_SCRATCH = { r: new THREE.Vector3(), u: new THREE.Vector3(), c: new THREE.Vector3(), a: new THREE.Vector3(), z: new THREE.Vector3(), m4: new THREE.Matrix4() };
 
@@ -148,6 +156,7 @@ export class Marionette {
     }
 
     this.flight = null;    // { center, yaw, pitch, roll }: posed in flight instead of hanging
+    this.seat = null;      // { center, yaw, pitch, roll }: sitting astride something (a dragon), pelvis at center
     this.gravityScale = 1; // "moon gravity" mode
     this.fragile = false;  // "fragile strings" mode: a hard yank snaps a string
     this.onSnap = null;    // (stringName, position) => void
@@ -219,6 +228,7 @@ export class Marionette {
     if (this._snapCool > 0) this._snapCool -= dt;
 
     if (this.flight) { this._fly(dt); this._render(dt); return; }
+    if (this.seat) { this._sit(dt); this._render(dt); return; }
     this.acc += dt;
     while (this.acc >= STEP) {
       this._step(STEP);
@@ -295,6 +305,23 @@ export class Marionette {
       if (n === "lF" || n === "lK") FLY.v.z += Math.sin(t * 6) * 0.008;
       if (n === "rF" || n === "rK") FLY.v.z += Math.sin(t * 6 + Math.PI) * 0.008;
       if (n === "lW" || n === "rW") FLY.v.z += 0.012 + Math.sin(t * 5 + i) * 0.004;
+      FLY.v.applyQuaternion(FLY.q).add(F.center);
+      this.pos[i].lerp(FLY.v, k);
+      this.prev[i].copy(this.pos[i]);
+    });
+  }
+
+  // riding: the seated pose, carried along (blended in, so mounting is smooth); the legs swing a little
+  _sit(dt) {
+    this._sitT = (this._sitT || 0) + dt;
+    const F = this.seat, t = this._sitT;
+    FLY.q.setFromEuler(FLY.e.set(F.pitch ?? 0.12, F.yaw ?? 0, F.roll || 0, "YXZ"));
+    const k = Math.min(1, dt * 9);
+    this.names.forEach((n, i) => {
+      const r = SEAT[n];
+      FLY.v.set(r[0], r[1], r[2]);
+      if (n === "lF") FLY.v.z += Math.sin(t * 3.2) * 0.004;
+      if (n === "rF") FLY.v.z += Math.sin(t * 3.2 + Math.PI) * 0.004;
       FLY.v.applyQuaternion(FLY.q).add(F.center);
       this.pos[i].lerp(FLY.v, k);
       this.prev[i].copy(this.pos[i]);

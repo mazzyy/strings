@@ -15,7 +15,7 @@ import { Sfx, Soundscape } from "./audio.js";
 import { Phrases } from "./phrases.js";
 import { Playground } from "./playground.js";
 import { parseStory, buildStory, storyFromCards, CARD_SECTIONS, STORY_EXAMPLES, VILLAINS } from "./storymaker.js";
-import { StoryPicker, storyFromPicks, surprisePicks, drawPreview, PICKS } from "./storypicker.js";
+import { StoryPicker, storyFromPicks, surprisePicks, drawPreview, PICKS, cardImage } from "./storypicker.js";
 import { Hints } from "./hints.js";
 import { Props } from "./props.js";
 import { Show, playbills, mindCardTexture } from "./show.js";
@@ -1163,6 +1163,9 @@ function setFlight(on) {
   if (sets.current === "sky") sets.refs("sky")?.setFlying?.(on);
   if (on) {
     sfx.play("swish", null, { volume: 0.5, rate: 1.3 });
+    // Sir Pip sits astride: his pelvis rides where it hangs below your bar
+    _seatOff.copy(pip.main.position).sub(pip.get("pelvis"));
+    pip.seat = { center: pip.get("pelvis").clone(), yaw: _fl.yaw, pitch: 0.12, roll: 0 };
     ai.react("carry", {
       force: true,
       target: () => _fv.copy(pip.main.position).add(_fo),
@@ -1171,15 +1174,19 @@ function setFlight(on) {
     });
   } else {
     ai.base.copy(ai.home); // Marlo glides home
+    pip.seat = null;       // Sir Pip back on his strings
     marlo.flight = null;
     marlo.flapBoost = 0;
   }
 }
 // while flying, Marlo is posed flat under Sir Pip (who rides on his back), banking into turns
 const _fl = { last: new THREE.Vector3(), bank: 0, yaw: Math.PI / 2 };
+const _seatOff = new THREE.Vector3(), _seatP = new THREE.Vector3();
+const SEAT_DROP = 0.036; // the dragon's chest sits this far below the rider's pelvis (his back under the saddle)
 function updateFlightPose(dt) {
   if (!flying) return;
-  const p = pip.get("pelvis");
+  // where the rider sits: under your bar, as he would hang (so you still steer him)
+  const p = _seatP.copy(pip.main.position).sub(_seatOff);
   const vx = (p.x - _fl.last.x) / Math.max(dt, 1e-3);
   _fl.last.copy(p);
   // fly sideways across the stage (it reads as flying), turning to face the way you're going
@@ -1188,8 +1195,10 @@ function updateFlightPose(dt) {
   const yaw = _fl.yaw;
   _fl.bank += (THREE.MathUtils.clamp(-vx * 1.2, -0.45, 0.45) - _fl.bank) * Math.min(1, dt * 4);
   const f = marlo.flight || (marlo.flight = { center: new THREE.Vector3() });
-  f.center.set(p.x, p.y - 0.045, p.z);
+  const bob = Math.sin(elapsed * 2) * 0.004; // the dragon's wingbeats lift them both
+  f.center.set(p.x, p.y - SEAT_DROP + bob, p.z);
   f.yaw = yaw; f.pitch = 1.32 + Math.sin(elapsed * 2) * 0.05; f.roll = _fl.bank;
+  if (pip.seat) { pip.seat.center.set(p.x, p.y + bob, p.z); pip.seat.yaw = yaw; pip.seat.roll = _fl.bank * 0.7; }
   marlo.flapBoost = 1;
 }
 
@@ -1858,6 +1867,15 @@ function leaveCurrentMode() {
   hints.hide();
   return true;
 }
+// the menu's theatre is designed at a fixed size, and scaled to fit the window
+function fitTheatre() {
+  const wrap = loadingEl?.querySelector(".theatre-wrap");
+  if (!wrap) return;
+  wrap.style.transform = "none";
+  const k = Math.min(1, (innerWidth - 24) / 1010, (innerHeight - 24) / (wrap.offsetHeight + 70));
+  wrap.style.transform = `scale(${k.toFixed(3)})`;
+}
+addEventListener("resize", fitTheatre);
 function renderStartMenu(midGame = false) {
   if (!loadingEl) return;
   const n = CHAPTER_LIST.findIndex((c) => c.id === chapter.id);
@@ -1877,29 +1895,64 @@ function renderStartMenu(midGame = false) {
     // an open hand, waving
     wave: `<svg viewBox="0 0 48 48" class="anim-wave"><g><path d="M17 44c-5-3-8-9-8-15v-7c0-2 3-2 3 0v7M12 24V12c0-2 3-2 3 0v11M15 22V8c0-2 3-2 3 0v14M18 22V9c0-2 3-2 3 0v13M21 23V12c0-2 3-2 3 0v14c2-3 4-6 6-5s0 5-2 8l-4 7c-1 3-3 5-6 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g><path class="w1" d="M34 10c3 2 4 5 4 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="w2" d="M37 6c4 3 6 7 6 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
     vr: `<svg viewBox="0 0 48 48" class="anim-vr"><path d="M6 17c0-3 2-5 5-5h26c3 0 5 2 5 5v11c0 3-2 5-5 5h-7l-3-4h-6l-3 4h-7c-3 0-5-2-5-5z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><circle cx="16" cy="22" r="3" fill="currentColor" class="eye"/><circle cx="32" cy="22" r="3" fill="currentColor" class="eye"/></svg>`,
-    // a little wooden marionette swinging from its bar (an original drawing)
-    puppet: `<svg viewBox="0 0 120 200" class="puppet"><g class="swing"><rect x="20" y="6" width="80" height="7" rx="3" fill="#8a5a30" stroke="#3a2010" stroke-width="2"/><rect x="56" y="0" width="8" height="22" rx="3" fill="#8a5a30" stroke="#3a2010" stroke-width="2"/><g stroke="#f3e6c8" stroke-width="1" opacity=".8"><path d="M24 12L42 112M96 12L80 112M60 18L60 40M40 9L46 160M80 9L74 160"/></g><g class="body"><circle cx="60" cy="52" r="15" fill="#e2b679" stroke="#3a2010" stroke-width="2.4"/><circle cx="55" cy="50" r="1.8" fill="#3a2010"/><circle cx="65" cy="50" r="1.8" fill="#3a2010"/><path d="M54 57c4 3 8 3 12 0" fill="none" stroke="#3a2010" stroke-width="2" stroke-linecap="round"/><rect x="52" y="66" width="16" height="6" rx="3" fill="#c99a5e" stroke="#3a2010" stroke-width="2"/><rect x="47" y="72" width="26" height="40" rx="8" fill="#e2b679" stroke="#3a2010" stroke-width="2.4"/><path d="M47 76l-14 24 30 4z" fill="#c0303a" stroke="#3a2010" stroke-width="2" stroke-linejoin="round" class="cape"/><g class="arm-l"><rect x="38" y="76" width="9" height="22" rx="4.5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/><rect x="38" y="98" width="9" height="16" rx="4.5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/></g><g class="arm-r"><rect x="73" y="76" width="9" height="22" rx="4.5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/><rect x="73" y="98" width="9" height="16" rx="4.5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/></g><g class="leg-l"><rect x="49" y="112" width="10" height="24" rx="5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/><rect x="49" y="136" width="10" height="22" rx="5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/></g><g class="leg-r"><rect x="61" y="112" width="10" height="24" rx="5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/><rect x="61" y="136" width="10" height="22" rx="5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/></g></g></g></svg>`,
+    // a wooden artist's-mannequin marionette with a red cape, dancing below its cross bar
+    puppet: `<svg viewBox="0 0 170 240" class="puppet"><defs><radialGradient id="wd" cx="35%" cy="30%"><stop offset="0" stop-color="#f6d29a"/><stop offset="1" stop-color="#c8904e"/></radialGradient><linearGradient id="cp" x1="0" x2="1"><stop offset="0" stop-color="#8a0f1c"/><stop offset="1" stop-color="#e0303c"/></linearGradient></defs>
+      <g class="swing"><g stroke="#5a3418" stroke-width="2.4"><rect x="42" y="14" width="96" height="9" rx="4" fill="#b07a3e"/><rect x="85" y="2" width="10" height="34" rx="4" fill="#b07a3e"/><rect x="62" y="30" width="56" height="7" rx="3" fill="#b07a3e"/></g>
+      <g stroke="#f6e8cc" stroke-width="1.1" opacity=".75" fill="none"><path d="M46 20L58 128M134 20L134 112M90 36L90 64M64 36L74 200M116 36L104 200"/></g>
+      <g class="body"><path class="cape" d="M78 92C60 96 34 120 22 150c14-2 26 2 38 8 6-24 14-44 26-58z" fill="url(#cp)" stroke="#5a0a12" stroke-width="2"/>
+      <circle cx="90" cy="76" r="15" fill="url(#wd)" stroke="#6a3a18" stroke-width="2.4"/><circle cx="84.5" cy="74" r="1.9" fill="#3a2010"/><circle cx="95.5" cy="74" r="1.9" fill="#3a2010"/><path d="M83 81c4 4 10 4 14 0" fill="none" stroke="#3a2010" stroke-width="2" stroke-linecap="round"/>
+      <rect x="86" y="90" width="8" height="6" rx="3" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/>
+      <path d="M76 98h28l-3 34H79z" fill="url(#wd)" stroke="#6a3a18" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="90" cy="138" rx="12" ry="7" fill="url(#wd)" stroke="#6a3a18" stroke-width="2.2"/>
+      <g class="arm-l"><circle cx="74" cy="100" r="5" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><rect x="58" y="100" width="8" height="26" rx="4" transform="rotate(30 62 100)" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><rect x="50" y="118" width="7" height="22" rx="3.5" transform="rotate(10 53 118)" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/></g>
+      <g class="arm-r"><circle cx="106" cy="100" r="5" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><rect x="112" y="84" width="8" height="24" rx="4" transform="rotate(-40 116 104)" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><rect x="126" y="72" width="7" height="20" rx="3.5" transform="rotate(-20 130 92)" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><circle cx="134" cy="112" r="4.5" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/></g>
+      <g class="leg-l"><rect x="78" y="142" width="9" height="30" rx="4.5" transform="rotate(12 82 142)" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><circle cx="76" cy="174" r="4.5" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><rect x="71" y="174" width="8" height="26" rx="4" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><path d="M68 200h14l2 6H66z" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/></g>
+      <g class="leg-r"><rect x="94" y="140" width="9" height="28" rx="4.5" transform="rotate(-38 98 140)" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><circle cx="114" cy="160" r="4.5" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><rect x="110" y="160" width="8" height="26" rx="4" transform="rotate(20 114 160)" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/><path d="M104 186h15l2 6h-18z" transform="rotate(20 112 188)" fill="url(#wd)" stroke="#6a3a18" stroke-width="2"/></g></g></g></svg>`,
+    // the crest above the stage: gold scrollwork round the masks of comedy and tragedy
+    crest: `<svg viewBox="0 0 380 130" class="crest"><defs><linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2c0"/><stop offset=".45" stop-color="#f2bc4e"/><stop offset="1" stop-color="#a0621a"/></linearGradient></defs>
+      <path d="M40 112h300" stroke="url(#gd)" stroke-width="6" stroke-linecap="round"/>
+      <g fill="none" stroke="url(#gd)" stroke-linecap="round"><path d="M190 104C150 104 132 86 104 86c-26 0-40 20-66 14" stroke-width="6"/><path d="M190 104c40 0 58-18 86-18 26 0 40 20 66 14" stroke-width="6"/>
+      <path d="M112 82c-14-18-6-40 14-40 12 0 16 12 8 18" stroke-width="5"/><path d="M268 82c14-18 6-40-14-40-12 0-16 12-8 18" stroke-width="5"/>
+      <path d="M70 94c-12-12-4-28 10-26M310 94c12-12 4-28-10-26" stroke-width="4"/><path d="M150 40c-8-14 0-26 14-26M230 40c8-14 0-26-14-26" stroke-width="4"/></g>
+      <g fill="url(#gd)"><path d="M190 2l9 14h-18z"/><circle cx="190" cy="22" r="6"/><path d="M84 66c-10 2-16 10-14 18 8-2 14-8 14-18zM296 66c10 2 16 10 14 18-8-2-14-8-14-18z"/></g>
+      <g stroke="#6a3c0c" stroke-width="2.4"><path d="M140 40c12-8 38-8 48 0 3 28-7 50-24 55-17-5-27-27-24-55z" fill="url(#gd)"/><path d="M192 38c12-8 38-8 48 0 3 28-7 50-24 55-17-5-27-27-24-55z" fill="url(#gd)"/></g>
+      <g stroke="#4a2606" stroke-width="2.8" fill="none" stroke-linecap="round"><path d="M149 56c4-4 10-4 14 0M168 56c4-4 10-4 14 0M201 58c4 4 10 4 14 0M220 58c4 4 10 4 14 0"/></g>
+      <path d="M152 70c5 11 20 11 25 0z" fill="#4a2606"/><path d="M205 80c5-9 20-9 25 0z" fill="#4a2606"/></svg>`,
+    // draped velvet curtains, tied back with gold tassels (one side; the other is mirrored)
+    curtain: `<svg viewBox="0 0 160 600" preserveAspectRatio="none" class="drape"><defs><linearGradient id="vf" x1="0" x2="1"><stop offset="0" stop-color="#5a0610"/><stop offset=".22" stop-color="#c41e30"/><stop offset=".4" stop-color="#7a0a18"/><stop offset=".6" stop-color="#d42a3a"/><stop offset=".8" stop-color="#8a0c1c"/><stop offset="1" stop-color="#b81a2a"/></linearGradient><linearGradient id="tg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ffe7a0"/><stop offset="1" stop-color="#b8801e"/></linearGradient></defs>
+      <path d="M0 0H158C150 70 112 150 52 238c-8 12-6 24 0 36 20 60 30 160 30 326H0z" fill="url(#vf)"/>
+      <path d="M0 0H158C150 70 112 150 52 238" fill="none" stroke="rgba(255,190,160,0.35)" stroke-width="3"/>
+      <g transform="translate(46 250)"><ellipse cx="0" cy="0" rx="14" ry="8" fill="url(#tg)" stroke="#7a4a10" stroke-width="2"/><path d="M-2 6c-6 10-8 22-6 34h18c2-12 0-24-6-34z" fill="url(#tg)" stroke="#7a4a10" stroke-width="2"/><path d="M-8 40h22" stroke="#7a4a10" stroke-width="2"/><path d="M-6 42v18M0 42v20M6 42v19M11 42v16" stroke="#d8a040" stroke-width="2"/></g></svg>`,
+    flourish: `<svg viewBox="0 0 420 40" class="flourish"><defs><linearGradient id="fl" x1="0" x2="1"><stop offset="0" stop-color="rgba(240,184,74,0)"/><stop offset=".3" stop-color="#f6c45a"/><stop offset="1" stop-color="#ffe7a0"/></linearGradient></defs><path d="M10 26C120 34 250 34 360 18c22-3 34-10 30-16-3-5-14-2-14 6 0 10 18 12 28 4" fill="none" stroke="url(#fl)" stroke-width="3.2" stroke-linecap="round"/></svg>`,
+    star: `<svg viewBox="0 0 40 40" class="sparkle"><path d="M20 0l4 16 16 4-16 4-4 16-4-16L0 20l16-4z" fill="#fff4c8"/></svg>`,
+    chev: `<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    plus: `<svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>`,
   };
   const bulbs = (n, cls) => `<div class="bulbs ${cls}">${Array.from({ length: n }, (_, i) => `<i style="animation-delay:${(i % 4) * 0.35}s"></i>`).join("")}</div>`;
-  loadingEl.innerHTML = `<div class="open theatre">` + bulbs(16, "top") + `<div class="curtain l"></div><div class="curtain r"></div>` + I.puppet +
-    `<h1>Strings</h1><p>A marionette theatre with an AI co-performer</p>` +
-    `<button id="begin" class="cta"><i>${I.play}</i>${resume ? `Continue · ${where}` : "Begin the Story"}</button>` +
-    `<div class="more"><button id="chapters" class="outline"><i>${I.book}</i>Play Any Chapter · All Unlocked</button>${resume ? `<button id="newstory" class="outline">Start a new story</button>` : ""}</div>` +
-    `<div class="duo"><button id="mystory" class="violet"><i>${I.pen}</i>Make Your Own Story</button><button id="freeplay" class="azure"><i>${I.pad}</i>Free Play · No Story, Just Fun</button></div>` +
+  // the Continue bar shows a little picture of where you'll be
+  const thumb = (() => { try { return cardImage("place", (at.id === "theatre" ? "courtyard" : at.set) || "courtyard", 360, 120).toDataURL(); } catch { return ""; } })();
+  loadingEl.innerHTML = `<div class="theatre-wrap"><div class="open theatre">` + I.crest +
+    bulbs(5, "top l") + bulbs(5, "top r") +
+    `<div class="curtain l">${I.curtain}</div><div class="curtain r">${I.curtain}</div>` + I.puppet +
+    `<div class="titlebox"><h1>Strings</h1>${I.star}${I.flourish}<p>A marionette theatre with an AI co-performer</p></div>` +
+    `<button id="begin" class="cta"><i class="pl">${I.play}</i><span>${resume ? `Continue · ${where}` : "Begin the Story"}</span><i class="ch">${I.chev}</i>${thumb ? `<span class="thumb" style="background-image:url(${thumb})"></span>` : ""}</button>` +
+    `<div class="pair"><button id="chapters" class="outline"><i class="gold">${I.book}</i>Play Any Chapter · All Unlocked</button>` +
+      (resume ? `<button id="newstory" class="outline"><i>${I.plus}</i>Start a New Story</button>` : "") + `</div>` +
+    `<div class="duo"><button id="mystory" class="violet"><i>${I.pen}</i>Make Your Own Story</button><button id="freeplay" class="azure"><i class="blue">${I.pad}</i>Free Play · No Story, Just Fun</button></div>` +
     `<div class="opts">` +
       `<label class="opt"><input type="checkbox" id="pinchlock"><span class="ic">${I.pinch}</span><span class="tx"><b>Pinch Lock</b><small>No need to hold a pinch</small></span></label>` +
       `<label class="opt"><input type="checkbox" id="onehand"><span class="ic">${I.wave}</span><span class="tx"><b>One Hand</b><small>No second hand needed</small></span></label>` +
-      `<div class="opt info"><span class="ic">${I.vr}</span><span class="tx"><b>VR Ready</b><small>Best with sound on · Quest hand tracking</small></span></div>` +
+      `<div class="opt info"><span class="ic">${I.vr}</span><span class="tx"><b>VR Ready</b><small>Best with sound on ·<br>Works with Quest hand tracking</small></span></div>` +
     `</div>` +
     (midGame
-      ? `<div class="more"><button id="backtoshow" class="outline">× Back to the show</button></div>` +
+      ? `<div class="pair"><button id="backtoshow" class="outline">× Back to the show</button></div>` +
         `<div class="extras-t">More</div><div class="extras">` +
         [["x-map", "🗺 Story map"], ["x-bills", $("bills")?.textContent || "Playbills"], ["x-mode", "✦ Fun modes", !$("mode") || $("mode").hidden], ["x-rec", recorder.recording ? "■ Stop recording" : "● Record a scene"], ["x-play", "▶ Replay my scene"], ["x-share", "🔗 Share link"], ["x-mute", $("mute")?.textContent || "Voice"], ["x-demo", "🤖 Demo"], ["x-help", document.body.classList.contains("showhelp") ? "Hide controls" : "⌨ Controls"], ["x-dev", document.body.classList.contains("devui") ? "Hide developer info" : "Developer info"], ["x-reset", "↺ Reset the stage"]]
           .filter(([, , hide]) => !hide).map(([id, label]) => `<button id="${id}">${label}</button>`).join("") + `</div>`
       : "") +
-    bulbs(9, "foot") + `</div>`;
+    bulbs(12, "foot") + `</div><div class="apron"></div></div>`;
   loadingEl.classList.add("ready");
   loadingEl.classList.remove("done");
+  fitTheatre();
   const enter = () => { loadingEl.classList.add("done"); unlockAudio(); };
   const begin = () => {
     enter();
