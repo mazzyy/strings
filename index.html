@@ -62,7 +62,16 @@
     body:not(.devui) #top .buttons > button:not(#menubtn):not(#talk):not(.xr) { display: none !important; }
     body:not(.showhelp) #help { display: none; }
     /* the start menu: a little theatre (gold proscenium with set-in bulbs, crest, drapes, apron) */
-    #loading.ready { background: radial-gradient(ellipse at 50% 42%, rgba(40,14,24,0.25), rgba(6,3,5,0.86) 72%); }
+    #loading.ready { background: radial-gradient(ellipse at 50% 42%, rgba(60,18,28,0.12), rgba(10,4,8,0.74) 72%); }
+    /* two warm spotlights from the flies, swaying slowly over the menu */
+    #loading.ready::before { content: ""; position: absolute; inset: -25%; pointer-events: none; mix-blend-mode: screen;
+      background: conic-gradient(from 132deg at 30% 6%, transparent 0deg, rgba(255,214,140,0.20) 16deg, transparent 34deg), conic-gradient(from 194deg at 70% 6%, transparent 0deg, rgba(255,214,140,0.20) 16deg, transparent 34deg);
+      animation: beams 8s ease-in-out infinite alternate; }
+    @keyframes beams { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+    #loading.done::before { display: none; }
+    /* a soft vignette round the play view, so the eye rests on the stage */
+    #vig { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 56%, rgba(0,0,0,0) 48%, rgba(10,4,8,0.5) 100%); }
+    body.in-xr #vig { display: none; }
     .theatre-wrap { position: relative; display: flex; flex-direction: column; align-items: center; transform-origin: 50% 50%; padding-top: 70px; }
     .open.theatre { position: relative; box-sizing: border-box; width: 1000px; padding: 46px 92px 44px; border-radius: 36px; border: 7px solid transparent;
       background: radial-gradient(ellipse at 50% 18%, #5a1626, #2c0812 62%, #1e050c) padding-box, linear-gradient(160deg, #fff2c0, #f2bc52 30%, #b0701e 60%, #f6cc6a 85%, #a8661a) border-box;
@@ -285,7 +294,7 @@
     #storybook .skip { position: absolute; right: 14px; bottom: -58px; padding: 12px 26px; font-size: 17px; font-weight: 600; background: radial-gradient(circle at 35% 35%, #c0303a, #7a1018); border: 2px solid rgba(255,200,170,0.55); color: #ffe8c8; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
     #storybook .skip:hover { filter: brightness(1.15); }
         button#storybtn { background: rgba(216,172,79,0.18); border-color: rgba(216,172,79,0.6); }
-    @media (max-width: 1100px) { #show { top: auto; bottom: 150px; } }
+    #show { left: auto; right: 16px; transform: none; } /* (top right: clear of the robot's face and the puppets) */
     @media (max-width: 760px) {
       #logwrap { display: none; }
       #help { right: 16px; max-width: none; }
@@ -304,6 +313,7 @@
 </head>
 <body>
   <canvas id="view"></canvas>
+  <div id="vig"></div>
   <div id="loading">The curtain is rising…</div>
 
   <div id="top" class="hud">

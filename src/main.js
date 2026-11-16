@@ -78,7 +78,8 @@ scene.environmentIntensity = 0.4;
 const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.01, 20);
 const DESK_TOP = 0.76;
 const STAGE_Y = DESK_TOP + STAGE.base;
-const desktopCam = { pos: new THREE.Vector3(0, STAGE_Y + 0.5, 1.5), look: new THREE.Vector3(0, STAGE_Y + 0.33, -0.15) };
+// (close enough that the puppets, not the room, fill the picture)
+const desktopCam = { pos: new THREE.Vector3(0, STAGE_Y + 0.44, 1.2), look: new THREE.Vector3(0, STAGE_Y + 0.3, -0.15) };
 camera.position.copy(desktopCam.pos);
 camera.lookAt(desktopCam.look);
 
@@ -130,7 +131,7 @@ stageRoot.add(pip.group, marlo.group, ghost.group);
 const robot = new Robot();
 // desktop: a tall robot standing behind the desk (like a puppeteer on a bridge);
 // XR: a desk-sized robot standing behind the stage, so it never looms over you
-saved += mergeStatic(robot.head, robot.eyes.concat([robot.mouth]));
+saved += mergeStatic(robot.head, robot.eyes.concat([robot.mouth, robot.antenna]));
 saved += mergeStatic(robot.neck, [robot.head]);
 saved += mergeStatic(robot.group, [robot.neck, robot.clock, ...robot.arms.flatMap((a) => [a.upper, a.elbow, a.lower, a.wrist, a.hand])]);
 saved += mergeStatic(robot.clock, [robot.hourHand, robot.minuteHand]);
@@ -347,6 +348,7 @@ const show = new Show({
   onChange: (sh, entry) => {
     updateShowHud();
     if (entry) {
+      robot.cheer = 2.5;
       const prog = chapter.custom ? {} : storyMap.complete(chapter.id, entry); // (your own stories aren't map chapters)
       if (chapter.finale) narrator.coach(STORY_LINES.theEnd);
       else if (prog.newChapter) narrator.coach(STORY_LINES.unlocked);
@@ -410,6 +412,7 @@ show.onMindCard = (m) => {
   show._mindT = setTimeout(() => el.classList.remove("on"), 15000);
 };
 show.onEnding = (type) => {
+  robot.cheer = 3; // the puppeteer is delighted: happy eyes, a bob of the head
   confetti.burst(type);
   if (chapter.custom) storyHappyEnding();
   emotes.pop("marlo", type === "grace" ? "♥" : type === "slapstick" ? "♪" : "!", marloHead, null, 3);
