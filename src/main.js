@@ -1865,20 +1865,39 @@ function renderStartMenu(midGame = false) {
   const atN = CHAPTER_LIST.findIndex((c) => c.id === at.id);
   const where = at.id === "theatre" ? "The Grand Theatre" : `Chapter ${atN + 1}: ${at.title}`;
   const resume = storyMap.hasProgress();
-  loadingEl.innerHTML = `<div class="open"><h1>Strings</h1><p>a marionette theatre with an AI co-performer</p>` +
-    (resume
-      ? `<button id="begin">Continue · ${where}</button><div class="more"><button id="newstory">Start a new story</button><button id="chapters">Play any chapter · all unlocked</button></div>`
-      : `<button id="begin">Begin the story</button><div class="more"><button id="chapters">Play any chapter · all unlocked</button></div>`) +
-    `<div class="more"><button id="mystory">✎ Make your own story</button><button id="freeplay">Free play · no story, just fun</button></div>` +
-    `<label class="lockopt"><input type="checkbox" id="pinchlock"> Pinch lock: no need to hold a pinch</label>` +
-    `<label class="lockopt"><input type="checkbox" id="onehand"> One hand: no second hand needed</label>` +
+  // the start menu, as a little theatre: marquee bulbs, curtains, a swinging marionette,
+  // and hand-gesture icons that act out what each option means
+  const I = {
+    play: `<svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>`,
+    book: `<svg viewBox="0 0 24 24"><path d="M3 5.5c3-1.4 6-1.4 9 .5 3-1.9 6-1.9 9-.5v13c-3-1.4-6-1.4-9 .5-3-1.9-6-1.9-9-.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 6v13" stroke="currentColor" stroke-width="1.7"/></svg>`,
+    pen: `<svg viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2 2 0 0 1 3 0l.5.5a2 2 0 0 1 0 3L8.5 19z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.5 7l3.5 3.5" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    pad: `<svg viewBox="0 0 24 24"><path d="M7 7h10a5 5 0 0 1 4.6 7l-1 2.4a2.6 2.6 0 0 1-4.3.7L14.5 15h-5l-1.8 2.1a2.6 2.6 0 0 1-4.3-.7l-1-2.4A5 5 0 0 1 7 7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 10v3M5.5 11.5h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="16" cy="10.5" r="1.1" fill="currentColor"/><circle cx="18" cy="12.5" r="1.1" fill="currentColor"/></svg>`,
+    // a hand pinching: the thumb and index finger close together, again and again
+    pinch: `<svg viewBox="0 0 48 48" class="anim-pinch"><path d="M18 44c-5-3-8-8-8-14v-6c0-2 3-2 3 0v4M13 26V14c0-2 3-2 3 0v10M16 22V11c0-2 3-2 3 0v11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M18 44h12c4-2 6-6 6-10l1-9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><g class="idx"><path d="M19 22V8c0-2 3-2 3 0v13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></g><g class="thb"><path d="M37 25c1-3 2-6 0-7s-4 2-5 5l-3 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></g><circle class="spark" cx="24" cy="8" r="2.4" fill="#ffe7a0"/></svg>`,
+    // an open hand, waving
+    wave: `<svg viewBox="0 0 48 48" class="anim-wave"><g><path d="M17 44c-5-3-8-9-8-15v-7c0-2 3-2 3 0v7M12 24V12c0-2 3-2 3 0v11M15 22V8c0-2 3-2 3 0v14M18 22V9c0-2 3-2 3 0v13M21 23V12c0-2 3-2 3 0v14c2-3 4-6 6-5s0 5-2 8l-4 7c-1 3-3 5-6 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g><path class="w1" d="M34 10c3 2 4 5 4 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="w2" d="M37 6c4 3 6 7 6 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    vr: `<svg viewBox="0 0 48 48" class="anim-vr"><path d="M6 17c0-3 2-5 5-5h26c3 0 5 2 5 5v11c0 3-2 5-5 5h-7l-3-4h-6l-3 4h-7c-3 0-5-2-5-5z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><circle cx="16" cy="22" r="3" fill="currentColor" class="eye"/><circle cx="32" cy="22" r="3" fill="currentColor" class="eye"/></svg>`,
+    // a little wooden marionette swinging from its bar (an original drawing)
+    puppet: `<svg viewBox="0 0 120 200" class="puppet"><g class="swing"><rect x="20" y="6" width="80" height="7" rx="3" fill="#8a5a30" stroke="#3a2010" stroke-width="2"/><rect x="56" y="0" width="8" height="22" rx="3" fill="#8a5a30" stroke="#3a2010" stroke-width="2"/><g stroke="#f3e6c8" stroke-width="1" opacity=".8"><path d="M24 12L42 112M96 12L80 112M60 18L60 40M40 9L46 160M80 9L74 160"/></g><g class="body"><circle cx="60" cy="52" r="15" fill="#e2b679" stroke="#3a2010" stroke-width="2.4"/><circle cx="55" cy="50" r="1.8" fill="#3a2010"/><circle cx="65" cy="50" r="1.8" fill="#3a2010"/><path d="M54 57c4 3 8 3 12 0" fill="none" stroke="#3a2010" stroke-width="2" stroke-linecap="round"/><rect x="52" y="66" width="16" height="6" rx="3" fill="#c99a5e" stroke="#3a2010" stroke-width="2"/><rect x="47" y="72" width="26" height="40" rx="8" fill="#e2b679" stroke="#3a2010" stroke-width="2.4"/><path d="M47 76l-14 24 30 4z" fill="#c0303a" stroke="#3a2010" stroke-width="2" stroke-linejoin="round" class="cape"/><g class="arm-l"><rect x="38" y="76" width="9" height="22" rx="4.5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/><rect x="38" y="98" width="9" height="16" rx="4.5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/></g><g class="arm-r"><rect x="73" y="76" width="9" height="22" rx="4.5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/><rect x="73" y="98" width="9" height="16" rx="4.5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/></g><g class="leg-l"><rect x="49" y="112" width="10" height="24" rx="5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/><rect x="49" y="136" width="10" height="22" rx="5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/></g><g class="leg-r"><rect x="61" y="112" width="10" height="24" rx="5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/><rect x="61" y="136" width="10" height="22" rx="5" fill="#e2b679" stroke="#3a2010" stroke-width="2"/></g></g></g></svg>`,
+  };
+  const bulbs = (n, cls) => `<div class="bulbs ${cls}">${Array.from({ length: n }, (_, i) => `<i style="animation-delay:${(i % 4) * 0.35}s"></i>`).join("")}</div>`;
+  loadingEl.innerHTML = `<div class="open theatre">` + bulbs(16, "top") + `<div class="curtain l"></div><div class="curtain r"></div>` + I.puppet +
+    `<h1>Strings</h1><p>A marionette theatre with an AI co-performer</p>` +
+    `<button id="begin" class="cta"><i>${I.play}</i>${resume ? `Continue · ${where}` : "Begin the Story"}</button>` +
+    `<div class="more"><button id="chapters" class="outline"><i>${I.book}</i>Play Any Chapter · All Unlocked</button>${resume ? `<button id="newstory" class="outline">Start a new story</button>` : ""}</div>` +
+    `<div class="duo"><button id="mystory" class="violet"><i>${I.pen}</i>Make Your Own Story</button><button id="freeplay" class="azure"><i>${I.pad}</i>Free Play · No Story, Just Fun</button></div>` +
+    `<div class="opts">` +
+      `<label class="opt"><input type="checkbox" id="pinchlock"><span class="ic">${I.pinch}</span><span class="tx"><b>Pinch Lock</b><small>No need to hold a pinch</small></span></label>` +
+      `<label class="opt"><input type="checkbox" id="onehand"><span class="ic">${I.wave}</span><span class="tx"><b>One Hand</b><small>No second hand needed</small></span></label>` +
+      `<div class="opt info"><span class="ic">${I.vr}</span><span class="tx"><b>VR Ready</b><small>Best with sound on · Quest hand tracking</small></span></div>` +
+    `</div>` +
     (midGame
-      ? `<div class="more"><button id="backtoshow">× Back to the show</button></div>` +
-        // everything that used to crowd the screen while playing
+      ? `<div class="more"><button id="backtoshow" class="outline">× Back to the show</button></div>` +
         `<div class="extras-t">More</div><div class="extras">` +
         [["x-map", "🗺 Story map"], ["x-bills", $("bills")?.textContent || "Playbills"], ["x-mode", "✦ Fun modes", !$("mode") || $("mode").hidden], ["x-rec", recorder.recording ? "■ Stop recording" : "● Record a scene"], ["x-play", "▶ Replay my scene"], ["x-share", "🔗 Share link"], ["x-mute", $("mute")?.textContent || "Voice"], ["x-demo", "🤖 Demo"], ["x-help", document.body.classList.contains("showhelp") ? "Hide controls" : "⌨ Controls"], ["x-dev", document.body.classList.contains("devui") ? "Hide developer info" : "Developer info"], ["x-reset", "↺ Reset the stage"]]
           .filter(([, , hide]) => !hide).map(([id, label]) => `<button id="${id}">${label}</button>`).join("") + `</div>`
-      : `<small>Best with sound on · works with Quest hand tracking</small>`) + `</div>`;
+      : "") +
+    bulbs(9, "foot") + `</div>`;
   loadingEl.classList.add("ready");
   loadingEl.classList.remove("done");
   const enter = () => { loadingEl.classList.add("done"); unlockAudio(); };

@@ -56,19 +56,76 @@
     #loading.ready { background: radial-gradient(ellipse at 50% 40%, rgba(60,20,20,0.55), rgba(10,6,5,0.92)); }
     #loading.ready::after { display: none; }
     .open { text-align: center; font-style: normal; }
-    .open h1 { font: 600 64px/1 ui-serif, Georgia, serif; letter-spacing: 0.06em; margin: 0 0 10px; color: #f3dfb0; text-shadow: 0 4px 30px rgba(224,178,58,0.35); }
-    .open p { margin: 0 0 28px; color: var(--muted); font: italic 18px ui-serif, Georgia, serif; }
-    .open button { font: 600 17px ui-sans-serif, system-ui, sans-serif; background: linear-gradient(#e7bf55, #c9962e); color: #241810; border: 0; padding: 14px 30px; border-radius: 999px; box-shadow: 0 8px 30px rgba(224,178,58,0.35); }
-    .open .more { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
     /* a clean screen while playing: only Menu, Talk and Enter VR/AR; the rest lives in ☰ Menu */
     body:not(.devui) #top .card, body:not(.devui) #logwrap, body:not(.devui) #xr-note { display: none !important; }
     body:not(.devui) #top .buttons > button:not(#menubtn):not(#talk):not(.xr) { display: none !important; }
     body:not(.showhelp) #help { display: none; }
-    .open .extras { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; max-width: 560px; }
-    .open .extras button { font: 600 13px ui-sans-serif, system-ui, sans-serif; background: rgba(255,255,255,0.06); color: #e8d8b8; border: 1px solid rgba(216,172,79,0.35); padding: 8px 12px; box-shadow: none; border-radius: 999px; }
+    /* the start menu: a little theatre (proscenium, curtains, marquee bulbs, footlights) */
+    #loading.ready { background: radial-gradient(ellipse at 50% 45%, rgba(40,14,24,0.35), rgba(8,4,6,0.88) 70%); }
+    .open.theatre { position: relative; width: min(760px, calc(100vw - 32px)); padding: 46px 64px 54px; border-radius: 26px 26px 18px 18px;
+      background: radial-gradient(ellipse at 50% 20%, rgba(90,24,40,0.92), rgba(34,10,18,0.96) 70%);
+      border: 3px solid #c8963e; box-shadow: 0 0 0 6px rgba(40,18,8,0.9), 0 0 0 8px rgba(200,150,62,0.45), 0 30px 120px rgba(0,0,0,0.75), inset 0 0 60px rgba(255,150,80,0.12); overflow: hidden; }
+    .open.theatre .curtain { position: absolute; top: 0; bottom: 0; width: 64px; background: repeating-linear-gradient(90deg, #7a0f1c 0 10px, #a51d2c 10px 18px, #7a0f1c 18px 26px); box-shadow: inset -10px 0 20px rgba(0,0,0,0.45); }
+    .open.theatre .curtain.l { left: 0; border-radius: 0 0 60px 0; } .open.theatre .curtain.r { right: 0; border-radius: 0 0 0 60px; transform: scaleX(-1); }
+    .open.theatre .bulbs { position: absolute; left: 70px; right: 70px; display: flex; justify-content: space-between; }
+    .open.theatre .bulbs.top { top: 14px; } .open.theatre .bulbs.foot { bottom: 14px; left: 90px; right: 90px; }
+    .open.theatre .bulbs i { width: 11px; height: 11px; border-radius: 50%; background: #ffe3a0; box-shadow: 0 0 10px 3px rgba(255,200,110,0.75); animation: twinkle 1.4s ease-in-out infinite; }
+    @keyframes twinkle { 50% { opacity: .55; box-shadow: 0 0 4px 1px rgba(255,200,110,0.4); } }
+    .open.theatre h1 { position: relative; font: italic 700 88px/1 "Playball", "Brush Script MT", Georgia, serif; letter-spacing: .01em; margin: 6px 0 6px;
+      background: linear-gradient(#fff2c4, #f2c45e 55%, #c98a2c); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 18px rgba(255,180,70,0.45)); }
+    .open.theatre p { margin: 0 0 24px; color: #f0dcc0; font: italic 18px Georgia, serif; }
+    .open.theatre button i { display: inline-block; width: 20px; height: 20px; vertical-align: -4px; margin-right: 10px; }
+    .open.theatre button i svg { width: 100%; height: 100%; display: block; }
+    .open.theatre .cta { font: 700 22px Georgia, serif; padding: 16px 46px; border-radius: 16px; color: #2a1606; background: linear-gradient(#ffe08a, #f0b43c 60%, #d48f22); border: 2px solid #fff0c0; box-shadow: 0 0 0 3px rgba(255,200,90,0.25), 0 0 34px rgba(255,190,80,0.6); }
+    .open.theatre .cta:hover { filter: brightness(1.07); }
+    .open.theatre .more { margin-top: 14px; }
+    .open.theatre .outline, .open.theatre .more button { font: 600 16px Georgia, serif; color: #f6e2b8; background: rgba(20,6,10,0.45); border: 1.5px solid #c8963e; border-radius: 14px; padding: 10px 26px; box-shadow: none; }
+    .open.theatre .duo { display: flex; gap: 14px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+    .open.theatre .duo button { font: 600 16px Georgia, serif; color: #fff; border-radius: 14px; padding: 11px 22px; background: rgba(20,6,30,0.55); box-shadow: none; }
+    .open.theatre .violet { border: 1.5px solid #b56cff; box-shadow: 0 0 16px rgba(181,108,255,0.45) !important; }
+    .open.theatre .azure { border: 1.5px solid #4fc8ff; box-shadow: 0 0 16px rgba(79,200,255,0.45) !important; }
+    /* the options, each with an animated hand gesture */
+    .open.theatre .opts { display: grid; grid-template-columns: repeat(3, 1fr); margin: 22px 0 6px; border: 1px solid rgba(200,150,62,0.55); border-radius: 14px; background: rgba(12,4,8,0.45); overflow: hidden; }
+    .open.theatre .opt { display: flex; align-items: center; gap: 10px; padding: 12px 14px; text-align: left; cursor: pointer; border-left: 1px solid rgba(200,150,62,0.3); transition: background .15s; }
+    .open.theatre .opt:first-child { border-left: 0; }
+    .open.theatre .opt input { position: absolute; opacity: 0; pointer-events: none; }
+    .open.theatre .opt .ic { flex: 0 0 40px; height: 40px; color: #f2c45e; }
+    .open.theatre .opt .ic svg { width: 100%; height: 100%; overflow: visible; }
+    .open.theatre .opt b { display: block; font: 600 15px Georgia, serif; color: #f6e2b8; }
+    .open.theatre .opt small { display: block; margin: 2px 0 0; font: 12px ui-sans-serif, system-ui, sans-serif; color: #cdb8a0; }
+    .open.theatre label.opt:hover { background: rgba(255,200,100,0.07); }
+    .open.theatre label.opt:has(input:checked) { background: rgba(255,190,80,0.16); box-shadow: inset 0 0 0 1.5px #f2c45e; }
+    .open.theatre label.opt:has(input:checked) b::after { content: " · on"; color: #ffd98a; font-size: 12px; }
+    .open.theatre .opt.info { cursor: default; }
+    .anim-pinch .idx { transform-origin: 20px 22px; animation: pinchIdx 1.6s ease-in-out infinite; }
+    .anim-pinch .thb { transform-origin: 33px 26px; animation: pinchThb 1.6s ease-in-out infinite; }
+    .anim-pinch .spark { opacity: 0; transform-origin: 26px 14px; animation: pinchSpark 1.6s ease-in-out infinite; }
+    @keyframes pinchIdx { 0%, 100% { transform: rotate(0); } 45%, 60% { transform: rotate(28deg); } }
+    @keyframes pinchThb { 0%, 100% { transform: rotate(0); } 45%, 60% { transform: rotate(-22deg) translate(-3px, -3px); } }
+    @keyframes pinchSpark { 0%, 40%, 70%, 100% { opacity: 0; transform: scale(.4) translate(4px, 6px); } 52% { opacity: 1; transform: scale(1.2) translate(4px, 6px); } }
+    .anim-wave > g { transform-origin: 20px 44px; animation: handWave 1.8s ease-in-out infinite; }
+    .anim-wave .w1, .anim-wave .w2 { animation: waveLines 1.8s ease-in-out infinite; } .anim-wave .w2 { animation-delay: .2s; }
+    @keyframes handWave { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(12deg); } }
+    @keyframes waveLines { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+    .anim-vr .eye { animation: vrEyes 3s ease-in-out infinite; } @keyframes vrEyes { 0%, 90%, 100% { opacity: 1; } 95% { opacity: .1; } }
+    /* the marionette swinging beside the title */
+    .open.theatre .puppet { position: absolute; left: 78px; top: 20px; width: 118px; height: 196px; pointer-events: none; }
+    .open.theatre .puppet .swing { transform-origin: 60px 4px; animation: pupSwing 3.2s ease-in-out infinite; }
+    .open.theatre .puppet .arm-l { transform-origin: 42px 78px; animation: pupArm 1.6s ease-in-out infinite; }
+    .open.theatre .puppet .arm-r { transform-origin: 78px 78px; animation: pupArm 1.6s ease-in-out infinite reverse; }
+    .open.theatre .puppet .leg-l { transform-origin: 54px 114px; animation: pupLeg 1.6s ease-in-out infinite; }
+    .open.theatre .puppet .leg-r { transform-origin: 66px 114px; animation: pupLeg 1.6s ease-in-out infinite reverse; }
+    .open.theatre .puppet .cape { transform-origin: 47px 76px; animation: pupCape 1.6s ease-in-out infinite; }
+    @keyframes pupSwing { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
+    @keyframes pupArm { 0%, 100% { transform: rotate(-24deg); } 50% { transform: rotate(18deg); } }
+    @keyframes pupLeg { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
+    @keyframes pupCape { 0%, 100% { transform: skewY(-6deg); } 50% { transform: skewY(8deg); } }
     .open .extras-t { margin-top: 18px; font: 600 12px ui-sans-serif, system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: rgba(243,223,176,0.6); }
-    .open .more button { font: 600 14px ui-sans-serif, system-ui, sans-serif; background: rgba(243,223,176,0.1); color: #f3dfb0; border: 1px solid rgba(216,172,79,0.55); padding: 10px 18px; box-shadow: none; }
-    .open small { display: block; margin-top: 14px; color: var(--muted); font: 12px ui-sans-serif, system-ui, sans-serif; }
+    .open .extras { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px auto 0; max-width: 600px; }
+    .open .extras button { font: 600 13px ui-sans-serif, system-ui, sans-serif; background: rgba(255,255,255,0.06); color: #e8d8b8; border: 1px solid rgba(216,172,79,0.35); padding: 8px 12px; box-shadow: none; border-radius: 999px; }
+    .open small { display: block; color: #cdb8a0; font: 12px ui-sans-serif, system-ui, sans-serif; }
+    @media (max-width: 760px) { .open.theatre { padding: 40px 22px 50px; } .open.theatre .puppet, .open.theatre .curtain { display: none; } .open.theatre .opts { grid-template-columns: 1fr; } .open.theatre h1 { font-size: 64px; } }
+    @media (prefers-reduced-motion: reduce) { .open.theatre * { animation: none !important; } }
     /* "what do I do next" chip */
     #hint { position: fixed; left: 50%; bottom: 92px; transform: translate(-50%, 12px); display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: rgba(10, 24, 32, 0.86); border: 1px solid rgba(127, 243, 255, 0.7); box-shadow: 0 0 24px rgba(41, 230, 255, 0.25); color: #eafcff; font: 15px ui-sans-serif, system-ui, sans-serif; opacity: 0; transition: opacity .35s, transform .35s; pointer-events: none; white-space: nowrap; }
     #hint.on { opacity: 1; transform: translate(-50%, 0); animation: nudge 2.4s ease-in-out infinite; }
@@ -214,6 +271,7 @@
       }
     }
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playball&display=swap">
 </head>
 <body>
   <canvas id="view"></canvas>

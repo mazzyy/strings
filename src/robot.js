@@ -112,6 +112,10 @@ export class Robot {
     this.head = new THREE.Group();
     this.head.position.set(0, 0.075, 0.005);
     this.neck.add(this.head);
+    // a black rod from the neck up into the helmet (no gap between neck and head), and a
+    // dark mounting ring where it meets the helmet
+    add(this.neck, new THREE.CylinderGeometry(0.0125, 0.015, 0.05, 20), dark, [0, 0.082, 0.002]);
+    add(this.head, new THREE.CylinderGeometry(0.02, 0.024, 0.008, 28), joint, [0, 0.014, -0.002]);
     const HC = 0.08;                                   // the helmet's centre height
     const skull = add(this.head, new THREE.SphereGeometry(0.075, 56, 40), shell, [0, HC, -0.006]);
     skull.scale.set(1.07, 0.95, 0.98);                 // wider than tall, like a helmet
