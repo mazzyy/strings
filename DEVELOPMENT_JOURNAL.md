@@ -236,7 +236,7 @@ An analysis of what judges and Meta reward (written up in `WOW_EXPERIMENT.md`) f
 ### Phase 16: the ending, made reliable
 - **Marlo always breaks free at the end.** After the grand finale he used to break free only if you clapped (real hands in the headset, K on desktop); otherwise the game moved on after 16 s, so many players never saw it. Now, if no clap comes within 10 s (or the headset misses it), the narrator says the whole audience is clapping for him, the crowd applauds, and he snaps his strings anyway. Desktop players are told to press K.
 - **No mystery "gold button".** Unlocking a fun mode used to announce itself ("press the gold button") right at the finale, drowning out the request to clap. Unlocks are no longer announced during the finale (a toast appears later instead), and the line now says *"the gold Modes button on the front of the stage"*.
-- **Every apron button has a little sign above it:** Record, Replay, Talk, Modes, Map, Free Marlo, Pinch lock.
+- **Every apron button has a little sign above it:** Record, Replay, Talk, Modes, Map, Free Marlo, Pinch lock (later also One hand and Menu).
 
 
 ### Phase 17: a scene partner, a guided first minute, one-hand play
@@ -275,6 +275,11 @@ Prompted by outside feedback (and a comparison with *Make with Puppet*, which re
   - At the curtain call, whoever was rescued celebrates with fireworks, the narrator says *"…happily ever after. Shall we make another story?"*, and the card opens again.
 - **Every sentence is voiced:** the story maker only produces sentences from a fixed set of combinations (5 villains × 7 places, 4 plots, 5 quests, every act goal), so all 105 are pre-recorded in the narrator's natural voice (646 lines in total).
 - You write the story on the flat page (the headset has no keyboard), then press "Enter VR" and play it in the headset.
+
+### Phase 19: the menu, any time
+- **☰ Menu** (a new toolbar button, or **Esc**) reopens the start menu mid-game, with a "× Back to the show" button. Every option works from wherever you are: continue the story, start a new one, play any chapter, make your own story, free play, pinch lock, one hand. Switching cleanly leaves the current mode first (it ends a running task, leaves free play, returns to Sir Pip, puts away the extra cast and closes the map).
+- **In the headset,** a white **Menu** button on the apron opens a board of options to poke: Continue the story, Chapter map, Free play, Write a story, Pinch lock, One hand. *Write a story* needs a keyboard, so it ends the VR session and opens the story card on the page.
+- **Fixed:** typing in the story card used to trigger keyboard shortcuts (R started recording, T the demo, U freed Marlo). Shortcuts now ignore typing.
 ---
 
 ## 4. The story
@@ -406,7 +411,7 @@ There's no headset, so testing used:
 ## 9. Hosting and deployment
 
 - `main` holds the code. The site is `public/`, published by pushing `git subtree split --prefix public` to the `gh-pages` branch. Pages builds from that branch (Actions is unavailable).
-- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`.
+- Feature work happens on branches, each pushed and tried before being merged into `main` and published: `story-mode`, `chapters-v2`, `polish-v3` … `experiment-wow`, `polish-v6`, `first-five`, `story-lock`, `judge-mode`, `free-play`, `ending-fix`, `scene-partner`, `story-maker`, `game-menu`.
 
 ---
 

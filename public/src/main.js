@@ -89,7 +89,7 @@ const { root: stageRoot, knobs, shadowCatcher, curtains, cord } = buildStage(ass
 stageRoot.position.set(0, STAGE_Y, 0);
 scene.add(stageRoot);
 // batch static geometry into one mesh per material (Quest needs few draw calls)
-let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, knobs.map, knobs.free, knobs.lock, knobs.hand, shadowCatcher, curtains.group, cord.group]);
+let saved = mergeStatic(stageRoot, [knobs.record, knobs.replay, knobs.talk, knobs.mode, knobs.map, knobs.free, knobs.lock, knobs.hand, knobs.menu, shadowCatcher, curtains.group, cord.group]);
 saved += mergeStatic(desk);
 saved += mergeStatic(room, [desk]);
 
@@ -1474,6 +1474,7 @@ $("help-toggle").onclick = () => { const c = $("help").classList.toggle("collaps
 $("talk").onclick = startTalking;
 $("mode").onclick = cycleMode;
 $("storybtn").onclick = () => { unlockAudio(); toggleMap(); };
+$("menubtn").onclick = () => { unlockAudio(); openGameMenu(); };
 refreshModeUi();
 $("bills").onclick = () => {
   const panel = $("billpanel");
@@ -1551,7 +1552,7 @@ addEventListener("pointerup", () => {
   }
 });
 // hold V to talk to Marlo
-addEventListener("keydown", (e) => { if (e.key.toLowerCase() === "v" && !e.repeat) startSpeaking(); });
+addEventListener("keydown", (e) => { if (e.key.toLowerCase() === "v" && !e.repeat && !/^(INPUT|TEXTAREA)$/.test(e.target?.tagName || "")) startSpeaking(); });
 addEventListener("keyup", (e) => { if (e.key.toLowerCase() === "v") talk.stop(); });
 
 // compile every shader now, behind the loading screen, so nothing stutters the
@@ -1622,6 +1623,7 @@ let gripInit = false;
 
 // ---- your own story: written in words, staged by the theatre (see storymaker.js) ---------
 function playStory(story) {
+  if (!leaveCurrentMode()) return;
   freePlay = false;
   document.body.classList.remove("free-play");
   playground.hide();
@@ -1749,6 +1751,10 @@ const playground = new Playground(stageRoot, (section, id) => {
 });
 playground.group.position.set(-0.46, 0.5, 0.2); // beside the stage, near your left hand
 function startFreePlay() {
+  // (stop whatever show was running)
+  if (currentTask) currentTask.end?.();
+  show.state = "idle"; show.starGroup.visible = false; show.bill.visible = false; show.mindCard.visible = false;
+  updateShowHud();
   freePlay = true;
   storyPending = false;
   showStarted = true; preshow = false;
@@ -1766,10 +1772,33 @@ function startFreePlay() {
 
 // the loading screen turns into the opening: one click raises the curtain
 // (and lets the browser play sound)
-if (loadingEl) {
-  // the start menu: continue where you left off, start the tale again, or pick a chapter
+// ---- the start menu (and the same menu mid-game: ☰ Menu, Esc, or the Menu knob) ---------
+// leave whatever is going on (free play, a task, the cast of the last scene) cleanly
+function leaveCurrentMode() {
+  if (unbound.busy) return false;
+  if (currentTask) currentTask.end?.();
+  if (flying) setFlight(false);
+  if (freePlay) {
+    freePlay = false;
+    document.body.classList.remove("free-play");
+    if ($("storybtn")) $("storybtn").textContent = "🗺 Story map";
+    playground.hide();
+    ai.suspended = false;
+  }
+  if (playerId !== "knight") setPlayer("knight");
+  phrases.hide();
+  if (storyMap.open) storyMap.hide();
+  hideExtras();
+  princessOn(false);
+  hints.hide();
+  return true;
+}
+function renderStartMenu(midGame = false) {
+  if (!loadingEl) return;
   const n = CHAPTER_LIST.findIndex((c) => c.id === chapter.id);
-  const where = chapter.id === "theatre" ? "The Grand Theatre" : `Chapter ${n + 1}: ${chapter.title}`;
+  const at = storyMap.current();
+  const atN = CHAPTER_LIST.findIndex((c) => c.id === at.id);
+  const where = at.id === "theatre" ? "The Grand Theatre" : `Chapter ${atN + 1}: ${at.title}`;
   const resume = storyMap.hasProgress();
   loadingEl.innerHTML = `<div class="open"><h1>Strings</h1><p>a marionette theatre with an AI co-performer</p>` +
     (resume
@@ -1778,12 +1807,13 @@ if (loadingEl) {
     `<div class="more"><button id="mystory">✎ Make your own story</button><button id="freeplay">Free play · no story, just fun</button></div>` +
     `<label class="lockopt"><input type="checkbox" id="pinchlock"> Pinch lock: no need to hold a pinch</label>` +
     `<label class="lockopt"><input type="checkbox" id="onehand"> One hand: no second hand needed</label>` +
-    `<small>Best with sound on · works with Quest hand tracking</small></div>`;
+    (midGame ? `<div class="more"><button id="backtoshow">× Back to the show</button></div>` : `<small>Best with sound on · works with Quest hand tracking</small>`) + `</div>`;
   loadingEl.classList.add("ready");
+  loadingEl.classList.remove("done");
   const enter = () => { loadingEl.classList.add("done"); unlockAudio(); };
-  const first = !storyMap.hasProgress();
   const begin = () => {
     enter();
+    if (showStarted) { if (leaveCurrentMode()) changeScene(storyMap.current()); return; } // mid-game: on with the story
     storyPending = true; // the story plays once the curtain is up
     startPreshow();
   };
@@ -1792,27 +1822,59 @@ if (loadingEl) {
   if ($("pinchlock")) { $("pinchlock").checked = pinchLock; $("pinchlock").onchange = (e) => setPinchLock(e.target.checked, true); }
   if ($("newstory")) $("newstory").onclick = () => {
     if (!confirm("Start the tale of Sir Pip again from the beginning? Your playbills are kept.")) return;
+    if (showStarted) { enter(); if (!leaveCurrentMode()) return; storyMap.resetStory(); changeScene(storyMap.current()); return; }
     newStory();
     begin();
   };
   if ($("chapters")) $("chapters").onclick = () => {
     storyMap.unlockAll(); // every chapter (and the Grand Theatre) can be picked on the map
     enter();
+    if (!leaveCurrentMode()) return;
     // straight to the stage with the curtain up, and the map open
-    showStarted = true; preshow = false;
+    showStarted = true; preshow = false; storyPending = false;
     curtains.open();
     setNight(false);
     music.play();
     openMap();
   };
-  if ($("freeplay")) $("freeplay").onclick = () => { enter(); startFreePlay(); };
+  if ($("freeplay")) $("freeplay").onclick = () => { enter(); if (!leaveCurrentMode()) return; startFreePlay(); };
   if ($("mystory")) $("mystory").onclick = () => openStoryMaker();
-  if (new URLSearchParams(location.search).has("autostart")) { loadingEl.classList.add("done"); raiseCurtain(); }
+  if ($("backtoshow")) $("backtoshow").onclick = () => enter();
 }
+// the headset version: a board of options to poke (writing a story needs the keyboard, so
+// that one takes the headset off: it ends the session and opens the story card)
+const GAME_MENU = [
+  { key: "story", text: "Continue the story" },
+  { key: "map", text: "Chapter map" },
+  { key: "free", text: "Free play" },
+  { key: "write", text: "Write a story" },
+  { key: "lock", text: "Pinch lock" },
+  { key: "hand", text: "One hand" },
+];
+const gameBoard = new Phrases(stageRoot, (it) => {
+  gameBoard.hide();
+  if (it.key === "story") { if (leaveCurrentMode()) changeScene(storyMap.current()); }
+  else if (it.key === "map") { if (leaveCurrentMode()) { storyMap.unlockAll(); showStarted = true; openMap(); } }
+  else if (it.key === "free") { if (leaveCurrentMode()) startFreePlay(); }
+  else if (it.key === "write") { renderer.xr.getSession()?.end(); setTimeout(openStoryMaker, 600); }
+  else if (it.key === "lock") setPinchLock(!pinchLock);
+  else if (it.key === "hand") setOneHand(!oneHand);
+}, GAME_MENU, null);
+gameBoard.group.position.set(0, 0.56, 0.18);
+gameBoard.group.scale.setScalar(1.25);
+function openGameMenu() {
+  if (xrMode) { gameBoard.toggle(true); if (gameBoard.open) faceViewer(gameBoard.group); return; }
+  if (loadingEl && !loadingEl.classList.contains("done")) { if (showStarted) loadingEl.classList.add("done"); return; }
+  renderStartMenu(true);
+}
+renderStartMenu(false);
+if (loadingEl && new URLSearchParams(location.search).has("autostart")) { loadingEl.classList.add("done"); raiseCurtain(); }
 $("enter-vr").addEventListener("click", () => loadingEl?.classList.add("done"));
 $("enter-ar").addEventListener("click", () => loadingEl?.classList.add("done"));
+const typing = (e) => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || "") || e.target?.isContentEditable;
 window.addEventListener("keydown", (e) => {
   if (e.repeat) return;
+  if (typing(e)) { if (e.key === "Escape") e.target.blur(); return; } // writing a story: no shortcuts
   const k = e.key.toLowerCase();
   if (k === "r") toggleRecord();
   else if (k === "p") player.playing ? stopReplay() : startReplay();
@@ -1826,6 +1888,8 @@ window.addEventListener("keydown", (e) => {
   else if (k === "u") { if (!unbound.busy) unbound.free(); }
   else if (k === "k") unbound.applause(); // desktop stand-in for clapping
   else if (k === "escape" && book.open) book.skipAll();
+  else if (k === "escape" && $("storymaker")?.classList.contains("on")) $("storymaker").classList.remove("on");
+  else if (k === "escape") openGameMenu(); // the game menu (Esc again closes it)
 });
 
 // shared performance in the URL?
@@ -2082,13 +2146,14 @@ function updatePlacement(dt, frame, hands) {
 }
 
 // poke the apron knobs with a fingertip (XR), and hold two empty pinches to re-place the stage
-const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0, free: 0, lock: 0, hand: 0 };
+const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0, free: 0, lock: 0, hand: 0, menu: 0 };
 let recenterHold = 0;
 function xrGestures(dt, hands, t) {
   // poke the floating storybook map
   if (storyMap.mesh.visible) for (const h of hands) if (h.present && storyMap.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (book.mesh.visible) for (const h of hands) if (h.present && book.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (phrases.group.visible) for (const h of hands) if (h.present && phrases.poke(stageRoot.localToWorld(h.tip.clone()))) break;
+  if (gameBoard.group.visible) for (const h of hands) if (h.present && gameBoard.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (playground.group.visible) for (const h of hands) if (h.present && playground.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   for (const [name, knob] of Object.entries(knobs)) {
     const kp = knob.position.clone().add(new THREE.Vector3(0, 0.01, 0));
@@ -2104,6 +2169,7 @@ function xrGestures(dt, hands, t) {
       else if (name === "free") { if (!unbound.busy) unbound.free(); }
       else if (name === "lock") setPinchLock(!pinchLock);
       else if (name === "hand") setOneHand(!oneHand);
+      else if (name === "menu") openGameMenu();
       else player.playing ? stopReplay() : startReplay();
     }
   }
@@ -2215,6 +2281,8 @@ renderer.setAnimationLoop((time, frame) => {
   updateBloom(dt);
   updateWarmup(dt);
   phrases.update(dt);
+  gameBoard.update(dt);
+  if (xrMode && gameBoard.group.visible) faceViewer(gameBoard.group);
   playground.update(dt);
   if (xrMode && playground.group.visible) faceViewer(playground.group); // always square to your eyes
   updateBlobs();
@@ -2298,4 +2366,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, openGameMenu, gameBoard, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
