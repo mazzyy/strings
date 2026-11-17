@@ -445,6 +445,11 @@ In the headset the storybook's picture now rises off the page like a pop-up book
 - **Video:** both storybook takes were re-recorded with the camera drifting slowly sideways, so the depth shows; chapter labels in the edit now wait for their picture to fade in. The video is 2 min 21 s.
 - **Tested:** `tools/video/popcheck.mjs` captures ten pages (prologue to epilogue) and the middle of a pop; `t57` and `t58` pass.
 
+### Phase 32: the red bar across the stage in the headset
+- **Problem:** the main curtain's velvet pelmet (a red bar with a gold trim along the top of the proscenium) stayed fixed across the front when the curtain opened. A seated player's eyes are about level with it, so in the headset it cut straight across the backdrop and the puppets' strings.
+- **Fix:** the pelmet is now two halves, one on each curtain panel (`stage.js`), so it gathers to the sides with the curtain. Closed, it still runs edge to edge; open, only short swags remain above the tied-back curtains.
+- **Tested:** `tools/video/pelmetcheck.mjs` (seated and low headset views, open and closed); `t57` and `t58` pass.
+
 
 
 
