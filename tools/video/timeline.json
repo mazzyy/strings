@@ -29,13 +29,13 @@
   {
    "id": "pipB",
    "clip": "court",
-   "in": 33.0,
+   "in": 32.9,
    "dur": 3.6
   },
   {
    "id": "aiA",
    "clip": "court",
-   "in": 2.6,
+   "in": 2.5,
    "dur": 5.2
   },
   {
@@ -84,7 +84,7 @@
   {
    "id": "bridge",
    "clip": "bridge",
-   "in": 4.4,
+   "in": 2.9,
    "dur": 5.4,
    "label": "The Troll Bridge"
   },

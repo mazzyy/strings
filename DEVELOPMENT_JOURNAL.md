@@ -449,6 +449,7 @@ In the headset the storybook's picture now rises off the page like a pop-up book
 - **Problem:** the main curtain's velvet pelmet (a red bar with a gold trim along the top of the proscenium) stayed fixed across the front when the curtain opened. A seated player's eyes are about level with it, so in the headset it cut straight across the backdrop and the puppets' strings.
 - **Fix:** the pelmet is now two halves, one on each curtain panel (`stage.js`), so it gathers to the sides with the curtain. Closed, it still runs edge to edge; open, only short swags remain above the tied-back curtains.
 - **Tested:** `tools/video/pelmetcheck.mjs` (seated and low headset views, open and closed); `t57` and `t58` pass.
+- **Video:** every take except the menu was re-recorded with the fix, and the cut re-run (`timeline.json`: only the troll-bridge in-point moved, to follow its new take). Still 2 min 21 s, no late cuts, peak 0.77. The curtain is still seen closed below the storybook while it reads, as in the game.
 
 
 
