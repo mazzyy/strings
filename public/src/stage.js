@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { withRepeat } from "./assets.js";
 import { paintBackdrop } from "./backdrops.js";
+import { buildDrapes } from "./drapes.js";
 
 const KNOB_LABELS = { record: "Record", replay: "Replay", talk: "Talk", mode: "Modes", map: "Map", free: "Free Marlo", lock: "Pinch lock", hand: "One hand", menu: "Menu" };
 export const STAGE = { width: 0.86, depth: 0.42, base: 0.075 };
@@ -60,22 +61,6 @@ function scrollTexture() {
   return t;
 }
 
-function curtainGeometry(w, h, gatherY) {
-  // a velvet drape: deep vertical folds, gathered at the tie-back
-  const geo = new THREE.PlaneGeometry(w, h, 40, 40);
-  const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), y = pos.getY(i);
-    const yy = y + h / 2; // 0 at bottom
-    const pinch = 1 - 0.62 * Math.exp(-Math.pow((yy - gatherY) / 0.06, 2));
-    const nx = x * pinch;
-    const fold = Math.sin((x / w) * Math.PI * 9) * 0.006 * (0.6 + 0.4 * (1 - pinch));
-    pos.setXYZ(i, nx, y, fold + (1 - pinch) * 0.01);
-  }
-  geo.computeVertexNormals();
-  return geo;
-}
-
 export function buildStage(assets) {
   const root = new THREE.Group();
   const T = assets?.tex || {};
@@ -84,7 +69,6 @@ export function buildStage(assets) {
   const darkPanel = new THREE.MeshStandardMaterial({ color: 0x4a2a18, roughness: 0.6, ...withRepeat(T.walnut, 2, 0.4) });
   const planks = new THREE.MeshStandardMaterial({ color: 0xd9b48c, roughness: 0.75, ...withRepeat(T.stagefloor, 1.6, 0.8) });
   const G = gold();
-  const velvet = new THREE.MeshPhysicalMaterial({ color: 0x8c1520, roughness: 0.85, sheen: 1, sheenRoughness: 0.4, sheenColor: new THREE.Color(0xff5a5a), side: THREE.DoubleSide });
 
   const W = STAGE.width, D = STAGE.depth, B = STAGE.base;
   const box = (w, h, d, mat, x, y, z) => {
@@ -137,54 +121,11 @@ export function buildStage(assets) {
     box(0.016, 0.016, D - 0.03, walnutPost, sx * (W / 2 - 0.018), postH - 0.03, 0);
   }
 
-  // velvet curtains tied back on the front posts
-  for (const sx of [-1, 1]) {
-    const curtain = new THREE.Mesh(curtainGeometry(0.1, postH - 0.02, 0.11), velvet);
-    curtain.position.set(sx * (W / 2 - 0.06), (postH - 0.02) / 2, D / 2 - 0.035);
-    curtain.castShadow = true;
-    root.add(curtain);
-    const valance = new THREE.Mesh(curtainGeometry(0.11, 0.04, 0.5), velvet);
-    valance.position.set(sx * (W / 2 - 0.06), postH - 0.03, D / 2 - 0.03);
-    root.add(valance);
-    const tie = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.003, 8, 20), G);
-    tie.position.set(sx * (W / 2 - 0.06), 0.11, D / 2 - 0.028);
-    tie.scale.set(1.3, 0.5, 1);
-    root.add(tie);
-    const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.006, 0.02, 10), G);
-    tassel.position.set(sx * (W / 2 - 0.045), 0.094, D / 2 - 0.022);
-    root.add(tassel);
-  }
-
-  // the main curtain across the front: closed until the show starts
-  const mainCurtain = new THREE.Group();
-  const panelW = W / 2 - 0.03, panelH = postH - 0.035;
-  const panelGeo = (() => {
-    const g = new THREE.PlaneGeometry(panelW, panelH, 48, 1);
-    g.translate(panelW / 2, panelH / 2, 0);
-    const pos = g.attributes.position;
-    for (let i = 0; i < pos.count; i++) pos.setZ(i, Math.sin((pos.getX(i) / panelW) * Math.PI * 14) * 0.006);
-    g.computeVertexNormals();
-    return g;
-  })();
-  // The velvet pelmet along the top rides on the two panels, so it gathers to the
-  // sides with them. (It used to be one fixed bar across the front, which sat
-  // right in a seated player's line of sight in the headset.)
-  const pelmetW = panelW + 0.012;
-  const pelmetGeo = new THREE.BoxGeometry(pelmetW, 0.03, 0.012).translate(pelmetW / 2, 0, 0);
-  const pelmetGoldGeo = new THREE.BoxGeometry(pelmetW, 0.004, 0.014).translate(pelmetW / 2, 0, 0);
-  const panels = [-1, 1].map((sx) => {
-    const p = new THREE.Mesh(panelGeo, velvet);
-    p.position.set(sx * (W / 2 - 0.03), 0.004, D / 2 - 0.05);
-    p.scale.x = -sx; // both panels grow toward the centre
-    p.castShadow = true;
-    const fringe = new THREE.Mesh(pelmetGeo, velvet);
-    fringe.position.y = postH - 0.024;
-    const fringeGold = new THREE.Mesh(pelmetGoldGeo, G);
-    fringeGold.position.y = postH - 0.04;
-    p.add(fringe, fringeGold);
-    mainCurtain.add(p);
-    return p;
-  });
+  // the drapery: tied-back side curtains under fixed swags, and the main traveller
+  // curtain with its pelmet, closed until the show starts (see drapes.js)
+  const drapes = buildDrapes({ W, D, postH, gold: G });
+  const mainCurtain = drapes.group;
+  drapes.update(0, 0);
   root.add(mainCurtain);
   const curtains = {
     group: mainCurtain,
@@ -198,11 +139,7 @@ export function buildStage(assets) {
       if (this.callT > 0 && (this.callT -= dt) <= 0) this.target = 1;
       const goal = this.manual != null ? this.manual : this.target;
       this.k += (goal - this.k) * Math.min(1, dt * (this.manual != null ? 10 : 1.8));
-      const open = this.k;
-      panels.forEach((p, i) => {
-        const sx = i === 0 ? -1 : 1;
-        p.scale.x = -sx * Math.max(0.08, 1 - open * 0.92);
-      });
+      drapes.update(this.k, dt);
     },
   };
 
