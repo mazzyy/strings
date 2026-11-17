@@ -460,3 +460,9 @@ In the headset the storybook's picture now rises off the page like a pop-up book
   - **The side curtains** are tied back properly: the fabric fans in to the tie, blouses out below it and spreads at the floor; a twisted gold rope and a tassel hold it.
 - **Cost:** about 8,000 vertices, updated only while the curtain moves (and every other frame for the closed curtain's sway).
 - **Tested:** `tools/video/curtaincheck.mjs` (closed, half open, open; seated, close and side headset views; desktop); `t57` and `t58` pass.
+
+### Phase 34: the video tells the story
+- **Problem:** the video's script was a feature list ("Catch fireflies. Duel a pirate. Answer a riddle."). It never said why Sir Pip travels, and left out the heart of the game: a lonely villain, and an ending won by a bow rather than a fight.
+- **New script** (`tools/video/vo.py`, 20 lines): the video is the game's own bedtime story. The pop-up prologue sets up the stolen music box; the curtain and Sir Pip show that you are the puppeteer; the robot and a shy Marlo show the cast's minds; each stage arrives as a step of the journey with its reason; the finale turns on kindness (Sir Pip bows to Clank, then is knighted, in the game's own voices); the epilogue page and Marlo landing on your palm pay it off.
+- **New takes** (`shots.mjs`): `prologue` and `epilogue` (pop-up pages held for their lines) and `finale` (the sky chapter's kindness and knighting acts, the bow timed to land on "is bow"). All gameplay takes were re-recorded with the new curtain.
+- **Result:** 2 min 44 s (`timeline.json`, 23 segments), no late cuts, peak 0.76. Saved over `demo-video/strings-demo.mp4`; the script with timings is in `demo-video/README.md`.

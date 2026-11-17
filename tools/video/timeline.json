@@ -8,8 +8,15 @@
    "id": "menu",
    "clip": "menu",
    "in": 0.4,
-   "dur": 8.6,
+   "dur": 7.0,
    "x": 0.01
+  },
+  {
+   "id": "prologue",
+   "clip": "prologue",
+   "in": 0.2,
+   "dur": 19.6,
+   "x": 0.6
   },
   {
    "id": "curtain",
@@ -22,55 +29,45 @@
   {
    "id": "pipA",
    "clip": "court",
-   "in": 7.6,
-   "dur": 9.6,
+   "in": 9.4,
+   "dur": 3.6,
    "note": "Recorded in the headset emulator \u00b7 hand tracking"
   },
   {
    "id": "pipB",
    "clip": "court",
-   "in": 32.9,
-   "dur": 3.6
+   "in": 14.2,
+   "dur": 2.8
   },
   {
-   "id": "aiA",
+   "id": "pipC",
    "clip": "court",
-   "in": 2.5,
-   "dur": 5.2
+   "in": 33.0,
+   "dur": 3.4
   },
   {
-   "id": "aiB",
+   "id": "cast",
    "clip": "court",
-   "in": 24.0,
-   "dur": 4.6
+   "in": 2.4,
+   "dur": 7.0
   },
   {
-   "id": "aiC",
+   "id": "marloA",
    "clip": "court",
-   "in": 41.6,
-   "dur": 3.6
+   "in": 23.4,
+   "dur": 5.4
   },
   {
-   "id": "book",
-   "clip": "book",
-   "in": 5.6,
-   "dur": 10.6,
-   "vol": 1.5,
-   "x": 0.35
-  },
-  {
-   "id": "books",
-   "clip": "books",
-   "in": 0.2,
-   "dur": 10.6,
-   "label": "Seven chapters, seven stories",
-   "x": 0.3
+   "id": "marloB",
+   "clip": "court",
+   "in": 41.0,
+   "dur": 3.4
   },
   {
    "id": "forest",
    "clip": "forest",
    "in": 2.0,
-   "dur": 6.4,
+   "dur": 8.6,
    "label": "The Whispering Forest",
    "x": 0.35
   },
@@ -78,36 +75,60 @@
    "id": "ship",
    "clip": "ship",
    "in": 4.6,
-   "dur": 5.6,
+   "dur": 4.6,
    "label": "The Pirate Ship"
   },
   {
    "id": "bridge",
    "clip": "bridge",
-   "in": 2.9,
-   "dur": 5.4,
+   "in": 4.3,
+   "dur": 4.8,
    "label": "The Troll Bridge"
   },
   {
    "id": "tower",
    "clip": "tower",
    "in": 1.6,
-   "dur": 6.2,
+   "dur": 5.4,
    "label": "The Clockwork Tower"
   },
   {
    "id": "cave",
    "clip": "cave",
    "in": 1.6,
-   "dur": 6.2,
+   "dur": 6.6,
    "label": "The Dragon's Cave"
   },
   {
    "id": "sky",
    "clip": "sky",
-   "in": 4.6,
-   "dur": 9.4,
-   "label": "The Night Sky"
+   "in": 3.0,
+   "dur": 7.4,
+   "label": "The Night Sky",
+   "x": 0.3
+  },
+  {
+   "id": "kind",
+   "clip": "finale",
+   "in": 0.0,
+   "dur": 12.5,
+   "vol": 1.2,
+   "x": 0.35
+  },
+  {
+   "id": "knight",
+   "clip": "finale",
+   "in": 17.4,
+   "dur": 10.0,
+   "vol": 1.4,
+   "x": 0.35
+  },
+  {
+   "id": "after",
+   "clip": "epilogue",
+   "in": 0.2,
+   "dur": 6.8,
+   "x": 0.6
   },
   {
    "id": "freeA",
@@ -126,7 +147,7 @@
    "id": "cards",
    "clip": "extras",
    "in": 1.4,
-   "dur": 4.6,
+   "dur": 3.4,
    "label": "Make your own story",
    "x": 0.35
   },
@@ -134,7 +155,7 @@
    "id": "play",
    "clip": "extras",
    "in": 13.2,
-   "dur": 5.6,
+   "dur": 5.4,
    "label": "Free play: be anyone"
   },
   {
@@ -155,67 +176,87 @@
   {
    "key": "open",
    "seg": "menu",
-   "off": 3.6
+   "off": 3.4
   },
   {
-   "key": "what",
+   "key": "tale1",
+   "seg": "prologue",
+   "off": 0.7
+  },
+  {
+   "key": "tale2",
+   "seg": "prologue",
+   "off": 7.0
+  },
+  {
+   "key": "tale3",
+   "seg": "prologue",
+   "off": 15.9
+  },
+  {
+   "key": "hands",
    "seg": "curtain",
-   "off": 0.5
+   "off": 0.1
   },
   {
    "key": "pip",
    "seg": "pipA",
+   "off": 0.0
+  },
+  {
+   "key": "cast",
+   "seg": "cast",
+   "off": 0.2
+  },
+  {
+   "key": "marlo",
+   "seg": "marloA",
    "off": 0.3
   },
   {
-   "key": "ai",
-   "seg": "aiA",
-   "off": 0.4
-  },
-  {
-   "key": "book",
-   "seg": "book",
-   "off": 0.2
-  },
-  {
-   "key": "stories",
-   "seg": "books",
-   "off": 0.6
-  },
-  {
-   "key": "each",
+   "key": "road",
    "seg": "forest",
-   "off": 0.2
+   "off": 0.3
   },
   {
    "key": "forest",
    "seg": "forest",
-   "off": 3.4
+   "off": 3.9
   },
   {
    "key": "ship",
    "seg": "ship",
-   "off": 1.0
+   "off": 0.4
   },
   {
    "key": "bridge",
    "seg": "bridge",
-   "off": 1.0
+   "off": 0.4
   },
   {
    "key": "tower",
    "seg": "tower",
-   "off": 1.0
+   "off": 0.4
   },
   {
    "key": "cave",
    "seg": "cave",
-   "off": 1.0
+   "off": 0.4
   },
   {
    "key": "sky",
    "seg": "sky",
-   "off": 1.0
+   "off": 0.3
+  },
+  {
+   "key": "kind",
+   "seg": "kind",
+   "off": 0.2
+  },
+  {
+   "key": "after",
+   "seg": "after",
+   "off": 0.6
   },
   {
    "key": "free",
@@ -235,16 +276,21 @@
  ],
  "ducks": [
   {
-   "seg": "book",
-   "off": 3.9,
-   "secs": 6.4
+   "seg": "kind",
+   "off": 8.6,
+   "secs": 3.8
+  },
+  {
+   "seg": "knight",
+   "off": 0.0,
+   "secs": 9.0
   }
  ],
  "music": [
   {
    "file": "music_story",
    "at": 0,
-   "end": 108.1,
+   "end": 96.0,
    "vol": 0.6,
    "fadeIn": 0.8,
    "fadeOut": 3.5,
@@ -252,8 +298,8 @@
   },
   {
    "file": "music_finale",
-   "at": 104.8,
-   "end": 138.6,
+   "at": 92.6,
+   "end": 160.5,
    "vol": 0.46,
    "fadeIn": 2.5,
    "fadeOut": 2.2,

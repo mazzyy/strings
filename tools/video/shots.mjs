@@ -231,6 +231,73 @@ const takes = {
     await finish(page, "extras");
   },
 };
+// pages of the pop-up storybook, held for a set time each (the prologue, the epilogue)
+async function pagesTake(name, pages) {
+  const page = await vr();
+  await E(page, () => { strings.raiseCurtain(); G.keepBook = true; });
+  await sleep(1200);
+  await E(page, (c) => V.cam(...c), CAM.wide);
+  await E(page, () => { G.go("courtyard"); });
+  await E(page, () => G.until(() => strings.book.open, 30000));
+  await sleep(300);
+  await E(page, async () => {
+    const s = strings, b = s.book, p = b.mesh.position.clone(), cam = [p.x, p.y + 0.05, p.z + 0.5];
+    const L = await import("/src/lines.js");
+    V.cam(cam, [p.x, p.y - 0.012, p.z], 0.8);
+    b.mesh.rotation.set(-Math.atan2(cam[1] - p.y, Math.hypot(cam[0] - p.x, cam[2] - p.z)), Math.atan2(cam[0] - p.x, cam[2] - p.z), 0, "YXZ");
+    G.show = (id, n, flip = true) => {
+      const ch = L[id.toUpperCase()] || s.storyMap.places.find((q) => q.id === id);
+      b.minT = 999; b.pageT = 0; b._clearPop();
+      if (flip) { b.prevC.getContext("2d").drawImage(b.canvas, 0, 0); b.chapter = ch; b.page = n; b.draw(b.nextC.getContext("2d")); b.flip = { t: 0, dur: 0.5 }; b.turning = true; }
+      else { b.chapter = ch; b.page = n; b.draw(b.g); b._buildPop(); }
+      G.mark(id + " p" + n);
+    };
+  });
+  const total = pages.reduce((a, [, , secs]) => a + secs, 0);
+  await E(page, ([id, n]) => G.show(id, n, false), pages[0]);
+  await E(page, () => { const p = strings.book.mesh.position; V.cam([p.x - 0.11, p.y + 0.05, p.z + 0.48], [p.x - 0.02, p.y - 0.012, p.z], 0.8); });
+  await sleep(300);
+  await E(page, () => REC.start());
+  await E(page, (secs) => { const p = strings.book.mesh.position; V.cam([p.x + 0.1, p.y + 0.06, p.z + 0.48], [p.x, p.y - 0.012, p.z], 0.8, secs); }, total);
+  await sleep(pages[0][2] * 1000);
+  for (const pg of pages.slice(1)) { await E(page, ([id, n]) => G.show(id, n), pg); await sleep(pg[2] * 1000); }
+  await finish(page, name);
+}
+takes.prologue = () => pagesTake("prologue", [["prologue", 0, 6.4], ["prologue", 1, 8.8], ["prologue", 2, 5.2]]);
+takes.epilogue = () => pagesTake("epilogue", [["epilogue", 0, 7.5]]);
+
+// the finale's turn: Clank caught and sorry; Sir Pip bows to him, then kneels to be knighted
+takes.finale = async () => {
+  const page = await vr();
+  await E(page, () => { strings.raiseCurtain(); });
+  await sleep(1200);
+  await E(page, (c) => V.cam(...c), CAM.wide);
+  await E(page, () => G.go("sky"));
+  await E(page, () => G.until(() => strings.show.state === "act", 25000));
+  await sleep(700);
+  await E(page, async () => {
+    const s = strings, w = G.wait;
+    V.cam([0, 0.44, 0.74], [0.02, 0.26, -0.08], 0.88);
+    await G.grab(); G.x0 = V.t.x;
+    for (let i = 0; i < 8 && G.act() < 4; i++) { s.show.skip(); await w(300); await G.until(() => s.show.state === "act", 15000); }
+    G.mark("at act " + G.act());
+    if (s.flying) s.setFlight(false);
+  });
+  await sleep(2500);
+  await E(page, () => { REC.start(); G.mark("kindness"); V.cam([0, 0.4, 0.66], [0.02, 0.22, -0.06], 0.82, 14); });
+  await E(page, async () => {
+    const s = strings, w = G.wait;
+    await w(7600); // (long enough for the voice-over to get to "is bow")
+    await G.bow(); G.mark("bow to clank");
+    await G.until(() => G.act() >= 5 || s.show.state !== "act", 9000); G.mark("act " + G.act());
+    await w(3000);
+    await G.bow(); G.mark("kneel");
+    V.to({ pitch: 0.62 }); await w(2600); V.to({ pitch: 0 });
+    await w(7500); G.mark("knighted " + s.show.state);
+  });
+  await finish(page, "finale");
+};
+
 // one chapter each: go there, pick Sir Pip up, play its game for a while
 const CHAPTERS = {
   forest: { cam: [[0, 0.42, 0.7], [0.02, 0.24, -0.08], 0.85], async play() { const s = strings, w = G.wait; s.props.moveTo("lantern", "pip"); await w(400); if (G.act() < 1) s.show.skip(); G.mark("act " + G.act()); for (const x of [0.2, -0.12, 0.26, -0.05, 0.18]) { G.by({ x: x - (V.t.x - G.x0) }, 1.3); await w(2400); if (Math.random() < 0.5) V.jump(); } } },

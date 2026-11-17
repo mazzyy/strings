@@ -9,22 +9,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tts"))
 from voice import Speaker
 
 LINES = {
-    "open":    "Every puppet theatre needs a puppeteer. Tonight, it's you.",
-    "what":    "This is Strings: a marionette theatre you play with nothing but your hands. Pinch the gold cord, pull, and the curtain rises.",
-    "pip":     "Sir Pip hangs from your fingers on real, simulated strings. Lift your hand, and he walks. Tip your wrist, and he bows. Flick, and he jumps.",
-    "ai":      "And you never perform alone. A robot puppeteer works the other marionettes. Each one has a mood, a memory, and a voice of its own. They answer what you do, and they remember it.",
-    "book":    "A storybook leads you through seven chapters,",
-    "stories": "and every chapter has a story of its own.",
-    "each":    "Each one has its own stage, and its own game.",
-    "forest":  "Catch fireflies in a whispering forest.",
-    "ship":    "Duel a pirate captain.",
-    "bridge":  "Answer a troll's riddle.",
-    "tower":   "Sneak through a clockwork tower, in a storm.",
-    "cave":    "Hunt for jewels in a dragon's cave.",
-    "sky":     "Then climb onto a dragon's back, and fly.",
-    "free":    "And when the story ends, your applause sets him free. Marlo snaps his strings, flies out of the theatre, and lands on your open hand.",
-    "more":    "Stage stories of your own. Play as any character. Use just one hand, if you like.",
-    "end":     "Strings. Hands only, seated, and running right in your headset's browser. Pull the cord. The show is yours.",
+    # the video is told as the game's own bedtime story: the plot carries you from stage to
+    # stage, and each thing you can do arrives as a moment in that story
+    "open":   "Once upon a time, in a kingdom no bigger than a desk,",
+    "tale1":  "a princess wound a little golden music box every night, and everyone fell asleep smiling.",
+    "tale2":  "Until one stormy night, a lonely clockwork robot carried her off, and hid the music box's jewels. The kingdom fell silent.",
+    "tale3":  "It needed a hero. It got Sir Pip.",
+    "hands":  "Sir Pip is a marionette, and his strings are in your hands. Pinch the gold cord, pull, and the curtain rises.",
+    "pip":    "No controllers, no buttons. Lift your hand, and he walks. Tip your wrist, and he bows. Flick, and he leaps.",
+    "cast":   "And you never perform alone. A robot puppeteer works the rest of the cast, and each of them has a mind of their own.",
+    "marlo":  "Marlo the dragon is shy. Rush at him, and he hides. Be gentle, and he'll follow you anywhere.",
+    "road":   "To bring the music back, Sir Pip must cross the whole kingdom.",
+    "forest": "Through a forest, where a wizard has lost his fireflies, and his way.",
+    "ship":   "Aboard a pirate ship, whose captain only sails for a duel.",
+    "bridge": "Over a bridge, where a troll lets no one pass without a riddle.",
+    "tower":  "Into a clockwork tower in the storm, past the searchlight, to the princess.",
+    "cave":   "And deep into a dragon's cave, where the jewels glitter. Lucky for Pip, it's Marlo's home.",
+    "sky":    "Then Clank snatches the music box one last time. So you climb onto a dragon's back, and fly.",
+    "kind":   "But this was never a story about beating a villain. Clank isn't wicked. He's lonely. So the bravest thing a knight can do, is bow.",
+    "after":  "From that night on, the music box played every evening. And Clank wound its key himself.",
+    "free":   "And when the show is over, your applause sets Marlo free. He snaps his strings, flies out of the theatre, and lands in your open hand.",
+    "more":   "Write stories of your own. Play as anyone. Use one hand, or set the stage on your real desk.",
+    "end":    "Strings. A marionette theatre for your hands. Pull the cord. The show is yours.",
 }
 
 def main():
