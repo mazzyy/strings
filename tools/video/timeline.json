@@ -5,24 +5,32 @@
  "voVol": 1.0,
  "segments": [
   {
+   "id": "cold",
+   "clip": "unbound",
+   "in": 12.0,
+   "dur": 3.4,
+   "x": 0.01,
+   "vol": 0.8
+  },
+  {
    "id": "menu",
    "clip": "menu",
    "in": 0.4,
-   "dur": 7.0,
-   "x": 0.01
+   "dur": 5.4,
+   "x": 0.5
   },
   {
    "id": "prologue",
    "clip": "prologue",
    "in": 0.2,
-   "dur": 19.6,
+   "dur": 16.2,
    "x": 0.6
   },
   {
    "id": "curtain",
    "clip": "curtain",
    "in": 0.4,
-   "dur": 10.2,
+   "dur": 8.6,
    "x": 0.35
   },
   {
@@ -41,38 +49,70 @@
    "id": "pipC",
    "clip": "court",
    "in": 33.0,
-   "dur": 3.4
+   "dur": 3.0
+  },
+  {
+   "id": "stumble",
+   "clip": "stumble",
+   "in": 1.8,
+   "dur": 10.4,
+   "x": 0.3,
+   "vol": 1.1
   },
   {
    "id": "cast",
    "clip": "court",
    "in": 2.4,
-   "dur": 7.0
+   "dur": 5.0,
+   "x": 0.3
   },
   {
-   "id": "marloA",
-   "clip": "court",
-   "in": 23.4,
-   "dur": 5.4
+   "id": "shyA",
+   "clip": "shyrush",
+   "in": 1.6,
+   "dur": 4.4
   },
   {
-   "id": "marloB",
-   "clip": "court",
-   "in": 41.0,
-   "dur": 3.4
+   "id": "shyB",
+   "clip": "shyrush",
+   "in": 14.6,
+   "dur": 4.6,
+   "x": 0.3
+  },
+  {
+   "id": "talk",
+   "clip": "talk",
+   "in": 0.6,
+   "dur": 7.6,
+   "x": 0.35,
+   "vol": 1.3
+  },
+  {
+   "id": "playA",
+   "clip": "playbill",
+   "in": 0.6,
+   "dur": 3.6,
+   "x": 0.3
+  },
+  {
+   "id": "playB",
+   "clip": "playbill",
+   "in": 10.6,
+   "dur": 6.6,
+   "x": 0.3
   },
   {
    "id": "map",
    "clip": "map",
    "in": 0.6,
-   "dur": 6.0,
+   "dur": 5.6,
    "x": 0.35
   },
   {
    "id": "forest",
    "clip": "forest",
    "in": 2.0,
-   "dur": 5.2,
+   "dur": 4.6,
    "label": "The Whispering Forest",
    "x": 0.3
   },
@@ -80,35 +120,35 @@
    "id": "ship",
    "clip": "ship",
    "in": 4.6,
-   "dur": 4.6,
+   "dur": 4.2,
    "label": "The Pirate Ship"
   },
   {
    "id": "bridge",
    "clip": "bridge",
    "in": 4.3,
-   "dur": 4.8,
+   "dur": 4.4,
    "label": "The Troll Bridge"
   },
   {
    "id": "tower",
    "clip": "tower",
    "in": 1.6,
-   "dur": 5.4,
+   "dur": 4.9,
    "label": "The Clockwork Tower"
   },
   {
    "id": "cave",
    "clip": "cave",
    "in": 1.6,
-   "dur": 6.6,
+   "dur": 6.2,
    "label": "The Dragon's Cave"
   },
   {
    "id": "sky",
    "clip": "sky",
    "in": 3.0,
-   "dur": 7.4,
+   "dur": 6.2,
    "label": "The Night Sky",
    "x": 0.3
   },
@@ -116,7 +156,7 @@
    "id": "kind",
    "clip": "finale",
    "in": 0.0,
-   "dur": 12.5,
+   "dur": 10.8,
    "vol": 1.2,
    "x": 0.35
   },
@@ -124,7 +164,7 @@
    "id": "knight",
    "clip": "finale",
    "in": 17.4,
-   "dur": 10.0,
+   "dur": 6.6,
    "vol": 1.4,
    "x": 0.35
   },
@@ -132,21 +172,21 @@
    "id": "after",
    "clip": "epilogue",
    "in": 0.2,
-   "dur": 6.8,
+   "dur": 6.0,
    "x": 0.6
   },
   {
    "id": "freeA",
    "clip": "unbound",
    "in": 0.6,
-   "dur": 4.2,
+   "dur": 4.0,
    "x": 0.35
   },
   {
    "id": "freeB",
    "clip": "unbound",
    "in": 11.6,
-   "dur": 9.4
+   "dur": 6.0
   },
   {
    "id": "cards",
@@ -160,14 +200,14 @@
    "id": "play",
    "clip": "extras",
    "in": 13.2,
-   "dur": 5.4,
+   "dur": 4.4,
    "label": "Free play: be anyone"
   },
   {
    "id": "end",
    "clip": "menu",
    "in": 3.0,
-   "dur": 9.0,
+   "dur": 8.4,
    "x": 0.5,
    "vol": 0,
    "end": [
@@ -181,22 +221,22 @@
   {
    "key": "open",
    "seg": "menu",
-   "off": 3.4
+   "off": 1.8
   },
   {
    "key": "tale1",
    "seg": "prologue",
-   "off": 0.7
+   "off": 0.5
   },
   {
-   "key": "tale2",
+   "key": "tale2b",
    "seg": "prologue",
-   "off": 7.0
+   "off": 6.3
   },
   {
    "key": "tale3",
    "seg": "prologue",
-   "off": 15.9
+   "off": 12.4
   },
   {
    "key": "hands",
@@ -209,13 +249,33 @@
    "off": 0.0
   },
   {
-   "key": "cast",
+   "key": "strings",
+   "seg": "stumble",
+   "off": 0.2
+  },
+  {
+   "key": "cast2",
    "seg": "cast",
    "off": 0.2
   },
   {
-   "key": "marlo",
-   "seg": "marloA",
+   "key": "shy1",
+   "seg": "shyA",
+   "off": 0.6
+  },
+  {
+   "key": "shy2",
+   "seg": "shyB",
+   "off": 0.3
+  },
+  {
+   "key": "talk",
+   "seg": "talk",
+   "off": 0.2
+  },
+  {
+   "key": "notes",
+   "seg": "playA",
    "off": 0.3
   },
   {
@@ -261,7 +321,7 @@
   {
    "key": "after",
    "seg": "after",
-   "off": 0.6
+   "off": 0.5
   },
   {
    "key": "free",
@@ -269,33 +329,38 @@
    "off": 0.4
   },
   {
-   "key": "more",
+   "key": "more2",
    "seg": "cards",
    "off": 0.3
   },
   {
-   "key": "end",
+   "key": "end2",
    "seg": "end",
    "off": 0.6
   }
  ],
  "ducks": [
   {
+   "seg": "talk",
+   "off": 2.8,
+   "secs": 4.2
+  },
+  {
    "seg": "kind",
    "off": 8.6,
-   "secs": 3.8
+   "secs": 2.4
   },
   {
    "seg": "knight",
    "off": 0.0,
-   "secs": 9.0
+   "secs": 6.6
   }
  ],
  "music": [
   {
    "file": "music_story",
    "at": 0,
-   "end": 98.6,
+   "end": 118.7,
    "vol": 0.6,
    "fadeIn": 0.8,
    "fadeOut": 3.5,
@@ -303,8 +368,8 @@
   },
   {
    "file": "music_finale",
-   "at": 95.2,
-   "end": 163.1,
+   "at": 115.3,
+   "end": 170.9,
    "vol": 0.46,
    "fadeIn": 2.5,
    "fadeOut": 2.2,

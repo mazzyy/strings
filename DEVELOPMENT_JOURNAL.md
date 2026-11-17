@@ -467,3 +467,9 @@ In the headset the storybook's picture now rises off the page like a pop-up book
 - **New takes** (`shots.mjs`): `prologue` and `epilogue` (pop-up pages held for their lines) and `finale` (the sky chapter's kindness and knighting acts, the bow timed to land on "is bow"). All gameplay takes were re-recorded with the new curtain.
 - **Result:** 2 min 44 s (`timeline.json`, 23 segments), no late cuts, peak 0.76. Saved over `demo-video/strings-demo.mp4`; the script with timings is in `demo-video/README.md`.
 - **Then:** the on-screen "Recorded in the headset emulator" note was removed, and a `map` take added before the forest: the story map opens with chapter one done, a finger pokes the Whispering Forest, and Sir Pip's token walks the road to it, under "Sir Pip must cross the whole kingdom". The video is now 2 min 46 s.
+
+### Phase 35: the video shows what it claims
+- **Problem:** the script told the viewer what was special (real physics, a cast with minds, endings) without showing it, the hook came late, and the accessibility story was squeezed into the last line.
+- **New takes** (`shots.mjs`): `stumble` (the bar and strings up close; dropped, Sir Pip falls and Marlo saves the scene with a double pratfall), `shyrush` (rushed, Marlo hides with "Too fast!"; approached gently, "Friends!"), `talk` (a finger pokes "Let's dance!"; Marlo answers in his voice and dances), `playbill` (the slapstick ending, the playbill with a critic's verdict, Marlo's Backstage Notes), a tighter `prologue`, and `artest` (the emulator's passthrough is a black void, so mixed reality is named, not shown).
+- **New script** (`vo.py`): a cold open on Marlo landing in a palm; then the story, with every claim shown as it is made; a mid-video line on seated, hands-only, one-hand play; the end names VR and the real desk.
+- **Result:** 2 min 54 s (`timeline.json`, 29 segments), no late cuts, no overlapping lines, peak 0.75. The script with timings is in `demo-video/README.md`.

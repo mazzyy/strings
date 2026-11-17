@@ -263,8 +263,130 @@ async function pagesTake(name, pages) {
   for (const pg of pages.slice(1)) { await E(page, ([id, n]) => G.show(id, n), pg); await sleep(pg[2] * 1000); }
   await finish(page, name);
 }
-takes.prologue = () => pagesTake("prologue", [["prologue", 0, 6.4], ["prologue", 1, 8.8], ["prologue", 2, 5.2]]);
+takes.prologue = () => pagesTake("prologue", [["prologue", 0, 6.2], ["prologue", 1, 6.0], ["prologue", 2, 4.4]]);
 takes.epilogue = () => pagesTake("epilogue", [["epilogue", 0, 7.5]]);
+
+// open a chapter, wait for its first act, pick Sir Pip up (with the camera at cam)
+async function inChapter(page, id, cam) {
+  await E(page, () => { strings.raiseCurtain(); });
+  await sleep(1200);
+  await E(page, (c) => V.cam(...c), CAM.wide);
+  await E(page, (id) => G.go(id), id);
+  await E(page, () => G.until(() => strings.show.state === "act", 25000));
+  await sleep(500);
+  await E(page, async (cam) => { V.cam(...cam); await G.grab(); G.x0 = V.t.x; G.y0 = V.t.y; }, cam);
+}
+const SEAT = [[0, 0.42, 0.7], [0.02, 0.24, -0.08], 0.85];
+
+// the strings up close: Sir Pip swings on them; let him fall and Marlo falls too (the save)
+takes.stumble = async () => {
+  const page = await vr();
+  await inChapter(page, "courtyard", SEAT);
+  await E(page, async () => { const s = strings, w = G.wait; s.show.skip(); await w(300); await G.until(() => s.show.state === "act", 15000); G.mark("act " + G.act()); });
+  await E(page, () => { const s = strings, p = s.pip.get("pelvis"), b = s.pip.main.position; G.pp = p.clone(); const lx = (p.x + b.x) / 2, ly = (p.y + b.y) / 2 + 0.01; G.look = [lx, ly, p.z]; V.cam([lx + 0.15, ly + 0.05, p.z + 0.5], G.look, 0.85); });
+  await sleep(800);
+  await E(page, () => { REC.start(); G.mark("close"); });
+  await E(page, async () => {
+    const s = strings, w = G.wait;
+    // a puppeteer's sway: the body follows a beat behind the bar
+    for (const x of [0.05, -0.06, 0.05, -0.03]) { G.by({ x }, 2.2); await w(900); }
+    V.to({ yaw: 0.5 }); await w(700); V.to({ yaw: -0.4 }); await w(700); V.to({ yaw: 0 }); await w(500);
+    // let go of the height: he crumples (and the co-star saves the scene)
+    const r = Math.random; Math.random = () => 0.4; G.mark("drop");
+    V.cam([G.pp.x + 0.2, G.pp.y + 0.2, G.pp.z + 0.52], [G.pp.x + 0.08, G.pp.y + 0.06, G.pp.z], 0.85, 1.5);
+    V.to({ y: G.y0 - 0.2, x: V.t.x + 0.03 }, 9);
+    await G.until(() => s.rescueCool > 0, 4000); G.mark("rescue " + s.rescueCool.toFixed(1));
+    await w(500); Math.random = r;
+    await w(3200);
+    V.to({ y: G.y0 }, 2.5); G.mark("up");
+    await w(3000);
+  });
+  await finish(page, "stumble");
+};
+
+// rush at Marlo and he hides; come back gently and he's your friend
+takes.shyrush = async () => {
+  const page = await vr();
+  await inChapter(page, "courtyard", SEAT);
+  await E(page, () => { REC.start(); G.mark("start"); });
+  await E(page, async () => {
+    const s = strings, w = G.wait, ph = () => s.currentTask?.debug?.().phase;
+    await G.until(() => ph() === "shy", 16000); G.mark("shy");
+    await w(500);
+    G.by({ x: 0.15 }, 9); G.mark("rush");
+    await G.until(() => ph() === "hiding", 3000); G.mark("hides " + ph());
+    await w(700);
+    G.by({ x: -0.09 }, 2); G.mark("back off");
+    await G.until(() => ph() === "shy", 6000); G.mark("peek");
+    await w(400);
+    G.by({ x: 0.085 }, 0.55); G.mark("gentle");
+    await G.until(() => ph() === "won" || G.act() > 0, 12000); G.mark("friends " + ph());
+    await w(2600);
+  });
+  await finish(page, "shyrush");
+};
+
+// poke a speech bubble; Marlo answers (in his own voice) and dances
+takes.talk = async () => {
+  const page = await vr();
+  await inChapter(page, "courtyard", SEAT);
+  await E(page, async () => { const s = strings, w = G.wait; s.show.skip(); await w(300); await G.until(() => s.show.state === "act", 15000); });
+  await E(page, async () => {
+    const THREE = await import("three"), s = strings, g = s.phrases.group;
+    const cam = new THREE.Vector3(0.02, 0.5, 0.74);
+    V.cam(cam.toArray(), [0.02, 0.32, 0], 0.9);
+    s.phrases.show(true);
+    const d = cam.clone().sub(g.position);
+    g.rotation.set(-Math.atan2(d.y, Math.hypot(d.x, d.z)), Math.atan2(d.x, d.z), 0, "YXZ");
+    g.updateMatrixWorld(true);
+    const chip = s.phrases.chips[2]; // "Let's dance!"
+    G.chipAt = s.stageRoot.worldToLocal(chip.localToWorld(new THREE.Vector3(0, -0.004, 0)));
+    G.chipNear = s.stageRoot.worldToLocal(chip.localToWorld(new THREE.Vector3(0, -0.004, 0.08)));
+  });
+  await sleep(700);
+  await E(page, () => { REC.start(); G.mark("bubbles"); });
+  await sleep(1200);
+  await E(page, () => { const q = G.chipNear; V.left({ x: q.x, y: q.y, z: q.z, pinch: false }, 3); G.mark("reach"); });
+  await sleep(1300);
+  await E(page, () => { const q = G.chipAt; V.left({ x: q.x, y: q.y, z: q.z }, 6); G.mark("poke"); });
+  await sleep(450);
+  await E(page, () => { const s = strings; if (s.phrases.cool <= 0) s.phrases.pick(s.phrases.items[2]); G.mark("picked"); V.left({ x: -0.3, y: 0.3, z: 0.4 }, 3); V.cam([0.02, 0.5, 0.82], [0.03, 0.28, -0.04], 0.95, 1.6); });
+  await sleep(6500);
+  await finish(page, "talk");
+};
+
+// a chapter's end: a slapstick finale, then the playbill (with a critic) and Marlo's backstage notes
+takes.playbill = async () => {
+  const page = await vr();
+  await inChapter(page, "courtyard", SEAT);
+  await E(page, async () => {
+    const s = strings, w = G.wait;
+    for (let i = 0; i < 8 && s.show.state !== "ending"; i++) { if (s.show.state === "act") { if (G.act() === s.show.scene.acts.length - 1) s.show.style = { grace: 0, slapstick: 6, drama: 1 }; s.show.skip(); } await w(400); await G.until(() => s.show.state === "act" || s.show.state === "ending", 15000); }
+    G.mark("ending " + s.show.state);
+  });
+  await E(page, () => { REC.start(); G.mark("rec"); });
+  await E(page, async () => {
+    const s = strings, w = G.wait;
+    await G.until(() => s.show.state === "finale", 12000); G.mark("finale");
+    await w(1200);
+    const b = s.show.bill.position, m = s.show.mindCard.position;
+    V.cam([b.x + 0.13, b.y + 0.04, b.z + 0.25], [b.x + 0.005, b.y, b.z], 0.75, 1.4); G.mark("bill");
+    await w(3600);
+    V.cam([m.x - 0.13, m.y + 0.04, m.z + 0.25], [m.x - 0.005, m.y, m.z], 0.75, 1.6); G.mark("notes");
+    await w(3800);
+  });
+  await finish(page, "playbill");
+};
+
+// can the emulator show the stage on a "real desk"? (passthrough)
+takes.artest = async () => {
+  const page = await vr({ mode: "#go-ar" });
+  await sleep(4000);
+  await E(page, () => { strings.raiseCurtain(); V.cam([0, 0.5, 0.9], [0, 0.2, -0.1], 1.0); });
+  await sleep(4000);
+  await page.screenshot({ path: `${out}/th/artest.png` });
+  await page.close();
+};
 
 // the story map between chapters: chapter one done, poke the forest, Sir Pip's token walks there
 takes.map = async () => {
