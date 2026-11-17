@@ -23,15 +23,13 @@
    "clip": "curtain",
    "in": 0.4,
    "dur": 10.2,
-   "note": "Recorded in the headset emulator \u00b7 hand tracking",
    "x": 0.35
   },
   {
    "id": "pipA",
    "clip": "court",
    "in": 9.4,
-   "dur": 3.6,
-   "note": "Recorded in the headset emulator \u00b7 hand tracking"
+   "dur": 3.6
   },
   {
    "id": "pipB",
@@ -64,12 +62,19 @@
    "dur": 3.4
   },
   {
+   "id": "map",
+   "clip": "map",
+   "in": 0.6,
+   "dur": 6.0,
+   "x": 0.35
+  },
+  {
    "id": "forest",
    "clip": "forest",
    "in": 2.0,
-   "dur": 8.6,
+   "dur": 5.2,
    "label": "The Whispering Forest",
-   "x": 0.35
+   "x": 0.3
   },
   {
    "id": "ship",
@@ -215,13 +220,13 @@
   },
   {
    "key": "road",
-   "seg": "forest",
-   "off": 0.3
+   "seg": "map",
+   "off": 0.4
   },
   {
    "key": "forest",
    "seg": "forest",
-   "off": 3.9
+   "off": 0.3
   },
   {
    "key": "ship",
@@ -290,7 +295,7 @@
   {
    "file": "music_story",
    "at": 0,
-   "end": 96.0,
+   "end": 98.6,
    "vol": 0.6,
    "fadeIn": 0.8,
    "fadeOut": 3.5,
@@ -298,8 +303,8 @@
   },
   {
    "file": "music_finale",
-   "at": 92.6,
-   "end": 160.5,
+   "at": 95.2,
+   "end": 163.1,
    "vol": 0.46,
    "fadeIn": 2.5,
    "fadeOut": 2.2,

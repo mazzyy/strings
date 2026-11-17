@@ -266,6 +266,46 @@ async function pagesTake(name, pages) {
 takes.prologue = () => pagesTake("prologue", [["prologue", 0, 6.4], ["prologue", 1, 8.8], ["prologue", 2, 5.2]]);
 takes.epilogue = () => pagesTake("epilogue", [["epilogue", 0, 7.5]]);
 
+// the story map between chapters: chapter one done, poke the forest, Sir Pip's token walks there
+takes.map = async () => {
+  const page = await vr();
+  await E(page, () => { strings.raiseCurtain(); });
+  await sleep(1200);
+  await E(page, (c) => V.cam(...c), CAM.wide);
+  await E(page, () => G.go("courtyard"));
+  await E(page, () => G.until(() => strings.show.state === "act", 25000));
+  await sleep(500);
+  await E(page, () => {
+    const s = strings, m = s.storyMap;
+    m.state = { unlocked: 2, done: { courtyard: { stars: 3, ending: "grace" } }, at: "courtyard" };
+    const c = m.places.find((p) => p.id === "courtyard"); m.token.x = c.map[0]; m.token.y = c.map[1];
+    m.onChoose = () => G.mark("arrived");
+    s.openMap();
+  });
+  await sleep(400);
+  await E(page, async () => {
+    const THREE = await import("three"), s = strings, m = s.storyMap.mesh;
+    const p = m.position.clone(), n = new THREE.Vector3(0, 0, 1).applyEuler(m.rotation);
+    const cam = p.clone().addScaledVector(n, 0.4);
+    V.cam([cam.x, cam.y + 0.015, cam.z], p.toArray(), 0.78);
+    // where the forest is drawn on the parchment (0.4 m x 0.25 m; the kingdom is 1600 x 1000)
+    const f = s.storyMap.places.find((q) => q.id === "forest");
+    const local = new THREE.Vector3((f.map[0] / 1600 - 0.5) * 0.4, (0.5 - f.map[1] / 1000) * 0.25, 0);
+    G.forestAt = s.stageRoot.worldToLocal(m.localToWorld(local.clone()));
+    G.forestNear = s.stageRoot.worldToLocal(m.localToWorld(local.clone().setZ(0.07)));
+  });
+  await sleep(600);
+  await E(page, () => { REC.start(); G.mark("map"); });
+  await sleep(1400);
+  await E(page, () => { const q = G.forestNear; V.to({ x: q.x, y: q.y - 0.02, z: q.z, pinch: false }, 3); G.mark("reach"); });
+  await sleep(1300);
+  await E(page, () => { const q = G.forestAt; V.to({ x: q.x, y: q.y - 0.02, z: q.z }, 6); G.mark("poke"); });
+  await sleep(500);
+  await E(page, () => { const m = strings.storyMap; if (!m.travel) m.travelTo(m.places.find((q) => q.id === "forest")); G.mark("travel"); G.park(); });
+  await sleep(3800);
+  await finish(page, "map");
+};
+
 // the finale's turn: Clank caught and sorry; Sir Pip bows to him, then kneels to be knighted
 takes.finale = async () => {
   const page = await vr();
