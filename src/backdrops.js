@@ -606,6 +606,26 @@ export function composite(name) {
 // Paint the backdrop into a w x h box of any shape: it's cropped to fill, never squashed.
 // focus (0..1) picks which part of a wide scene a narrow box looks at.
 const FOCUS = { courtyard: 0.5, forest: 0.66, ship: 0.86, bridge: 0.84, tower: 0.5, cave: 0.5, sky: 0.82 };
+// the far part alone (sky and whatever drifts across it), the same size as the composite
+function farLayer(name) {
+  const key = `${name}/far`;
+  if (!cache.has(key)) {
+    const c = mk(LW * FORE_SCALE, LH * FORE_SCALE), g = c.getContext("2d");
+    g.drawImage(skyLayer(name), 0, 0, c.width, c.height);
+    g.save(); g.scale(FORE_SCALE, FORE_SCALE); PAINT[name].clouds?.(g); g.restore();
+    cache.set(key, c);
+  }
+  return cache.get(key);
+}
+// One layer of a backdrop with the same crop as paintBackdrop: "far" (the sky), "fore" (the scene
+// in front, with see-through gaps) or "all". The pop-up storybook stacks them with real depth.
+export function paintLayer(name, which, g, w, h, focus) {
+  if (!PAINT[name]) name = "courtyard";
+  const src = which === "fore" ? foreLayer(name) : which === "far" ? farLayer(name) : composite(name);
+  const f = focus ?? FOCUS[name] ?? 0.5;
+  const k = Math.max(w / src.width, h / src.height), sw = w / k, sh = h / k;
+  g.drawImage(src, (src.width - sw) * f, src.height - sh, sw, sh, 0, 0, w, h);
+}
 export function paintBackdrop(name, g, w, h, focus = FOCUS[name] ?? 0.5) {
   const src = composite(name);
   const k = Math.max(w / src.width, h / src.height);

@@ -4,7 +4,7 @@
 //   Desktop: an overlay (click to turn the page, Skip to jump ahead).
 //   Headset: a floating book in front of the stage (poke to turn the page).
 import * as THREE from "three";
-import { paintBackdrop } from "./backdrops.js";
+import { paintBackdrop, paintLayer } from "./backdrops.js";
 import { figure } from "./figures.js";
 
 const W = 1200, H = 750;
@@ -31,6 +31,11 @@ function wrap(g, text, x, y, maxW, lh) {
   }
   g.fillText(line, x, y);
 }
+
+// the picture's frame on the left page (book-canvas pixels), and book-canvas pixels to metres on the mesh
+const FRAME = { x: 62, y: 62, w: W / 2 - 34 - 68, h: 452 };
+const MX = (px) => (px / W - 0.5) * 0.48, MY = (py) => (0.5 - py / H) * 0.3, MW = (px) => (px / W) * 0.48, MH = (py) => (py / H) * 0.3;
+const backOut = (k) => { const c = 1.9; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; }; // (springs a little past, then settles)
 
 export class StoryBook {
   constructor({ narrator, onFlip }) {
@@ -61,6 +66,10 @@ export class StoryBook {
     this.shade.position.z = -0.012; this.shade.renderOrder = 29;
     this.mesh.add(this.shade);
     this.appear = 0; this.life = 0;
+    // the pop-up: in the headset the picture rises off the page in layers (see _buildPop)
+    this.popGroup = new THREE.Group();
+    this.mesh.add(this.popGroup);
+    this.pops = [];
     this.open = false;
     this.pokeCool = 0;
   }
@@ -93,7 +102,8 @@ export class StoryBook {
     if (this.page >= this.chapter.pages.length) return this.finish();
     if (this.flip) { this.page--; return; } // let the current turn finish first
     const text = this.chapter.pages[this.page];
-    if (this.page === 0) this.draw(this.g);
+    this._clearPop(); // (the old page's pop-ups fold away as it turns)
+    if (this.page === 0) { this.draw(this.g); this._buildPop(); }
     else {
       // turn the page like real paper: keep the old spread, draw the new one, and flip between them
       this.prevC.getContext("2d").drawImage(this.canvas, 0, 0);
@@ -113,6 +123,7 @@ export class StoryBook {
     this.open = false;
     this.el?.classList.remove("on");
     this.mesh.visible = false;
+    this._clearPop();
     const cb = this.onDone;
     this.onDone = null;
     cb?.();
@@ -141,12 +152,13 @@ export class StoryBook {
       this.mesh.scale.setScalar(this.baseScale * (0.82 + 0.18 * e));
       this.mesh.material.opacity = e; this.shade.material.opacity = e;
       if (this.home) this.mesh.position.y = this.home.y + Math.sin(this.life * 1.1) * 0.0025 - (1 - e) * 0.03;
+      this._updatePop(dt, e);
     }
     if (this.flip) {
       this.flip.t += dt;
       const p = Math.min(1, this.flip.t / this.flip.dur);
       this._flipFrame(p * p * (3 - 2 * p));
-      if (p >= 1) { this.g.drawImage(this.nextC, 0, 0); this.tex.needsUpdate = true; this.flip = null; this.turning = false; }
+      if (p >= 1) { this.g.drawImage(this.nextC, 0, 0); this.tex.needsUpdate = true; this.flip = null; this.turning = false; this._buildPop(); }
     }
     if (!this.open) return;
     this.pageT += dt;
@@ -246,9 +258,10 @@ export class StoryBook {
     g.save();
     g.beginPath(); g.roundRect(fx, fy, fw, fh, 8); g.clip();
     g.translate(fx, fy);
-    paintBackdrop(set, g, fw, fh, art?.focus);
+    const pop = this.xr; // (headset: the page keeps only the sky; the scene and the cast pop up in front of it)
+    if (pop) paintLayer(set, "far", g, fw, fh, art?.focus); else paintBackdrop(set, g, fw, fh, art?.focus);
     if (art?.night) { g.fillStyle = "rgba(14,20,64,0.55)"; g.fillRect(0, 0, fw, fh); const mx = fw * 0.82, my = 70; const mg = g.createRadialGradient(mx, my, 0, mx, my, 150); mg.addColorStop(0, "rgba(250,244,214,0.5)"); mg.addColorStop(1, "rgba(250,244,214,0)"); g.fillStyle = mg; g.fillRect(mx - 150, my - 150, 300, 300); g.fillStyle = "#fbf4d8"; g.beginPath(); g.arc(mx, my, 28, 0, Math.PI * 2); g.fill(); for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(255,255,240,${0.4 + ((i * 37) % 10) / 16})`; g.fillRect((i * 97) % fw, (i * 53) % 150, 2, 2); } }
-    for (const [kind, px, flip, dy = 0, sc = 1] of art?.cast || CASTS[ch.id]?.[n] || []) figure(g, kind, fw * px, fh - 30 + dy, 1.3 * sc, flip); // (dy, sc: lift or shrink one figure, e.g. a rider)
+    if (!pop) for (const [kind, px, flip, dy = 0, sc = 1] of art?.cast || CASTS[ch.id]?.[n] || []) figure(g, kind, fw * px, fh - 30 + dy, 1.3 * sc, flip); // (dy, sc: lift or shrink one figure, e.g. a rider)
     const iv = g.createRadialGradient(fw / 2, fh / 2, fh * 0.42, fw / 2, fh / 2, fw * 0.78); iv.addColorStop(0, "rgba(40,16,10,0)"); iv.addColorStop(1, "rgba(40,16,10,0.42)");
     g.fillStyle = iv; g.fillRect(0, 0, fw, fh);
     g.restore();
@@ -308,6 +321,66 @@ export class StoryBook {
       g.font = "italic 16px Georgia, serif"; g.fillText("start the show", sx, sy + 22);
     }
     this.tex.needsUpdate = true;
+  }
+
+  // ---- the pop-up ------------------------------------------------------------------------
+  // The page keeps the far sky. In front of it, each on its own sheet with real depth between
+  // them: the scene (castle, trees, cave...), then every character as a paper cut-out that
+  // swings up from the page on a spring, and sways a little, like card on a tab.
+  _clearPop() {
+    for (const l of this.pops) for (const o of l.all) { o.parent?.remove(o); o.traverse?.((c) => { if (c.isMesh) { c.geometry.dispose(); c.material.map?.dispose(); c.material.dispose(); } }); }
+    this.pops = [];
+  }
+  _buildPop() {
+    this._clearPop();
+    if (!this.xr || !this.open) return;
+    const ch = this.chapter, n = this.page, art = ch.art?.[n], set = art?.set || ch.set, F = FRAME;
+    const sheet = (tex, w, h, color = 0xffffff, opacity = 1, order = 31) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, color, transparent: true, opacity, depthWrite: false, toneMapped: false })); m.renderOrder = order; m.userData.opacity = opacity; return m; };
+    const texOf = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+    // the scene, lifted off the sky, with its shadow falling on the page behind
+    const fc = document.createElement("canvas"); fc.width = Math.round(F.w * 1.4); fc.height = Math.round(F.h * 1.4);
+    { const g = fc.getContext("2d"); paintLayer(set, "fore", g, fc.width, fc.height, art?.focus);
+      if (art?.night) { g.globalCompositeOperation = "source-atop"; g.fillStyle = "rgba(14,20,64,0.55)"; g.fillRect(0, 0, fc.width, fc.height); } }
+    const ft = texOf(fc), cx = MX(F.x + F.w / 2), cy = MY(F.y + F.h / 2), inset = 0.985;
+    const fore = sheet(ft, MW(F.w) * inset, MH(F.h) * inset); fore.position.set(cx, cy, 0);
+    const foreSh = sheet(ft, MW(F.w) * inset, MH(F.h) * inset, 0x000000, 0.3, 30.5); foreSh.position.set(cx + 0.0025, cy - 0.003, 0);
+    this.popGroup.add(foreSh, fore);
+    this.pops.push({ obj: fore, depth: 0.016, sh: foreSh, shDepth: 0.003, delay: 0.1, t: 0, all: [fore, foreSh] });
+    // the cast: one cut-out each, with a cream paper edge
+    const CW = 300, CH = 340, R = 2, FEET = 310;
+    (art?.cast || CASTS[ch.id]?.[n] || []).forEach(([kind, px, flip, dy = 0, sc = 1], i) => {
+      const raw = document.createElement("canvas"); raw.width = CW * R; raw.height = CH * R;
+      const rg = raw.getContext("2d"); rg.scale(R, R); figure(rg, kind, CW / 2, FEET, 1.3 * sc, flip);
+      // the paper edge follows the solid parts of the drawing only (not its glows or its ground shadow)
+      const mask = document.createElement("canvas"); mask.width = raw.width; mask.height = raw.height;
+      { const mg = mask.getContext("2d"), d = rg.getImageData(0, 0, raw.width, raw.height), p = d.data; for (let k = 0; k < p.length; k += 4) { const on = p[k + 3] > 170; p[k] = 255; p[k + 1] = 249; p[k + 2] = 236; p[k + 3] = on ? 255 : 0; } mg.putImageData(d, 0, 0); }
+      const cut = document.createElement("canvas"); cut.width = raw.width; cut.height = raw.height;
+      { const g = cut.getContext("2d"); for (let a = 0; a < 16; a++) g.drawImage(mask, Math.cos((a / 16) * 6.283) * 3.4 * R, Math.sin((a / 16) * 6.283) * 3.4 * R); g.drawImage(raw, 0, 0); }
+      const t = texOf(cut), w = MW(CW), h = MH(CH), up = MH(FEET - CH / 2); // (the sheet hangs so its feet are at the hinge)
+      const hinge = new THREE.Group(); hinge.position.set(MX(F.x + F.w * px), MY(F.y + F.h - 30 + dy), 0);
+      const fig = sheet(t, w, h, 0xffffff, 1, 33 + i); fig.position.y = up; hinge.add(fig);
+      const shadow = sheet(t, w, h, 0x000000, 0.3, 32); shadow.position.set(hinge.position.x + 0.004, hinge.position.y + up - 0.004, 0);
+      this.popGroup.add(shadow, hinge);
+      this.pops.push({ obj: hinge, depth: 0.034 + i * 0.009, swing: true, sh: shadow, shDepth: 0.018, delay: 0.32 + i * 0.14, t: 0, i, all: [hinge, shadow] });
+    });
+    this.popT = 0; this.popSaid = false;
+  }
+  _updatePop(dt, bookE) {
+    if (!this.pops.length) return;
+    for (const l of this.pops) {
+      l.t += dt;
+      const k = Math.min(1, Math.max(0, (l.t - l.delay) / 0.6)), e = k <= 0 ? 0 : backOut(k);
+      if (k > 0 && !this.popSaid) { this.popSaid = true; this.onPop?.(); }
+      l.obj.position.z = l.depth * e;
+      l.sh.position.z = l.shDepth * Math.min(1, e);
+      l.sh.material.opacity = l.sh.userData.opacity * Math.min(1, k * 1.5) * bookE;
+      if (l.swing) {
+        // up from flat on a spring, then a slow sway
+        l.obj.rotation.x = (1 - e) * 1.35;
+        l.obj.rotation.z = Math.sin(this.life * 1.4 + l.i * 1.7) * 0.022 * Math.min(1, k);
+        l.obj.children[0].material.opacity = Math.min(1, k * 3) * bookE;
+      } else l.obj.material.opacity = Math.min(1, k * 2.5) * bookE;
+    }
   }
 
   _index() { return Math.max(0, ["courtyard", "forest", "ship", "bridge", "tower", "cave", "sky"].indexOf(this.chapter.id)); }
