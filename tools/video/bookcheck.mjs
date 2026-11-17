@@ -28,4 +28,10 @@ const cam = await page.evaluate(() => { const b = strings.book.mesh.position; re
 await page.evaluate((c) => { const b = strings.book.mesh.position; V.cam(c, [b.x, b.y - 0.012, b.z], 0.8); }, cam); await face(cam);
 await sleep(1200);
 await page.screenshot({ path: `${out}/book-video.png` });
+// 3. from the side, to see the layers stand off the page
+const side = [cam[0] + 0.34, cam[1] + 0.02, cam[2] - 0.2];
+await page.evaluate((c) => { const b = strings.book.mesh.position; V.cam(c, [b.x - 0.08, b.y, b.z], 0.62); }, side);
+await sleep(900);
+await page.screenshot({ path: `${out}/book-side.png` });
+console.log("pop layers:", await page.evaluate(() => strings.book.pops.length));
 await browser.close();

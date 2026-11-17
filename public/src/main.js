@@ -1371,6 +1371,7 @@ const book = new StoryBook({ narrator });
   // cuts across it or pokes through it; a comfortable size at arm's length)
 book.mesh.position.set(0, 0.485, 0.15);
 book.mesh.scale.setScalar(0.96);
+book.onPop = () => sfx.play("chime", book.mesh, { volume: 0.14, rate: 1.9 }); // (a tiny sparkle as the picture pops up)
 stageRoot.add(book.mesh);
 function faceViewer(mesh) {
   const head = stageRoot.worldToLocal(camera.getWorldPosition(new THREE.Vector3()));
@@ -2564,6 +2565,7 @@ renderer.setAnimationLoop((time, frame) => {
   xrCaption.mesh.visible = !!xrMode && captionTimer > 0 && !book.mesh.visible;
   // (Sir Pip's glowing bar rests just behind the book: it stays dark while the book is open)
   if (pip.skin.bars) pip.skin.bars.visible = !(xrMode && book.mesh.visible);
+  if (xrMode && book.mesh.visible && hints.current) hints.hide(); // (no pointing arrows over the open book)
   if (xrCaption.mesh.visible && xrCaption.fresh) { xrCaption.fresh = false; faceViewer(xrCaption.mesh); }
   if (Math.floor(elapsed * 4) !== Math.floor((elapsed - dt) * 4)) updateStatus();
   // Quest: shadows refresh every other frame (puppets move slowly; halves that pass)

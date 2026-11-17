@@ -62,7 +62,7 @@
    "id": "books",
    "clip": "books",
    "in": 0.2,
-   "dur": 9.4,
+   "dur": 10.6,
    "label": "Seven chapters, seven stories",
    "x": 0.3
   },
@@ -244,7 +244,7 @@
   {
    "file": "music_story",
    "at": 0,
-   "end": 106.9,
+   "end": 108.1,
    "vol": 0.6,
    "fadeIn": 0.8,
    "fadeOut": 3.5,
@@ -252,8 +252,8 @@
   },
   {
    "file": "music_finale",
-   "at": 103.6,
-   "end": 137.4,
+   "at": 104.8,
+   "end": 138.6,
    "vol": 0.46,
    "fadeIn": 2.5,
    "fadeOut": 2.2,

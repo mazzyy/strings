@@ -135,7 +135,10 @@ const takes = {
     await E(page, () => { const b = strings.book.mesh, p = b.position.clone(); G.bookAt = p; const cam = [p.x, p.y + 0.05, p.z + 0.5]; V.cam(cam, [p.x, p.y - 0.012, p.z], 0.8);
       // (the book turns to face whoever is reading: here, the camera)
       b.rotation.set(-Math.atan2(cam[1] - p.y, Math.hypot(cam[0] - p.x, cam[2] - p.z)), Math.atan2(cam[0] - p.x, cam[2] - p.z), 0, "YXZ"); });
+    await E(page, () => { const p = G.bookAt; V.cam([p.x - 0.1, p.y + 0.05, p.z + 0.5], [p.x - 0.02, p.y - 0.012, p.z], 0.8); });
+    await sleep(500);
     await E(page, () => REC.start());
+    await E(page, () => { const p = G.bookAt; V.cam([p.x + 0.11, p.y + 0.06, p.z + 0.48], [p.x + 0.01, p.y - 0.012, p.z], 0.8, 17); });
     await sleep(7500);
     await E(page, () => { const p = G.bookAt; V.to({ x: p.x + 0.09, y: p.y - 0.03, z: p.z + 0.07 }, 3); G.mark("reach"); });
     await sleep(1400);
@@ -160,16 +163,19 @@ const takes = {
       b.mesh.rotation.set(-Math.atan2(cam[1] - p.y, Math.hypot(cam[0] - p.x, cam[2] - p.z)), Math.atan2(cam[0] - p.x, cam[2] - p.z), 0, "YXZ");
       // show a page of a chapter; with a paper page turn when the book is already open on another
       G.show = (id, n, flip = true) => { const ch = s.storyMap.places.find((q) => q.id === id); b.minT = 999; b.pageT = 0;
-        if (flip) { b.prevC.getContext("2d").drawImage(b.canvas, 0, 0); b.chapter = ch; b.page = n; b.draw(b.nextC.getContext("2d")); b.flip = { t: 0, dur: 0.6 }; b.turning = true; }
-        else { b.chapter = ch; b.page = n; b.draw(b.g); }
+        b._clearPop();
+        if (flip) { b.prevC.getContext("2d").drawImage(b.canvas, 0, 0); b.chapter = ch; b.page = n; b.draw(b.nextC.getContext("2d")); b.flip = { t: 0, dur: 0.5 }; b.turning = true; }
+        else { b.chapter = ch; b.page = n; b.draw(b.g); b._buildPop(); }
         G.mark(id + " p" + n); };
       G.show("ship", 1, false);
     });
-    await sleep(900);
+    await E(page, () => { const p = strings.book.mesh.position; V.cam([p.x - 0.11, p.y + 0.05, p.z + 0.48], [p.x - 0.02, p.y - 0.012, p.z], 0.8); });
+    await sleep(1400);
     await E(page, () => REC.start());
-    await sleep(1500);
-    for (const [id, n] of [["bridge", 1], ["tower", 1], ["cave", 1], ["sky", 2], ["courtyard", 2]]) { await E(page, ([id, n]) => G.show(id, n), [id, n]); await sleep(1650); }
-    await sleep(900);
+    await E(page, () => { const p = strings.book.mesh.position; V.cam([p.x + 0.1, p.y + 0.06, p.z + 0.48], [p.x + 0.0, p.y - 0.012, p.z], 0.8, 13); });
+    await sleep(1700);
+    for (const [id, n] of [["bridge", 1], ["tower", 1], ["cave", 1], ["sky", 2]]) { await E(page, ([id, n]) => G.show(id, n), [id, n]); await sleep(2350); }
+    await sleep(600);
     await finish(page, "books");
   },
   // free flight: Marlo snaps his strings, circles your head, lands on your open palm

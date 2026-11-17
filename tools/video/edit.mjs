@@ -97,7 +97,9 @@ window.RUN = async () => {
         const prev = S[cur]; cur++; const s = S[cur];
         const show = () => { s.v.style.zIndex = 10 + S.indexOf(s); s.v.style.transition = "opacity " + (s.x ?? 0.18) + "s"; s.v.style.opacity = 1; s.v.play(); if (prev?.v) { const pv = prev.v, pg = prev.g; setTimeout(() => { pv.pause(); pv.remove(); pg.disconnect(); }, 600); } };
         if (s.v) show(); else { s.late = true; window.LATE = (window.LATE || []).concat(s.id); s.ready.then(() => { const lag = (ac.currentTime - T0) - s.start; s.v.currentTime = s.in + lag; show(); }); }
-        if (s.label) { label.textContent = s.label; label.classList.add("on"); } else label.classList.remove("on");
+        // (a new label waits for its picture to finish fading in)
+        clearTimeout(window.LT); label.classList.remove("on");
+        if (s.label) window.LT = setTimeout(() => { label.textContent = s.label; label.classList.add("on"); }, (s.x ?? 0.18) * 1000 + 60);
         if (s.note) { note.textContent = s.note; note.classList.add("on"); } else note.classList.remove("on");
         if (s.end) { end.querySelector("b").textContent = s.end[0]; end.querySelector("small").textContent = s.end[1]; setTimeout(() => { end.classList.add("on"); shade.classList.add("on"); }, (s.endAt ?? 1) * 1000); } else { end.classList.remove("on"); shade.classList.remove("on"); }
       }

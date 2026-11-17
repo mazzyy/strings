@@ -436,6 +436,16 @@ The video showed the headset's storybook cut across by the top of the stage, wit
 - **Video:** the storybook take was re-recorded, and a new take turns the book through six other chapters' stories (pirate ship, troll bridge, clockwork tower, dragon's cave, night sky, castle courtyard) under a new line, "and every chapter has a story of its own." The video is now 2 min 20 s.
 - **Tested:** `tools/video/bookcheck.mjs` captures the book from a seated player's head position and from the video's camera; `t58` passes.
 
+### Phase 31: a pop-up storybook in the headset
+In the headset the storybook's picture now rises off the page like a pop-up book.
+- **Layers:** the page keeps only the far sky. In front of it, on its own sheet 1.6 cm off the page, stands the scene (castle, trees, tower wall, cave). Each character is a paper cut-out with a cream edge, 3.4 cm off the page (and a little more for each extra character), so they stand clear of the scene behind them.
+- **The pop:** when a page is shown, the scene lifts first; then each cut-out swings up from flat on a little spring, one after another, with a soft shadow on the page behind it and a tiny chime. Afterwards the cut-outs sway slightly, like card on a tab. When the page turns they fold away and the next page's pop up.
+- **How:** `backdrops.js` gained `paintLayer` (the sky, the scene or both, cropped like the flat picture); `storybook.js` builds the pop-up sheets (`_buildPop`) and animates them (`_updatePop`). The desktop book is unchanged (flat).
+- **While the book is open** in the headset, the hint arrows are hidden as well as Sir Pip's bar.
+- **Video:** both storybook takes were re-recorded with the camera drifting slowly sideways, so the depth shows; chapter labels in the edit now wait for their picture to fade in. The video is 2 min 21 s.
+- **Tested:** `tools/video/popcheck.mjs` captures ten pages (prologue to epilogue) and the middle of a pop; `t57` and `t58` pass.
+
+
 
 
 
