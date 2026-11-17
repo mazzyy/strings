@@ -1,0 +1,251 @@
+{
+ "clipVol": 0.72,
+ "duckClips": 0.38,
+ "duckMusic": 0.32,
+ "voVol": 1.0,
+ "segments": [
+  {
+   "id": "menu",
+   "clip": "menu",
+   "in": 0.4,
+   "dur": 8.6,
+   "x": 0.01
+  },
+  {
+   "id": "curtain",
+   "clip": "curtain",
+   "in": 0.4,
+   "dur": 10.2,
+   "note": "Recorded in the headset emulator \u00b7 hand tracking",
+   "x": 0.35
+  },
+  {
+   "id": "pipA",
+   "clip": "court",
+   "in": 7.6,
+   "dur": 9.6,
+   "note": "Recorded in the headset emulator \u00b7 hand tracking"
+  },
+  {
+   "id": "pipB",
+   "clip": "court",
+   "in": 33.0,
+   "dur": 3.6
+  },
+  {
+   "id": "aiA",
+   "clip": "court",
+   "in": 2.6,
+   "dur": 5.2
+  },
+  {
+   "id": "aiB",
+   "clip": "court",
+   "in": 24.0,
+   "dur": 4.6
+  },
+  {
+   "id": "aiC",
+   "clip": "court",
+   "in": 41.6,
+   "dur": 3.6
+  },
+  {
+   "id": "book",
+   "clip": "book",
+   "in": 5.6,
+   "dur": 10.6,
+   "vol": 1.5,
+   "x": 0.35
+  },
+  {
+   "id": "forest",
+   "clip": "forest",
+   "in": 2.0,
+   "dur": 6.4,
+   "label": "The Whispering Forest",
+   "x": 0.35
+  },
+  {
+   "id": "ship",
+   "clip": "ship",
+   "in": 4.6,
+   "dur": 5.6,
+   "label": "The Pirate Ship"
+  },
+  {
+   "id": "bridge",
+   "clip": "bridge",
+   "in": 4.4,
+   "dur": 5.4,
+   "label": "The Troll Bridge"
+  },
+  {
+   "id": "tower",
+   "clip": "tower",
+   "in": 1.6,
+   "dur": 6.2,
+   "label": "The Clockwork Tower"
+  },
+  {
+   "id": "cave",
+   "clip": "cave",
+   "in": 1.6,
+   "dur": 6.2,
+   "label": "The Dragon's Cave"
+  },
+  {
+   "id": "sky",
+   "clip": "sky",
+   "in": 4.6,
+   "dur": 9.4,
+   "label": "The Night Sky"
+  },
+  {
+   "id": "freeA",
+   "clip": "unbound",
+   "in": 0.6,
+   "dur": 4.2,
+   "x": 0.35
+  },
+  {
+   "id": "freeB",
+   "clip": "unbound",
+   "in": 11.6,
+   "dur": 9.4
+  },
+  {
+   "id": "cards",
+   "clip": "extras",
+   "in": 1.4,
+   "dur": 4.6,
+   "label": "Make your own story",
+   "x": 0.35
+  },
+  {
+   "id": "play",
+   "clip": "extras",
+   "in": 13.2,
+   "dur": 5.6,
+   "label": "Free play: be anyone"
+  },
+  {
+   "id": "end",
+   "clip": "menu",
+   "in": 3.0,
+   "dur": 9.0,
+   "x": 0.5,
+   "vol": 0,
+   "end": [
+    "Play it now in your headset's browser",
+    "mazzyy.github.io/strings"
+   ],
+   "endAt": 1.2
+  }
+ ],
+ "vo": [
+  {
+   "key": "open",
+   "seg": "menu",
+   "off": 3.6
+  },
+  {
+   "key": "what",
+   "seg": "curtain",
+   "off": 0.5
+  },
+  {
+   "key": "pip",
+   "seg": "pipA",
+   "off": 0.3
+  },
+  {
+   "key": "ai",
+   "seg": "aiA",
+   "off": 0.4
+  },
+  {
+   "key": "book",
+   "seg": "book",
+   "off": 0.2
+  },
+  {
+   "key": "each",
+   "seg": "forest",
+   "off": 0.2
+  },
+  {
+   "key": "forest",
+   "seg": "forest",
+   "off": 3.1
+  },
+  {
+   "key": "ship",
+   "seg": "ship",
+   "off": 1.0
+  },
+  {
+   "key": "bridge",
+   "seg": "bridge",
+   "off": 1.0
+  },
+  {
+   "key": "tower",
+   "seg": "tower",
+   "off": 1.0
+  },
+  {
+   "key": "cave",
+   "seg": "cave",
+   "off": 1.0
+  },
+  {
+   "key": "sky",
+   "seg": "sky",
+   "off": 1.0
+  },
+  {
+   "key": "free",
+   "seg": "freeA",
+   "off": 0.4
+  },
+  {
+   "key": "more",
+   "seg": "cards",
+   "off": 0.3
+  },
+  {
+   "key": "end",
+   "seg": "end",
+   "off": 0.6
+  }
+ ],
+ "ducks": [
+  {
+   "seg": "book",
+   "off": 3.9,
+   "secs": 6.4
+  }
+ ],
+ "music": [
+  {
+   "file": "music_story",
+   "at": 0,
+   "end": 97.5,
+   "vol": 0.6,
+   "fadeIn": 0.8,
+   "fadeOut": 3.5,
+   "from": 2.0
+  },
+  {
+   "file": "music_finale",
+   "at": 94.2,
+   "end": 128.0,
+   "vol": 0.46,
+   "fadeIn": 2.5,
+   "fadeOut": 2.2,
+   "from": 1.0
+  }
+ ],
+ "master": 0.8
+}

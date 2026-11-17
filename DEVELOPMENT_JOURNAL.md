@@ -421,6 +421,15 @@ The old menu was a gold-framed card over a dimmed view of the room. The new one 
 - **Fit:** the middle is designed 1180 wide and scaled to sit between the valance and the footlights at any window size (it used to slide off-centre when the window was smaller than the design).
 - **Tested:** `tools/headless-tests/menu.mjs` captures the menu at 1440 x 900, 800 x 600, 1024 x 640 with the headset buttons, mid-entrance and mid-game, and checks every button can be clicked; `t57` and `t58` still pass.
 
+### Phase 29: the demo video, made by script
+The demo video (2 min 10 s, 1080p) is built by scripts in `tools/video/`, so it can be re-cut or re-recorded after any change.
+- **Takes (`shots.mjs`):** each take opens the game in the headset emulator, enters VR from the new menu, and drives the two emulated hands like a puppeteer (reach, pinch, walk with a rocking wrist, bow, jump, wave) while the tab is recorded with the game's own sound. The emulated head is placed and eased like a camera. Takes: the menu, the cord and curtain, chapter one with Marlo, the storybook, one for each of chapters two to seven, Marlo's free flight onto the palm, and story cards with free play.
+- **Voice-over (`vo.py`):** fifteen lines in the narrator's Kokoro voice.
+- **Edit (`edit.mjs`, `timeline.json`):** a page plays the takes back in order with cuts, chapter labels, the voice-over and two CC0 music tracks that dip under the voice; that page is recorded to MP4 (H.264 and AAC). Nothing plays out loud while recording: the sound is taken from the audio graph.
+- **Checks:** `frames.swift` pulls frames after every cut (all nineteen segments start on time); the sound has no clipped samples and no silent gaps after the opening second.
+- **Limits:** the footage is from the emulator, not a real headset (the rules allow an emulator; a note on screen says so). The music was left out of the takes and laid in the edit.
+
+
 
 
 
