@@ -166,19 +166,25 @@ export function buildStage(assets) {
     g.computeVertexNormals();
     return g;
   })();
+  // The velvet pelmet along the top rides on the two panels, so it gathers to the
+  // sides with them. (It used to be one fixed bar across the front, which sat
+  // right in a seated player's line of sight in the headset.)
+  const pelmetW = panelW + 0.012;
+  const pelmetGeo = new THREE.BoxGeometry(pelmetW, 0.03, 0.012).translate(pelmetW / 2, 0, 0);
+  const pelmetGoldGeo = new THREE.BoxGeometry(pelmetW, 0.004, 0.014).translate(pelmetW / 2, 0, 0);
   const panels = [-1, 1].map((sx) => {
     const p = new THREE.Mesh(panelGeo, velvet);
     p.position.set(sx * (W / 2 - 0.03), 0.004, D / 2 - 0.05);
     p.scale.x = -sx; // both panels grow toward the centre
     p.castShadow = true;
+    const fringe = new THREE.Mesh(pelmetGeo, velvet);
+    fringe.position.y = postH - 0.024;
+    const fringeGold = new THREE.Mesh(pelmetGoldGeo, G);
+    fringeGold.position.y = postH - 0.04;
+    p.add(fringe, fringeGold);
     mainCurtain.add(p);
     return p;
   });
-  const fringe = new THREE.Mesh(new THREE.BoxGeometry(W - 0.05, 0.03, 0.012), velvet);
-  fringe.position.set(0, postH - 0.02, D / 2 - 0.05);
-  const fringeGold = new THREE.Mesh(new THREE.BoxGeometry(W - 0.05, 0.004, 0.014), G);
-  fringeGold.position.set(0, postH - 0.036, D / 2 - 0.05);
-  mainCurtain.add(fringe, fringeGold);
   root.add(mainCurtain);
   const curtains = {
     group: mainCurtain,
