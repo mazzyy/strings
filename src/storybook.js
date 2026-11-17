@@ -53,6 +53,14 @@ export class StoryBook {
     this.tex.colorSpace = THREE.SRGBColorSpace;
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.3), new THREE.MeshBasicMaterial({ map: this.tex, toneMapped: false, side: THREE.DoubleSide, transparent: true }));
     this.mesh.visible = false;
+    this.mesh.renderOrder = 30; // (drawn after the stage's glows, so none of them shows on the page)
+    // a soft shadow behind the book lifts it off the busy stage
+    const sc = document.createElement("canvas"); sc.width = 256; sc.height = 160;
+    { const g = sc.getContext("2d"), gr = g.createRadialGradient(128, 80, 30, 128, 80, 128); gr.addColorStop(0, "rgba(6,3,10,0.72)"); gr.addColorStop(0.62, "rgba(6,3,10,0.5)"); gr.addColorStop(1, "rgba(6,3,10,0)"); g.save(); g.translate(128, 80); g.scale(1, 0.625); g.translate(-128, -80); g.fillStyle = gr; g.fillRect(0, -80, 256, 320); g.restore(); }
+    this.shade = new THREE.Mesh(new THREE.PlaneGeometry(0.48 * 1.5, 0.3 * 1.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false, toneMapped: false }));
+    this.shade.position.z = -0.012; this.shade.renderOrder = 29;
+    this.mesh.add(this.shade);
+    this.appear = 0; this.life = 0;
     this.open = false;
     this.pokeCool = 0;
   }
@@ -74,6 +82,7 @@ export class StoryBook {
     this.open = true;
     this.xr = xr;
     this.el?.classList.toggle("on", !xr);
+    if (!this.mesh.visible) this.appear = 0; // (it opens with a little flourish)
     this.mesh.visible = !!xr;
     this.turn();
   }
@@ -124,6 +133,15 @@ export class StoryBook {
 
   update(dt) {
     if (this.pokeCool > 0) this.pokeCool -= dt;
+    if (this.mesh.visible) {
+      // the book swells into view, then floats, breathing very slightly
+      this.appear = Math.min(1, this.appear + dt * 2.4); this.life += dt;
+      const e = 1 - (1 - this.appear) ** 3;
+      if (this.baseScale == null) this.baseScale = this.mesh.scale.x;
+      this.mesh.scale.setScalar(this.baseScale * (0.82 + 0.18 * e));
+      this.mesh.material.opacity = e; this.shade.material.opacity = e;
+      if (this.home) this.mesh.position.y = this.home.y + Math.sin(this.life * 1.1) * 0.0025 - (1 - e) * 0.03;
+    }
     if (this.flip) {
       this.flip.t += dt;
       const p = Math.min(1, this.flip.t / this.flip.dur);

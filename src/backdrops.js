@@ -276,12 +276,17 @@ const PAINT = {
     fore(g) {
       const r = rnd(7);
       // three depths of trees, each darker and sharper than the one behind
-      for (let i = 0; i < 26; i++) pine(g, r, r() * LW, 268 + r() * 10, 120 + r() * 70, "#24525a");
+      // (a gap in the trees is kept clear, so the moon hangs in open sky)
+      const MX = 742, clear = (x, half) => Math.abs(x - MX) < half;
+      for (let i = 0; i < 26; i++) { const x = r() * LW, h = 120 + r() * 70; if (clear(x, 64)) continue; pine(g, r, x, 268 + r() * 10, h, "#24525a"); }
       vfill(g, 200, 300, [[0, "rgba(120,200,190,0)"], [1, "rgba(120,200,190,0.20)"]]);
-      for (let i = 0; i < 16; i++) { const x = r() * LW; if (r() < 0.6) pine(g, r, x, 300 + r() * 12, 170 + r() * 80, "#173a3e"); else tree(g, r, x, 304 + r() * 10, 170 + r() * 50, "#122c30", "#1a4244"); }
+      for (let i = 0; i < 16; i++) { const x = r() * LW, kind = r(), a = r(), b = r(); if (clear(x, 120)) continue; if (kind < 0.6) pine(g, r, x, 300 + a * 12, 170 + b * 80, "#173a3e"); else tree(g, r, x, 304 + a * 10, 170 + b * 50, "#122c30", "#1a4244"); }
+      // two low firs under the moon, so the gap still reads as forest
+      pine(g, r, MX - 46, 306, 96, "#173a3e"); pine(g, r, MX + 58, 308, 82, "#173a3e");
       // moonbeams slanting through the trunks
-      g.save(); g.globalCompositeOperation = "lighter";
-      for (const [x, w] of [[600, 60], [700, 40], [520, 30], [800, 50], [420, 24]]) { const bg = g.createLinearGradient(0, 60, 0, 330); bg.addColorStop(0, "rgba(190,240,220,0.16)"); bg.addColorStop(1, "rgba(190,240,220,0)"); g.fillStyle = bg; g.beginPath(); g.moveTo(742, 150); g.lineTo(x - 150 + w, 340); g.lineTo(x - 150 - w, 340); g.closePath(); g.fill(); }
+      // (soft-edged: blurred where the browser can, and faint either way)
+      g.save(); g.globalCompositeOperation = "lighter"; try { g.filter = "blur(7px)"; } catch { /* drawn sharp */ }
+      for (const [x, w] of [[640, 46], [720, 34], [560, 26], [800, 40]]) { const bg = g.createLinearGradient(0, 150, 0, 340); bg.addColorStop(0, "rgba(200,244,226,0.13)"); bg.addColorStop(1, "rgba(200,244,226,0)"); g.fillStyle = bg; g.beginPath(); g.moveTo(MX - 10, 160); g.lineTo(MX + 10, 160); g.lineTo(x - 60 + w, 344); g.lineTo(x - 60 - w, 344); g.closePath(); g.fill(); }
       g.restore();
       // the forest floor: a pale path winding into the wood
       vfill(g, 306, LH, [[0, "#14302c"], [1, "#0b1c1a"]]);
@@ -291,7 +296,10 @@ const PAINT = {
         const tg = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0); tg.addColorStop(0, dir > 0 ? "#061210" : "#12302c"); tg.addColorStop(1, dir > 0 ? "#12302c" : "#061210");
         g.fillStyle = tg; g.beginPath(); g.moveTo(x - w * 0.5, 0); g.quadraticCurveTo(x - w * 0.34, 200, x - w * 0.9, LH); g.lineTo(x + w * 0.9, LH); g.quadraticCurveTo(x + w * 0.34, 200, x + w * 0.5, 0); g.fill();
         g.strokeStyle = "rgba(160,230,210,0.20)"; g.lineWidth = 2; g.beginPath(); g.moveTo(x + dir * w * 0.42, 10); g.quadraticCurveTo(x + dir * w * 0.3, 200, x + dir * w * 0.7, LH - 10); g.stroke();
-        g.strokeStyle = "#0a1a18"; g.lineWidth = w * 0.16; g.lineCap = "round"; g.beginPath(); g.moveTo(x + dir * w * 0.3, 90); g.quadraticCurveTo(x + dir * w * 1.6, 50, x + dir * w * 2.6, 78); g.stroke();
+        // a bough reaching in, thinning to its tip and ending in a spray of leaves
+        const bx = x + dir * w * 2.5, by = 76;
+        g.fillStyle = "#0a1a18"; g.beginPath(); g.moveTo(x + dir * w * 0.3, 82); g.quadraticCurveTo(x + dir * w * 1.5, 46, bx, by - 1); g.lineTo(bx, by + 2); g.quadraticCurveTo(x + dir * w * 1.5, 60, x + dir * w * 0.3, 100); g.closePath(); g.fill();
+        for (let k = 0; k < 16; k++) { g.fillStyle = ["#0c2420", "#143830", "#1c4a3c"][k % 3]; g.beginPath(); g.ellipse(bx - dir * r() * w * 1.1 + dir * 8, by - 6 + (r() - 0.4) * 26, 8 + r() * 8, 4 + r() * 4, r() * 3, 0, Math.PI * 2); g.fill(); }
       }
       // leaves hanging down from above
       for (let i = 0; i < 260; i++) { const x = r() * LW, edge = Math.min(x, LW - x) / (LW / 2), y = r() * r() * (80 - edge * 50); g.fillStyle = ["#0c2420", "#143830", "#1c4a3c"][Math.floor(r() * 3)]; g.beginPath(); g.ellipse(x, y, 9 + r() * 8, 5 + r() * 4, r() * 3, 0, Math.PI * 2); g.fill(); }
