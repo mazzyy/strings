@@ -1367,8 +1367,10 @@ show.makeTask = (spec, done) => {
 
 // ---- the storybook: three illustrated, narrated pages before each chapter -------------------
 const book = new StoryBook({ narrator });
-book.mesh.position.set(0, 0.42, 0.14);
-book.mesh.scale.setScalar(1.25);
+// (in the headset: above the top of the proscenium and in front of the puppets' bars, so nothing
+  // cuts across it or pokes through it; a comfortable size at arm's length)
+book.mesh.position.set(0, 0.485, 0.15);
+book.mesh.scale.setScalar(0.96);
 stageRoot.add(book.mesh);
 function faceViewer(mesh) {
   const head = stageRoot.worldToLocal(camera.getWorldPosition(new THREE.Vector3()));
@@ -1384,6 +1386,7 @@ function openingBook(then) {
 function playBook(place, then) {
   if (!place.pages?.length) { then(); return; }
   if (xrMode) faceViewer(book.mesh);
+  book.home = book.mesh.position.clone();
   hints.hide();
   book.play(place, !!xrMode, then);
 }
@@ -2559,6 +2562,8 @@ renderer.setAnimationLoop((time, frame) => {
 
   if (captionTimer > 0 && (captionTimer -= dt) <= 0) caption.classList.remove("on");
   xrCaption.mesh.visible = !!xrMode && captionTimer > 0 && !book.mesh.visible;
+  // (Sir Pip's glowing bar rests just behind the book: it stays dark while the book is open)
+  if (pip.skin.bars) pip.skin.bars.visible = !(xrMode && book.mesh.visible);
   if (xrCaption.mesh.visible && xrCaption.fresh) { xrCaption.fresh = false; faceViewer(xrCaption.mesh); }
   if (Math.floor(elapsed * 4) !== Math.floor((elapsed - dt) * 4)) updateStatus();
   // Quest: shadows refresh every other frame (puppets move slowly; halves that pass)

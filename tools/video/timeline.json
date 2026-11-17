@@ -59,6 +59,14 @@
    "x": 0.35
   },
   {
+   "id": "books",
+   "clip": "books",
+   "in": 0.2,
+   "dur": 9.4,
+   "label": "Seven chapters, seven stories",
+   "x": 0.3
+  },
+  {
    "id": "forest",
    "clip": "forest",
    "in": 2.0,
@@ -170,6 +178,11 @@
    "off": 0.2
   },
   {
+   "key": "stories",
+   "seg": "books",
+   "off": 0.6
+  },
+  {
    "key": "each",
    "seg": "forest",
    "off": 0.2
@@ -177,7 +190,7 @@
   {
    "key": "forest",
    "seg": "forest",
-   "off": 3.1
+   "off": 3.4
   },
   {
    "key": "ship",
@@ -231,7 +244,7 @@
   {
    "file": "music_story",
    "at": 0,
-   "end": 97.5,
+   "end": 106.9,
    "vol": 0.6,
    "fadeIn": 0.8,
    "fadeOut": 3.5,
@@ -239,8 +252,8 @@
   },
   {
    "file": "music_finale",
-   "at": 94.2,
-   "end": 128.0,
+   "at": 103.6,
+   "end": 137.4,
    "vol": 0.46,
    "fadeIn": 2.5,
    "fadeOut": 2.2,

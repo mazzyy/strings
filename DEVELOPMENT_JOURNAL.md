@@ -429,6 +429,14 @@ The demo video (2 min 10 s, 1080p) is built by scripts in `tools/video/`, so it 
 - **Checks:** `frames.swift` pulls frames after every cut (all nineteen segments start on time); the sound has no clipped samples and no silent gaps after the opening second.
 - **Limits:** the footage is from the emulator, not a real headset (the rules allow an emulator; a note on screen says so). The music was left out of the takes and laid in the edit.
 
+### Phase 30: the storybook in the headset, and more stories in the video
+The video showed the headset's storybook cut across by the top of the stage, with a glowing shape on the picture.
+- **Where the book sits:** it was low enough for the proscenium's top beam to cut across its bottom edge and its Skip seal, and close enough to Sir Pip's glowing control bar for the bar to poke through the page (the "glowing shape"). It now floats higher (above the beam), is a little smaller, and Sir Pip's bar stays dark while the book is open. A soft shadow behind it lifts it off the stage, it swells into view when it opens, and it's drawn after the stage's glows.
+- **The forest picture:** the moon was hidden behind trees, the moonbeams were hard-edged wedges and the boughs ended in black stubs. A gap in the trees now holds a full moon, the beams are soft, and each bough ends in a spray of leaves.
+- **Video:** the storybook take was re-recorded, and a new take turns the book through six other chapters' stories (pirate ship, troll bridge, clockwork tower, dragon's cave, night sky, castle courtyard) under a new line, "and every chapter has a story of its own." The video is now 2 min 20 s.
+- **Tested:** `tools/video/bookcheck.mjs` captures the book from a seated player's head position and from the video's camera; `t58` passes.
+
+
 
 
 

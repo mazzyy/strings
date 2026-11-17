@@ -14,7 +14,8 @@ LINES = {
     "pip":     "Sir Pip hangs from your fingers on real, simulated strings. Lift your hand, and he walks. Tip your wrist, and he bows. Flick, and he jumps.",
     "ai":      "And you never perform alone. A robot puppeteer works the other marionettes. Each one has a mood, a memory, and a voice of its own. They answer what you do, and they remember it.",
     "book":    "A storybook leads you through seven chapters,",
-    "each":    "each with its own stage, and its own game.",
+    "stories": "and every chapter has a story of its own.",
+    "each":    "Each one has its own stage, and its own game.",
     "forest":  "Catch fireflies in a whispering forest.",
     "ship":    "Duel a pirate captain.",
     "bridge":  "Answer a troll's riddle.",
@@ -32,7 +33,11 @@ def main():
     speed = float(sys.argv[3]) if len(sys.argv) > 3 else 0.95
     spk = Speaker(voice, speed)
     meta = {}
+    old = json.loads((out / "vo.json").read_text()) if (out / "vo.json").exists() else {}
     for key, text in LINES.items():
+        # (a line already recorded with the same words is kept as it is)
+        if old.get(key, {}).get("text") == text and (out / f"{key}.wav").exists():
+            meta[key] = old[key]; continue
         samples, sr = spk.k.create(text, voice=voice, speed=speed, lang="en-gb" if voice.startswith("b") else "en-us")
         samples = np.asarray(samples, dtype=np.float32)
         # trim silence at both ends, then a soft fade so nothing clicks
