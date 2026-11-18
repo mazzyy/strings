@@ -23,13 +23,18 @@ async function vr({ narrator = false, mode = "#go-vr" } = {}) {
   await page.evaluate((narrator) => {
     const s = window.strings, wait = (ms) => new Promise((r) => setTimeout(r, ms));
     // the narrator stays quiet in most takes (the video has its own voice-over); the cast still speak
-    if (!narrator) { const vp = s.narrator.player, play = vp.play.bind(vp); vp.play = (url, who = "narrator") => (who === "marlo" ? play(url, who) : Promise.resolve(2.2)); }
+    // (each line the cast speaks is marked with its file, so the edit can keep the voice-over clear of it)
+    const vp = s.narrator.player, play = vp.play.bind(vp);
+    vp.play = (url, who = "narrator") => {
+      if (who === "marlo") { window.G?.mark("voice " + String(url).split("/").pop()); return play(url, who); }
+      return narrator ? play(url, who) : Promise.resolve(2.2);
+    };
     const G = (window.G = {
       wait, marks: [],
       mark(m) { G.marks.push([+(window.REC?.t0 ? (performance.now() - window.REC.t0) / 1000 : -1).toFixed(1), m]); },
       async until(fn, ms = 30000) { const t = performance.now(); while (!fn()) { if (performance.now() - t > ms) return false; await wait(80); } return true; },
       async go(id) {
-        s.storyMap.state.unlocked = 7;
+        s.storyMap.state.unlocked = 9;
         s.changeScene(s.storyMap.places.find((p) => p.id === id));
         await G.until(() => s.book.open, 30000);
         if (!G.keepBook) s.book.finish();
@@ -229,6 +234,33 @@ const takes = {
       for (const id of ["dragon", "troll", "wizard", "princess"]) { s.setPlayer(id); G.mark("as " + id); await w(700); await G.grab(); G.by({ x: 0.08 }, 1.5); await w(900); V.jump(); await w(900); V.to({ pinch: false }); await w(300); }
     });
     await finish(page, "extras");
+  },
+  // free play as it is now: the board's Stage tab (the Workshop), You play: Twig, Noodle the sock
+  // as co-star, then Marlo. (Tabs and picks are set from the script; the board shows each one)
+  async freeplay() {
+    const page = await vr();
+    await E(page, () => { strings.raiseCurtain(); });
+    await sleep(1200);
+    await E(page, () => G.go("courtyard"));
+    await E(page, () => strings.startFreePlay());
+    await sleep(900);
+    await E(page, () => { const s = strings, g = s.playground.group, q = s.stageRoot.worldToLocal(g.getWorldPosition(g.position.clone())); V.cam([q.x, q.y - 0.02, q.z + 0.62], [q.x, q.y - 0.12, q.z], 0.95); });
+    await sleep(600);
+    await E(page, () => { REC.start(); G.mark("free play"); });
+    await E(page, async () => {
+      const s = strings, w = G.wait, P = s.playground;
+      const pick = (sec, id) => { P.cool = 0; P.tab = sec; P._buildItems(); P.pick(sec, id); G.mark(sec + " " + id + " " + s.playerId); };
+      await w(700);
+      pick("stage", "workshop"); await w(1800);
+      pick("you", "twig"); await w(900);
+      await G.grab(); G.by({ x: 0.08 }, 1.5); await w(900); V.jump(); await w(1000);
+      pick("costar", "noodle"); await w(1200);
+      G.by({ x: -0.1 }, 1.4); await w(1400); V.jump(); await w(1200);
+      V.to({ pinch: false }); await w(300);
+      pick("you", "dragon"); await w(700); await G.grab(); G.by({ x: 0.08 }, 1.5); await w(900); V.jump(); await w(1200);
+      G.mark("end");
+    });
+    await finish(page, "freeplay");
   },
 };
 // pages of the pop-up storybook, held for a set time each (the prologue, the epilogue)
@@ -456,8 +488,132 @@ takes.finale = async () => {
     await G.bow(); G.mark("kneel");
     V.to({ pitch: 0.62 }); await w(2600); V.to({ pitch: 0 });
     await w(7500); G.mark("knighted " + s.show.state);
+    // and on into the curtain call: the whole cast (Twig and the two socks too) cheering for Sir Pip
+    await G.until(() => s.show.state === "ending", 15000); G.mark("call");
+    V.cam([0, 0.47, 0.86], [0, 0.22, -0.06], 0.95, 2.2);
+    // the cheers come one after another; when Twig's turn comes, a gentle push in on the
+    // left of the stage (Twig, Noodle, Sir Pip, Doodle), and on through Noodle's cheer
+    const cap = (re) => re.test(document.getElementById("caption")?.textContent || "");
+    await G.until(() => cap(/Clank:/), 30000); G.mark("clank cheer");
+    await G.until(() => cap(/Twig:/), 12000); G.mark("twig cheer");
+    V.cam([-0.12, 0.36, 0.5], [-0.1, 0.2, -0.04], 0.88, 1.8);
+    await G.until(() => cap(/Noodle:/), 12000); G.mark("noodle cheer");
+    await w(5000); G.mark("call end");
   });
   await finish(page, "finale");
+};
+
+// chapter three: Twig boasts he's made of solid gold, and his nose grows (and sprouts leaves);
+// Sir Pip steps onto "Fib", and Twig owns up (his nose springs back)
+takes.workshop = async () => {
+  const page = await vr();
+  await E(page, () => { strings.raiseCurtain(); });
+  await sleep(1200);
+  await E(page, (c) => V.cam(...c), CAM.wide);
+  // (the first boast must be a whopper: the fib game picks its rounds with Math.random)
+  await E(page, () => { G.r = Math.random; Math.random = () => 0.9; return G.go("workshop"); });
+  // (rolling from the start of the act, so the boast and the nose growing are in the take)
+  // (a three-quarter view from his right: the nose grows across the picture, and the True/Fib
+  // signs on the other side of the stage stay out of shot)
+  await E(page, () => { const h = strings.marlo.get("head"); V.cam([h.x + 0.085, h.y + 0.025, h.z + 0.175], [h.x - 0.012, h.y - 0.012, h.z], 0.78); REC.start(); G.mark("start " + strings.show.state); });
+  await E(page, async () => { await G.grab(); G.x0 = V.t.x; });
+  await E(page, async () => {
+    const s = strings, w = G.wait, d = () => s.currentTask?.debug?.() || {};
+    await G.until(() => d().round === 0, 20000); Math.random = G.r; G.mark("fib task " + JSON.stringify(d()));
+    const t0 = performance.now(), since = (ms) => G.until(() => performance.now() - t0 > ms, ms + 2000);
+    await G.until(() => (d().nose || 0) > 0.02, 12000); G.mark("nose " + (d().nose || 0).toFixed(3));
+    // the boast is heard in full in close-up while the nose grows; then back to the stage
+    await since(2800);
+    V.cam([0.04, 0.42, 0.66], [0.02, 0.18, -0.04], 0.85, 1.2); G.mark("wide");
+    await G.until(() => d().phase === "answer", 8000); G.mark("answer");
+    // (Sir Pip waits while the voice-over speaks in the edit, then walks onto the Fib slice)
+    await since(6300);
+    const p = s.pip.get("pelvis"); G.by({ x: (-0.06 - p.x) / 1.3 }, 1.4); G.mark("to fib");
+    await G.until(() => d().phase !== "answer", 9000); G.mark("caught " + d().phase);
+    await w(4200); G.mark("end");
+  });
+  await finish(page, "workshop");
+};
+
+// chapter five: the robot crouches behind the stage and works Noodle up through the trapdoors.
+// Peekaboo (Sir Pip boops it), then the twin on the washing line, and Doodle pops up too
+takes.laundry = async () => {
+  const page = await vr();
+  await E(page, () => { strings.raiseCurtain(); });
+  await sleep(1200);
+  await E(page, (c) => V.cam(...c), CAM.wide);
+  await E(page, () => G.go("laundry"));
+  await E(page, () => G.until(() => strings.show.state === "act" && strings.currentTask?.debug?.().got !== undefined, 25000));
+  await E(page, () => { V.cam([0.05, 0.43, 0.6], [0.05, 0.19, -0.06], 0.86); });
+  await E(page, async () => { await G.grab(); G.x0 = V.t.x; });
+  await E(page, () => { REC.start(); G.mark("start"); });
+  await E(page, async () => {
+    const s = strings, w = G.wait, d = () => s.currentTask?.debug?.() || {};
+    // peekaboo: walk Sir Pip to each hole Noodle pops out of
+    for (let k = 0; k < 24 && (d().got ?? 3) < 3; k++) {
+      if (d().phase === "up") { const h = s.hand.holes[d().at], p = s.pip.get("pelvis"); G.by({ x: (h[0] - 0.035 - p.x) / 1.3 }, 2.2); G.mark("to hole " + d().at); await G.until(() => d().phase !== "up", 5000); G.mark("boop " + d().got); }
+      await w(400);
+    }
+    G.mark("booped");
+    // the twin: under the sock with Noodle's stripes
+    await G.until(() => d().right !== undefined, 15000); G.mark("socks");
+    await w(2600);
+    const m = d(), p = s.pip.get("pelvis"); G.by({ x: (m.at[m.right] - p.x) / 1.3 }, 1.2); G.mark("to sock " + m.right);
+    await G.until(() => d().phase === "found", 10000); G.mark("found");
+    await G.until(() => s.socks.doodle?.group.visible, 6000); G.mark("doodle");
+    await w(5500); G.mark("end");
+  });
+  await finish(page, "laundry");
+};
+
+// your own story, on the desktop: the picker (Twig as the villain, in the Toymaker's Workshop,
+// rescuing the King), "Tonight's Show", then the curtain goes up. A drawn pointer shows the clicks.
+takes.picker = async () => {
+  // (a 1280 x 720 page at 1.5x: the picker fills the frame, and it's still sharp at 1080p)
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1.5 });
+  page.on("pageerror", (e) => console.log("  pageerror", e.message));
+  await page.route("**/audio/music_*.mp3", (r) => r.abort());
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto("http://localhost:8080/?quality=high");
+  await page.waitForSelector("#mystory", { timeout: 90000 });
+  await sleep(5000); // (the menu's entrance)
+  await armRecorder(page);
+  await E(page, () => {
+    const c = document.createElement("div");
+    c.id = "fakecursor";
+    c.innerHTML = '<svg width="44" height="44" viewBox="0 0 24 24"><path d="M4 2l15 9-6.6 1.6 3.9 7.2-2.9 1.5-3.9-7.2L4 18z" fill="#fff" stroke="#1a1a1a" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+    c.style.cssText = "position:fixed;left:0;top:0;z-index:2147483646;pointer-events:none;transition:transform .55s cubic-bezier(.3,.7,.3,1);transform:translate(1000px,560px);filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))";
+    document.body.appendChild(c);
+    window.G = { marks: [], mark(m) { this.marks.push([+((performance.now() - window.REC.t0) / 1000).toFixed(1), m]); } };
+  });
+  const point = async (sel, ms = 650) => {
+    await page.locator(sel).first().waitFor({ state: "visible", timeout: 8000 }).catch(() => console.log("  not visible:", sel));
+    // (on a 720-high page the picker's sticky button row covers the last row of pills, and a
+    // click there would land on "Generate" instead: bring the target into the clear first)
+    const covered = await E(page, (sel) => { const el = document.querySelector(sel), r = el?.getBoundingClientRect(), hit = r && document.elementFromPoint(r.x + r.width * 0.55, r.y + r.height * 0.55); return !!el && !(hit && el.contains(hit)); }, sel);
+    if (covered) { await E(page, (sel) => document.querySelector(sel).scrollIntoView({ block: "center", behavior: "smooth" }), sel); await sleep(700); }
+    const b = await page.locator(sel).first().boundingBox();
+    if (!b) throw new Error("no box for " + sel);
+    await E(page, ([x, y]) => { document.getElementById("fakecursor").style.transform = `translate(${x}px,${y}px)`; }, [b.x + b.width * 0.55, b.y + b.height * 0.55]);
+    await sleep(ms);
+    await E(page, () => { const c = document.getElementById("fakecursor"); c.animate([{ scale: 1 }, { scale: 0.8 }, { scale: 1 }], { duration: 220 }); });
+    await page.locator(sel).first().click({ force: true });
+    await E(page, (sel) => G.mark("click " + sel), sel);
+  };
+  await E(page, () => REC.start());
+  await sleep(700);
+  await point("#mystory", 900);
+  await sleep(1300);
+  await point('[data-s="conflict"][data-id="rescue"]', 600); await sleep(250);
+  await point('[data-s="who"][data-id="king"]', 650); await sleep(250);
+  await point('[data-s="villain"][data-id="twig"]', 650); await sleep(250);
+  await point('[data-s="place"][data-id="workshop"]', 650); await sleep(250);
+  await point('[data-s="twist"][data-id="night"]', 600); await sleep(500);
+  await point("#storymaker .go", 750);
+  await sleep(3200); await E(page, () => G.mark("preview"));
+  await point("#storymaker .go", 800);
+  await sleep(5200); await E(page, () => G.mark("end"));
+  await finish(page, "picker");
 };
 
 // one chapter each: go there, pick Sir Pip up, play its game for a while

@@ -677,3 +677,23 @@ Outside `public/`: `server.mjs` (the optional local server for a live language m
   - They stand in overlapping ranges: a hazy back row, then nearer rows on green foothills, round the Dragon's Cave and at the river's source. The rolling hills are now drawn first, so they never sit on a peak.
 - **Tested:** `maplook.mjs` (whole map, and the ranges enlarged); `t59` (the Workshop is chapter three, the Ship four), `t60` (the road reads courtyard 1 … sky 9), `t61` and `t58` pass. All 899 voice lines are recorded.
 
+### Phase 43: the demo video, re-cut for Twig, Noodle and your own stories
+- **Why:** the video still showed seven chapters, the old free-play board and the story cards. Twig, Noodle, the curtain call with them, the story picker and the new map were missing.
+- **Takes** (`tools/video/shots.mjs`), new or re-recorded:
+  - `workshop`: a three-quarter close-up from Twig's right while he boasts "I'm made of solid gold. Under the paint." and his nose grows (the first boast is made to be a fib). Then the wide stage: Sir Pip waits (room for the voice-over), walks onto the Fib slice, and Twig says "Caught me! How did you know?"
+  - `laundry`: the robot, crouched behind the stage, works Noodle up through the trapdoors; three boops; the twin on the washing line; Doodle pops up.
+  - `finale`: now runs on through the curtain call, with the whole cast, Twig and both socks. When Twig's turn to cheer comes, the camera pushes in gently.
+  - `picker`: the desktop picker at 1280 x 720 (rescue the King, Twig as the villain, the Toymaker's Workshop, night) and "Tonight's Show", with a drawn pointer. At that height the picker's sticky button row covers the last row of pills, so a click meant for "night" landed on "Generate". The target is now scrolled into the clear first.
+  - `freeplay` (new): the free-play board's Stage tab (the Workshop), You play: Twig, Noodle as co-star, then Marlo.
+  - Every take now marks when each character starts a line (the voice file it plays), so the edit can keep the voice-over off the characters' own lines.
+- **Voice-over** (`vo.py`): new lines for the Workshop, the Laundry, your own story and play-as-anyone. Four lines were shortened to make room.
+- **Edit** (`timeline.json`, 33 segments, laid out against the voice marks):
+  - Twig's boast and "Caught me!", Noodle's "My twin! Doodle!", the King's "I name you Sir Pip the Brave" and Noodle's "You're a perfect fit!" are heard in the characters' own voices, with the music dipped under them.
+  - `edit.mjs` now starts recording once every take is loaded, so the film opens after about 0.6 s of black instead of 1.4 s.
+  - The closing line now ends before the fade-out. In the last cut it ran on into the fade, and its last words were faded out.
+- **Result:** `demo-video/strings-demo.mp4`, 2 min 56 s (1080p, about 300 MB). No late cuts, no overlapping lines, audio peak 0.88. Frames were checked at every cut. The script with times and a new contact sheet are in `demo-video/README.md`.
+- **Recording note:** the takes jump straight into chapters, so the opening warm-up (Sir Pip's first walk over to Marlo) was still running. When its timer ran out, it greeted in Marlo's voice under the guest's name: in the Laundry after Doodle pops up, and during the knighting. The cut avoids those moments. In normal play, the menu and the story road end the warm-up first.
+- **Also on this branch, not yet published:**
+  - the start-menu strings now end on each title letter's ink, and on Sir Pip's and Marlo's hands and heads (`menustrings.mjs`);
+  - the end credits read "Created by Abdul Musawar Soomro", with Twig, Noodle and Doodle in the cast.
+

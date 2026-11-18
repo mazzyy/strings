@@ -76,6 +76,8 @@ window.RUN = async () => {
   await Promise.all([...new Set(S.map((s) => s.clip))].map(blob));
   await prep(S[0]); if (S[1]) await prep(S[1]); if (S[2]) await prep(S[2]); prepped = 2;
   await document.fonts.ready;
+  // (the recording starts only now, with everything loaded, so the film opens on its first picture)
+  if (window.REC_MIME) window.REC.start(window.REC_MIME, 14e6);
   const T0 = ac.currentTime + 0.6; window.T0 = T0;
   // music: each track fades in and out; everything dips under the voice
   TL.music.forEach((m, i) => { const src = ac.createBufferSource(); src.buffer = music[i]; src.loop = true; const g = ac.createGain(); g.gain.setValueAtTime(0, T0); g.gain.setValueAtTime(0, T0 + m.at); g.gain.linearRampToValueAtTime(m.vol, T0 + m.at + (m.fadeIn ?? 1.5)); g.gain.setValueAtTime(m.vol, T0 + m.end - (m.fadeOut ?? 2)); g.gain.linearRampToValueAtTime(0, T0 + m.end); src.connect(g); g.connect(musicG); src.start(T0 + m.at, m.from || 0); src.stop(T0 + m.end + 0.1); });
@@ -136,7 +138,7 @@ if (mode === "preview") {
   for (const m of marks) { await page.waitForFunction((m) => window.NOW >= m, m, { timeout: 0, polling: 100 }); await page.screenshot({ path: `${dir}/${String(Math.round(m)).padStart(3, "0")}.jpg`, type: "jpeg", quality: 70 }); }
   await run;
 } else {
-  await page.evaluate((mime) => REC.start(mime, 14e6), outFile.endsWith(".mp4") ? "video/mp4;codecs=avc1,mp4a.40.2" : "video/webm;codecs=vp9,opus");
+  await page.evaluate((mime) => { window.REC_MIME = mime; }, outFile.endsWith(".mp4") ? "video/mp4;codecs=avc1,mp4a.40.2" : "video/webm;codecs=vp9,opus");
   const total = await page.evaluate(() => window.RUN());
   await sleep(300);
   console.log(JSON.stringify(await stopTo(page, outFile)), "timeline", total, "late cuts:", JSON.stringify(await page.evaluate(() => window.LATE || [])));
