@@ -105,11 +105,11 @@ export function buildStage(assets) {
   box(W + 0.034, 0.004, 0.004, G, 0, -B + 0.012, D / 2 + 0.016);
 
   // corner posts with gold finials, side rails at the top
-  const postH = 0.3, HEAD_RISE = 0.07; // (the header sits this far above the side posts: clear of the puppets' heads)
+  const postH = 0.3;
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
       const x = sx * (W / 2 - 0.018), z = sz * (D / 2 - 0.018);
-      const h = sz > 0 ? postH + HEAD_RISE : postH; // (the front posts carry the proscenium header)
+      const h = postH;
       box(0.026, h, 0.026, walnutPost, x, h / 2, z);
       box(0.034, 0.012, 0.034, walnutPost, x, 0.006, z);
       box(0.032, 0.01, 0.032, walnutPost, x, h, z);
@@ -121,29 +121,6 @@ export function buildStage(assets) {
       root.add(collar, ball);
     }
     box(0.016, 0.016, D - 0.03, walnutPost, sx * (W / 2 - 0.018), postH - 0.03, 0);
-  }
-
-  // the proscenium header: a walnut board between the front posts (their gold balls its finials),
-  // gold trim along both edges, and a gilt plaque with the theatre's name at its centre
-  {
-    const hw = W - 0.07, hy = postH + HEAD_RISE - 0.017, hz = D / 2 - 0.011;
-    box(hw, 0.03, 0.016, darkPanel, 0, hy, hz);
-    box(hw + 0.004, 0.004, 0.019, G, 0, hy + 0.017, hz);
-    box(hw + 0.004, 0.004, 0.019, G, 0, hy - 0.017, hz);
-    const c = document.createElement("canvas"); c.width = 640; c.height = 200;
-    const g = c.getContext("2d");
-    const grd = g.createLinearGradient(0, 0, 0, 200); grd.addColorStop(0, "#7a1020"); grd.addColorStop(1, "#4a0812");
-    g.fillStyle = grd; g.beginPath(); g.roundRect(10, 10, 620, 180, 90); g.fill();
-    g.lineWidth = 12; g.strokeStyle = "#e6be62"; g.stroke();
-    g.lineWidth = 3; g.strokeStyle = "#ffe7a6"; g.beginPath(); g.roundRect(30, 30, 580, 140, 70); g.stroke();
-    g.fillStyle = "#f6d27a"; g.textAlign = "center"; g.textBaseline = "middle";
-    g.font = 'italic 700 112px "Playball", Georgia, serif'; g.fillText("Strings", 320, 104);
-    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.04), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.45, metalness: 0.25 }));
-    plaque.position.set(0, hy + 0.004, hz + 0.0095);
-    root.add(plaque);
-    // (redrawn once the script font has loaded, if it wasn't ready yet)
-    document.fonts?.load('italic 700 112px "Playball"').then(() => { g.clearRect(0, 0, 640, 200); g.fillStyle = grd; g.beginPath(); g.roundRect(10, 10, 620, 180, 90); g.fill(); g.lineWidth = 12; g.strokeStyle = "#e6be62"; g.stroke(); g.lineWidth = 3; g.strokeStyle = "#ffe7a6"; g.beginPath(); g.roundRect(30, 30, 580, 140, 70); g.stroke(); g.fillStyle = "#f6d27a"; g.font = 'italic 700 112px "Playball", Georgia, serif'; g.fillText("Strings", 320, 104); tex.needsUpdate = true; }).catch(() => {});
   }
 
   // the drapery: tied-back side curtains under fixed swags, and the main traveller
