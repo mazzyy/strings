@@ -39,7 +39,7 @@ for (let k = 0; k < 30; k++) {
   if (!d || d.got === undefined || d.got >= 3) break;
   if (d.phase === "up") {
     if (!shot) { await page.screenshot({ path: `${out}/2-peekaboo.png` }); shot = true; }
-    await S((at) => { const h = window.strings.hand.holes[at]; window.strings.movePipTo(h[0] - 0.03, h[1]); }, d.at);
+    await S((at) => { const h = window.strings.hand.holes[at]; window.strings.placePip(h[0] - 0.03, h[1]); }, d.at);
   }
   await page.waitForTimeout(700);
 }
@@ -49,7 +49,7 @@ await page.waitForTimeout(2500);
 await page.screenshot({ path: `${out}/3-socks.png` });
 const m = await S(() => window.strings.currentTask.debug());
 for (let k = 0; k < 30; k++) {
-  await S((x) => window.strings.movePipTo(x, 0.03), m.at[m.right]);
+  await S((x) => window.strings.placePip(x, 0.03), m.at[m.right]);
   if (await waitFor(() => window.strings.currentTask?.debug?.().phase !== "choose", null, 700)) break;
 }
 R.found = await waitFor(() => window.strings.socks.doodle?.group.visible, null, 30000);

@@ -53,11 +53,11 @@ for (let k = 0; k < 3; k++) {
   // stand on the answer until it's taken (the headless browser runs slower than real time)
   let answered = false;
   for (let tries = 0; tries < 40 && !answered; tries++) {
-    await S((truth) => window.strings.movePipTo(truth ? -0.3 : -0.06, 0.012), d.truth);
+    await S((truth) => window.strings.placePip(truth ? -0.3 : -0.06, 0.012), d.truth);
     answered = await waitFor((k) => { const q = window.strings.currentTask?.debug?.(); return !q || q.round !== k || q.phase !== "answer"; }, k, 700);
   }
   R.rounds.push({ ok: ok && answered, truth: d.truth, nose: +(d.nose || 0).toFixed(3) });
-  await S(() => window.strings.movePipTo(-0.18, 0.03));
+  await S(() => window.strings.placePip(-0.18, 0.03));
 }
 R.act2 = await waitFor(() => window.strings.show.act === 1 && window.strings.show.state === "act", null, 60000);
 R.noseAfterConfess = await S(() => +window.strings.guests.twig.skin.extra.nose().toFixed(3));

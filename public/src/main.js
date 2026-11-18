@@ -817,6 +817,12 @@ const taken = (b) => [...grabs.values()].some((x) => x.bar === b);
 // your arm up at eye level.
 const GAIN_XR = new THREE.Vector3(1.3, 1.6, 1.3);
 const GAIN_DESK = new THREE.Vector3(1, 1, 1);
+// Desktop: where each bar sits relative to the on-screen hand holding it (as they start out).
+// While you hold it, the bar settles there, so the hand and the bar never drift apart (a click
+// away from the bar, the bar meeting its height limit, or the game moving Sir Pip would
+// otherwise leave a gap for good).
+let deskNeedsNear = false;
+const DESK_HOLD = { main: new THREE.Vector3(0.01, -0.03, 0.03), hands: new THREE.Vector3(-0.02, -0.014, -0.113) };
 const _gv = new THREE.Vector3(), _gw = new THREE.Vector3(), _gd = new THREE.Vector3();
 function grabScore(bar, h) {
   const gp = bar.worldPoint(GRIP[bar.kind], _gv);
@@ -931,7 +937,10 @@ function handleHands(hands, desktop) {
     }
     if (h.pinch && !g) {
       let bar = null;
-      if (desktop) bar = h === sim.main ? pip.main : pip.hands;
+      if (desktop) {
+        bar = h === sim.main ? pip.main : pip.hands;
+        if (deskNeedsNear && grabScore(bar, h) === Infinity) bar = null; // (after the story moved him: reach his bar first)
+      }
       else if (fresh) {
         let best = Infinity;
         for (const b of bars) {
@@ -943,6 +952,7 @@ function handleHands(hands, desktop) {
       }
       if (bar && !taken(bar)) {
         g = { bar, barPos: bar.position.clone(), anchor: h.anchor.clone(), qOff: h.quaternion.clone().invert().multiply(bar.quaternion) };
+        if (desktop) deskNeedsNear = false;
         grabs.set(h.id, g);
         bar.held = true;
         sfx.play("clack", pip.group, { volume: 0.35, rate: bar === pip.main ? 1 : 1.25 });
@@ -963,6 +973,10 @@ function handleHands(hands, desktop) {
       g = null;
     }
     if (g) {
+      if (desktop) {
+        _gw.copy(g.anchor).add(g.bar === pip.hands ? DESK_HOLD.hands : DESK_HOLD.main);
+        g.barPos.lerp(_gw, 1 - Math.exp(-_dtNow * 5));
+      }
       // position follows the (filtered) knuckle, amplified; rotation turns the
       // bar about itself — so closing your fingers never jerks the puppet
       _gd.subVectors(h.anchor, g.anchor).multiply(desktop ? GAIN_DESK : GAIN_XR);
@@ -1442,8 +1456,12 @@ function clearBloom() {
 // ---- tasks: duels, riddles, sneaking... (see tasks.js) -----------------------------------
 let currentTask = null;
 // teleport Sir Pip (and the bars your hand holds) so his pelvis lands at x, z
-function movePipTo(x, z) {
+// regrab: the story moved him (caught by the searchlight: back to the start). On desktop the
+// on-screen hand can't follow (it's wherever your mouse is), so it lets go, and you pick him
+// up again at his new spot (the bar would otherwise glide straight back to your hand).
+function movePipTo(x, z, regrab = false) {
   const p = pip.get("pelvis"), d = new THREE.Vector3(x - p.x, 0, z - p.z);
+  if (regrab && !xrMode) { for (const [id, g] of grabs) if (id.startsWith("sim")) { g.bar.held = false; grabs.delete(id); } deskNeedsNear = true; }
   for (let i = 0; i < pip.pos.length; i++) { pip.pos[i].add(d); pip.prev[i].add(d); }
   for (const b of [pip.main, pip.hands]) { b.position.add(d); b._lastPos?.add(d); }
   for (const g of grabs.values()) g.barPos.add(d);
@@ -1468,7 +1486,7 @@ const taskCtx = {
   sfx: (n, at, o) => sfx.play(n, at, o),
   showHint: (name) => hints.show(name, !!xrMode),
   hideHint: () => hints.hide(),
-  knockPip, movePipTo,
+  knockPip, movePipTo: (x, z) => movePipTo(x, z, true),
   // a shove for the guest (a sword hit lands)
   knockGuest: (dir, amount) => {
     const d = dir.clone().setY(0).normalize();
@@ -2787,4 +2805,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMovePip: (x, z) => movePipTo(x, z, true), placePip: (x, z) => { movePipTo(x, z); sim.mainPos.set(x - DESK_HOLD.main.x, sim.mainPos.y, z - DESK_HOLD.main.z); }, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
