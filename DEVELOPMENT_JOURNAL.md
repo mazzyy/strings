@@ -497,3 +497,4 @@ In the headset the storybook's picture now rises off the page like a pop-up book
   - Story words like "fibs", "peekaboo" and "twin" pick those games.
 - **Voices:** 899 lines, all recorded.
 - **Tests:** new `t59` (the workshop tale end to end, its place on the road, free play) and `t60` (the laundry tale end to end, the robot back up afterwards, the curtain call with Twig and both socks, a written sock-puppet story); `t57`, `t58` pass. Look-checks: `twiglook.mjs`, `socklook.mjs`, `pickerlook.mjs`.
+- **Fix, stuck on "The curtain is rising":** with progress saved at the Harbour Laundry, the page never got past loading. The stage is set up for the saved place while the page loads, and putting the robot under the stage read the headset-mode variable (`xrMode`) before its declaration further down `main.js` (a TDZ error). It's now declared near the top. New `t61` reloads with progress saved at every stop on the road (and the theatre) and checks the menu appears.
