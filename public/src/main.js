@@ -65,8 +65,9 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); // retina at 2x costs ~
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.85;
+// (Khronos PBR Neutral: true colours and bright mid-tones; ACES darkened the painted sets)
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.0;
 renderer.xr.enabled = true;
 renderer.xr.setFoveation(1); // Quest: render the edges of each eye at lower resolution
 
@@ -78,7 +79,7 @@ const scene = new THREE.Scene();
 const bg = new THREE.Color(0x140d0a);
 scene.background = bg;
 scene.environment = assets.env;
-scene.environmentIntensity = 0.4;
+scene.environmentIntensity = 0.6;
 const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.01, 20);
 const DESK_TOP = 0.76;
 const STAGE_Y = DESK_TOP + STAGE.base;
@@ -100,9 +101,9 @@ saved += mergeStatic(desk);
 saved += mergeStatic(room, [desk]);
 
 // lights: a warm key spot on the stage (the only shadow caster), soft fill
-const hemi = new THREE.HemisphereLight(0xffe2c0, 0x2a1810, 0.25);
+const hemi = new THREE.HemisphereLight(0xffe2c0, 0x3a2418, 0.45);
 scene.add(hemi);
-const spot = new THREE.SpotLight(0xffe6c4, 5.5, 3.2, 0.5, 0.6, 1.3);
+const spot = new THREE.SpotLight(0xffe6c4, 6.5, 3.2, 0.5, 0.6, 1.3);
 spot.position.set(-0.35, 1.05, 0.85);
 spot.target.position.set(0, 0.08, 0);
 spot.castShadow = true;
@@ -111,10 +112,56 @@ spot.shadow.bias = -0.0004;
 spot.shadow.normalBias = 0.01;
 spot.shadow.camera.near = 0.3;
 spot.shadow.camera.far = 3;
+spot.shadow.intensity = 0.78; // (shadows that darken, not black holes: the fill light still reaches them)
 stageRoot.add(spot, spot.target);
+// a warm wash from the audience side, like footlights and a front-of-house light: faces are
+// lit from the front, not only from the key spot above
+const fill = new THREE.DirectionalLight(0xffd8a8, 0.75);
+fill.position.set(0.1, 0.32, 1.4);
+fill.target.position.set(0, 0.12, 0);
+stageRoot.add(fill, fill.target);
 const rim = new THREE.DirectionalLight(0x9fc4ff, 0.6); // a cool blue edge on the robot and the cast
 rim.position.set(0.6, 1.2, -1.2);
 stageRoot.add(rim);
+
+// soft contact shadows: a dark, blurred patch on the floor under each puppet's feet, so the cast
+// stand on the stage instead of floating over it; it shrinks and fades as the feet leave the
+// floor (a jump, a flight). Cheap enough for the headset, where the real shadows are pared down.
+const contactShadows = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, "rgba(0,0,0,0.8)"); grd.addColorStop(0.5, "rgba(0,0,0,0.4)"); grd.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  const pool = [];
+  const get = (i) => {
+    if (!pool[i]) {
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+      m.renderOrder = 2;
+      stageRoot.add(m);
+      pool[i] = m;
+    }
+    return pool[i];
+  };
+  return {
+    update(pups) {
+      let i = 0;
+      for (const p of pups) {
+        if (!p?.group?.visible || !p.get) continue;
+        const l = p.get("lF"), r = p.get("rF");
+        if (!l || !r) continue;
+        const h = Math.max(0, Math.min(l.y, r.y)), k = THREE.MathUtils.clamp(1 - h / 0.15, 0, 1);
+        const m = get(i++);
+        m.visible = k > 0.02;
+        m.position.set((l.x + r.x) / 2, 0.0025, (l.z + r.z) / 2);
+        m.scale.set(0.09 * (1.5 - 0.5 * k), 1, 0.065 * (1.5 - 0.5 * k));
+        m.material.opacity = 0.6 * k;
+      }
+      for (; i < pool.length; i++) pool[i].visible = false;
+    },
+  };
+})();
 
 // ---- the cast ------------------------------------------------------------------
 const PIP_ROOT = [-0.15, 0, 0.03];
@@ -186,7 +233,8 @@ let qTier = pinnedQuality ?? (innerWidth * innerHeight * Math.min(devicePixelRat
 const perfWin = { last: performance.now(), sum: 0, n: 0, settle: 0, downs: 0 };
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.45, 1.05);
+// (only real lights glow: lanterns, fireflies, the glowing bars; not the brighter-lit white robot)
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.3, 0.4, 1.7);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -2890,11 +2938,15 @@ renderer.setAnimationLoop((time, frame) => {
     if (!ai.busy && Math.floor(elapsed) % 9 === 0 && Math.floor(elapsed - dt) % 9 !== 0) ai.react("dance");
   }
   footsteps();
+  contactShadows.update([pip, marlo, princess, ...[...extras.values()].filter((e) => e.on).map((e) => e.pup)]);
   marloMouth.position.copy(marlo.get("head"));
   night += (nightTarget - night) * Math.min(1, dt * 1.5);
-  spot.intensity = 5.5 - 4.3 * night;
-  hemi.intensity = 0.25 - 0.19 * night;
-  scene.environmentIntensity = 0.4 - 0.3 * night;
+  // night: moodier, but still easy to see (cooler, with a stronger moonlight edge)
+  spot.intensity = 6.5 - 3.2 * night;
+  hemi.intensity = 0.45 - 0.22 * night;
+  fill.intensity = 0.75 - 0.3 * night;
+  rim.intensity = 0.6 + 0.7 * night;
+  scene.environmentIntensity = 0.6 - 0.28 * night;
   narrator.update(dt);
   updateBloom(dt);
   dust.update(dt);

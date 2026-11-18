@@ -404,7 +404,7 @@ export function buildRoom(assets, deskTop) {
   for (let i = 0; i <= 12; i++) { const t = i / 12; shadePts.push(new THREE.Vector2(0.15 - t * 0.09 + Math.sin(t * Math.PI) * 0.015, t * 0.13)); }
   const shade = add(new THREE.LatheGeometry(shadePts, 32), new THREE.MeshStandardMaterial({ color: 0xf2c27a, emissive: 0xff9a3a, emissiveIntensity: 0.9, roughness: 0.4, side: THREE.DoubleSide }), [0, 0.3, 0], lamp);
   shade.castShadow = false;
-  const bulb = new THREE.PointLight(0xffa850, 0.9, 2.6, 1.6);
+  const bulb = new THREE.PointLight(0xffa850, 1.4, 2.8, 1.6);
   bulb.position.set(0, 0.33, 0);
   lamp.add(bulb);
 

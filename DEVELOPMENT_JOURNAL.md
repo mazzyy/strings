@@ -746,3 +746,12 @@ Four things the developer found while playing, on the desktop page and in the he
 - **Bramble** (all 40 lines): a voice unlike anyone else's in the cast: "a very old wizard of about 85: a thin, breathy, crackly voice, mysterious and twinkly, slow and wise, often with a soft chuckle". The lowest voice in the company (median pitch about 117 Hz), and slow (takes about 1.45 times as long as the Kokoro ones).
 - **Grumble** (all 37 lines, riddles included): asked for high-pitched and loud: "a big grumpy troll with a surprisingly high-pitched, loud, shouty voice: brash, squawky and bossy" (median about 324 Hz, where his Kokoro voice was 87 Hz), and quick (0.78 times as long).
 - Lines of theirs without a feeling of their own take the character's usual one (`DEFAULT_FEEL`: Bramble "warm, wise and gently amused", Grumble "grumpy, loud and bossy"). 184 Qwen lines in all (4.6 MB); every one mapped for the game. The voices page (`voice-qwen/cast.html`) shows both.
+
+### Phase 50: brighter, warmer lighting, and the cast standing on the stage
+The game looked too dark next to other headset games. What changed:
+- **Exposure and colour:** the Khronos PBR Neutral tone mapping at exposure 1.0 (it was ACES at 0.85, which darkened the mid-tones and dulled the painted sets).
+- **Lights:** the environment (the reading-room HDRI) from 0.4 to 0.6, the warm hemisphere fill from 0.25 to 0.45, the key spot from 5.5 to 6.5, the desk lamp from 0.9 to 1.4, and a new warm front light from the audience's side (0.75), like footlights, so faces are lit from the front and not only from the spot above.
+- **Night chapters** (the forest, the tower, the sky) dim less (the spot to half, not a fifth) and get a stronger cool moonlight edge: still moody, now easy to read.
+- **Desktop glow** only from real lights (bloom threshold 1.05 to 1.7, strength 0.4 to 0.3), so the brighter-lit white robot doesn't glow.
+- **Shadows:** a soft contact shadow under every puppet's feet (Sir Pip, the guest, the princess, the King, the whole company), shrinking and fading as the feet leave the floor, so the cast stand on the stage instead of floating over it; cheap, so it's there in the headset too, where the real shadows are pared down. The key spot's shadows are a little lighter (shadow intensity 0.78), as they would be with the fill light reaching into them.
+- Checked in pictures, before and after: the courtyard (day), the forest and the tower (night) on the desktop page, and the courtyard in the headset emulator.
