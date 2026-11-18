@@ -176,24 +176,44 @@ const guests = { marlo };
 (function buildShowcase() {
   const holder = new THREE.Group();
   scene.add(holder);
-  const SHELF = { x: 1.15, z: -1.3 }, FRONT = SHELF.z + 0.13;
+  const SHELF = { x: 1.15, z: -1.3 }, FRONT = SHELF.z + 0.15;
   const rows = [
     { y: 0.935, ids: ["pip", "marlo", "princess", "king", "twig"] },
     { y: 1.355, ids: ["wizard", "pirate", "troll", "clank"] },
   ];
   const SKIN = { pip: knightSkin, marlo: dragonSkin, princess: princessSkin, king: kingSkin, wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin, clank: clankSkin, twig: twigSkin };
+  // each strikes their own pose, set the way a puppeteer would: the main bar tipped (pitch: a bow,
+  // roll: a lean), raised or lowered, and the arm bar lifted, pushed out and rolled (one arm up)
+  const POSE = {
+    pip: { hands: [0, 0.14, 0.03], hroll: 0.75 },                   // sword up in salute
+    marlo: { hands: [0, 0.16, 0.03], yaw: -0.2 },                   // arms up, cheering
+    princess: { pitch: 0.15, dy: -0.035, hands: [0, 0.01, 0.03] },  // a curtsy: a little dip, hands at her skirt
+    king: { pitch: -0.12, hands: [0, 0.07, 0.04] },                 // arms open, chest out
+    twig: { yaw: 0.25, hands: [0, 0.12, 0.02], hroll: -0.95 },      // one hand waving
+    wizard: { hands: [0, 0.15, 0.02], hroll: 0.7 },                 // staff raised, casting
+    pirate: { roll: 0.22, hands: [0.03, 0.06, 0.08], hroll: 0.45 }, // leaning into "en garde"
+    troll: { pitch: 0.32, dy: -0.04, hands: [0, -0.03, 0.02] },     // hunched and grumpy
+    clank: { hands: [0, 0.05, 0.12] },                              // arms out, zapper ready
+  };
   const skinOf = (id) => SKIN[id](assets);
   for (const row of rows) {
     row.ids.forEach((id, i) => {
       const sub = new THREE.Group();
-      const x = SHELF.x - 0.38 + (i + (5 - row.ids.length) / 2) * 0.19;
+      const x = SHELF.x + (i - (row.ids.length - 1) / 2) * 0.17; // (centred, clear of the bookcase's sides)
       sub.position.set(x, row.y, FRONT);
       sub.rotation.y = Math.atan2(-x, 1.2 - FRONT); // (turned a little towards the stage)
-      sub.scale.setScalar(0.85);
+      sub.scale.setScalar(row.y > 1 ? 0.76 : 0.85); // (the top shelf a little smaller: the wizard's hat clears the shelf above)
       holder.add(sub);
       const p = new Marionette({ root: [0, 0, 0], yaw: 0, skin: skinOf(id) });
       sub.add(p.group);
-      for (let k = 0; k < 120; k++) p.update(1 / 60);
+      const P = POSE[id] || {};
+      p.main.held = true;
+      p.main.quaternion.setFromEuler(new THREE.Euler(P.pitch || 0, P.yaw || 0, -(P.roll || 0), "YXZ"));
+      p.main.position.y += P.dy || 0;
+      p.hands.held = true;
+      p.hands.position.copy(p.handsHook).applyQuaternion(p.main.quaternion).add(p.main.position).add(new THREE.Vector3(...(P.hands || [0, 0, 0])));
+      p.hands.quaternion.copy(p.main.quaternion).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -(P.hroll || 0))));
+      for (let k = 0; k < 180; k++) p.update(1 / 60);
       for (const o of [p.skin.bars, p.stringLines]) o?.parent?.remove(o);
       p.group.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
     });
