@@ -33,6 +33,21 @@ CAST = {
     "princess": "Female, about 18 years old, a sweet, clear and bright soprano voice, warm and brave. She plays Princess Juniper in a children's puppet show. Natural, lively, expressive English.",
     "noodle": f"Male, a goofy, bouncy young man with a medium-low, slightly nasal, rubbery comic voice, full of giggles, like a silly cartoon sidekick. He plays Noodle, a striped sock puppet in a children's puppet show. {EN}",
     "doodle": f"Female, a goofy, bouncy, sing-song young woman's voice, a little nasal and full of giggles. She plays Doodle, a cheerful striped sock puppet, Noodle's twin. {EN}",
+    "king": "Male, about 60 years old, a warm, deep and stately baritone, kind and proud, every word clear: a good old king in a children's puppet show. Natural, expressive British English.",
+    # (these four speak in Qwen only at the curtain call, where everyone cheers at once)
+    "wizard": "Male, about 75 years old, an old wizard: a warm, slow, wise voice with a little creak in it. Natural, expressive British English.",
+    "pirate": f"Male, a big, boisterous pirate captain: a loud, hearty, rough voice with a booming laugh. {EN}",
+    "troll": f"Male, a huge, grumpy troll: a very deep, slow, gravelly bass voice. {EN}",
+    "clank": f"Male, a small clockwork robot: a clipped, precise, slightly flat mechanical voice, very excited for once. {EN}",
+    "twig": f"Male, a boy of about ten: a bright, quick, cheeky voice, a wooden puppet boy. {EN}",
+}
+# for these, only the lines listed are recorded in Qwen (their other lines keep their Kokoro voice)
+ONLY = {
+    "wizard": {"Splendid! Simply splendid!"},
+    "pirate": {"Three cheers for Sir Pip! Hip hip, hooray!"},
+    "troll": {"Grumble is happy. Don't tell anyone."},
+    "clank": {"Clank is happy. Beep! Very, very happy!"},
+    "twig": {"Best show ever! And that's not a fib!"},
 }
 
 # how each line feels (anything not listed: cheerful and lively)
@@ -138,6 +153,17 @@ FEEL = {
     "That's okay! I'm soft. Nothing hurts a sock.": "warm and forgiving, cheerful",
     "Fire? No thanks! I'd rather stay fluffy.": "alarmed, then giggly",
     "Huh? Sorry, I've got yarn in my ears.": "confused and apologetic, silly",
+    # the King
+    "Kneel, brave knight.": "solemn and kind, a gentle command",
+    "For courage, for kindness, and for very good manners.": "proud and warm, slow and ceremonial",
+    "I name you Sir Pip the Brave, Knight of the Music Box!": "grand and joyful, proclaiming to the whole court",
+    "Let the music play!": "joyful, a happy royal command",
+    # the curtain call: everyone cheering at once
+    "Splendid! Simply splendid!": "delighted, cheering, clapping his hands",
+    "Three cheers for Sir Pip! Hip hip, hooray!": "roaring with joy, cheering loudly",
+    "Grumble is happy. Don't tell anyone.": "grumpy but secretly very happy, a little embarrassed",
+    "Clank is happy. Beep! Very, very happy!": "excited and happy, bouncing",
+    "Best show ever! And that's not a fib!": "overjoyed, cheering, cheeky",
     # Doodle
     "Noodle! There you are! I've been hanging around all day!": "relieved and delighted, giggly",
     "La la la! Two odd socks, one even song!": "singing happily, playful",
@@ -173,7 +199,8 @@ def main():
     ap.add_argument("--rms", type=float, default=0.11, help="loudness to match (the Kokoro clips' level)")
     a = ap.parse_args()
 
-    every = [(l["text"], l["who"]) for l in json.loads(subprocess.check_output(["node", str(ROOT / "tts" / "export_lines.mjs")])) if l["who"] in CAST]
+    every = [(l["text"], l["who"]) for l in json.loads(subprocess.check_output(["node", str(ROOT / "tts" / "export_lines.mjs")]))
+             if l["who"] in CAST and (l["who"] not in ONLY or l["text"] in ONLY[l["who"]])]
     todo = [(t, w) for t, w in every if not a.who or w in a.who]
     kokoro = json.loads((ROOT / "public" / "voice" / "manifest.json").read_text())["lines"]
     OUT.mkdir(parents=True, exist_ok=True)

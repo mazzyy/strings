@@ -4,7 +4,13 @@
   "marlo": "Male, a cheerful young man with a medium-low, warm voice and a hint of gravel, like a lovable cartoon dragon sidekick. Natural, lively American English, very expressive.",
   "princess": "Female, about 18 years old, a sweet, clear and bright soprano voice, warm and brave. She plays Princess Juniper in a children's puppet show. Natural, lively, expressive English.",
   "noodle": "Male, a goofy, bouncy young man with a medium-low, slightly nasal, rubbery comic voice, full of giggles, like a silly cartoon sidekick. He plays Noodle, a striped sock puppet in a children's puppet show. Natural, lively American English, very expressive.",
-  "doodle": "Female, a goofy, bouncy, sing-song young woman's voice, a little nasal and full of giggles. She plays Doodle, a cheerful striped sock puppet, Noodle's twin. Natural, lively American English, very expressive."
+  "doodle": "Female, a goofy, bouncy, sing-song young woman's voice, a little nasal and full of giggles. She plays Doodle, a cheerful striped sock puppet, Noodle's twin. Natural, lively American English, very expressive.",
+  "king": "Male, about 60 years old, a warm, deep and stately baritone, kind and proud, every word clear: a good old king in a children's puppet show. Natural, expressive British English.",
+  "wizard": "Male, about 75 years old, an old wizard: a warm, slow, wise voice with a little creak in it. Natural, expressive British English.",
+  "pirate": "Male, a big, boisterous pirate captain: a loud, hearty, rough voice with a booming laugh. Natural, lively American English, very expressive.",
+  "troll": "Male, a huge, grumpy troll: a very deep, slow, gravelly bass voice. Natural, lively American English, very expressive.",
+  "clank": "Male, a small clockwork robot: a clipped, precise, slightly flat mechanical voice, very excited for once. Natural, lively American English, very expressive.",
+  "twig": "Male, a boy of about ten: a bright, quick, cheeky voice, a wooden puppet boy. Natural, lively American English, very expressive."
  },
  "lines": {
   "Hello! Hello! Oh, I love visitors!": "b82c0576567d.mp3",
@@ -106,7 +112,16 @@
   "Fire? No thanks! I'd rather stay fluffy.": "4edecf7b1f99.mp3",
   "Huh? Sorry, I've got yarn in my ears.": "865e209259fc.mp3",
   "Noodle! There you are! I've been hanging around all day!": "249d873a7ffb.mp3",
-  "La la la! Two odd socks, one even song!": "fa1535946fb8.mp3"
+  "La la la! Two odd socks, one even song!": "fa1535946fb8.mp3",
+  "Splendid! Simply splendid!": "b834a9210e92.mp3",
+  "Three cheers for Sir Pip! Hip hip, hooray!": "9471e7c5dbbf.mp3",
+  "Grumble is happy. Don't tell anyone.": "98164b9788c6.mp3",
+  "Clank is happy. Beep! Very, very happy!": "ba485c15008d.mp3",
+  "Kneel, brave knight.": "72caed605768.mp3",
+  "For courage, for kindness, and for very good manners.": "af6bee6fa4bc.mp3",
+  "I name you Sir Pip the Brave, Knight of the Music Box!": "16c97240ded3.mp3",
+  "Let the music play!": "02edd183f22d.mp3",
+  "Best show ever! And that's not a fib!": "16ca69ae0264.mp3"
  },
  "who": {
   "Hello! Hello! Oh, I love visitors!": "marlo",
@@ -208,7 +223,16 @@
   "Fire? No thanks! I'd rather stay fluffy.": "noodle",
   "Huh? Sorry, I've got yarn in my ears.": "noodle",
   "Noodle! There you are! I've been hanging around all day!": "doodle",
-  "La la la! Two odd socks, one even song!": "doodle"
+  "La la la! Two odd socks, one even song!": "doodle",
+  "Splendid! Simply splendid!": "wizard",
+  "Three cheers for Sir Pip! Hip hip, hooray!": "pirate",
+  "Grumble is happy. Don't tell anyone.": "troll",
+  "Clank is happy. Beep! Very, very happy!": "clank",
+  "Kneel, brave knight.": "king",
+  "For courage, for kindness, and for very good manners.": "king",
+  "I name you Sir Pip the Brave, Knight of the Music Box!": "king",
+  "Let the music play!": "king",
+  "Best show ever! And that's not a fib!": "twig"
  },
  "feels": {
   "Hello! Hello! Oh, I love visitors!": "thrilled and excited, bubbling over with joy at meeting someone new",
@@ -310,7 +334,16 @@
   "Fire? No thanks! I'd rather stay fluffy.": "alarmed, then giggly",
   "Huh? Sorry, I've got yarn in my ears.": "confused and apologetic, silly",
   "Noodle! There you are! I've been hanging around all day!": "relieved and delighted, giggly",
-  "La la la! Two odd socks, one even song!": "singing happily, playful"
+  "La la la! Two odd socks, one even song!": "singing happily, playful",
+  "Splendid! Simply splendid!": "delighted, cheering, clapping his hands",
+  "Three cheers for Sir Pip! Hip hip, hooray!": "roaring with joy, cheering loudly",
+  "Grumble is happy. Don't tell anyone.": "grumpy but secretly very happy, a little embarrassed",
+  "Clank is happy. Beep! Very, very happy!": "excited and happy, bouncing",
+  "Kneel, brave knight.": "solemn and kind, a gentle command",
+  "For courage, for kindness, and for very good manners.": "proud and warm, slow and ceremonial",
+  "I name you Sir Pip the Brave, Knight of the Music Box!": "grand and joyful, proclaiming to the whole court",
+  "Let the music play!": "joyful, a happy royal command",
+  "Best show ever! And that's not a fib!": "overjoyed, cheering, cheeky"
  },
  "files": {
   "aae2510706f5.mp3": "b82c0576567d.mp3",
@@ -412,7 +445,16 @@
   "da9d2e957567.mp3": "4edecf7b1f99.mp3",
   "3646178d112b.mp3": "865e209259fc.mp3",
   "5afac001c40e.mp3": "249d873a7ffb.mp3",
-  "1496bf27223f.mp3": "fa1535946fb8.mp3"
+  "1496bf27223f.mp3": "fa1535946fb8.mp3",
+  "b74a090bea29.mp3": "b834a9210e92.mp3",
+  "48ca2d2e5d91.mp3": "9471e7c5dbbf.mp3",
+  "c56b30216997.mp3": "98164b9788c6.mp3",
+  "5b780cb2c811.mp3": "ba485c15008d.mp3",
+  "34af7a3504ca.mp3": "72caed605768.mp3",
+  "5239a2eca4e6.mp3": "af6bee6fa4bc.mp3",
+  "3ca0236dc9cf.mp3": "16c97240ded3.mp3",
+  "797a8a5c4ea6.mp3": "02edd183f22d.mp3",
+  "0194a22800e5.mp3": "16ca69ae0264.mp3"
  },
  "seeds": {}
 }
