@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { withRepeat } from "./assets.js";
 import { paintBackdrop } from "./backdrops.js";
 import { buildDrapes } from "./drapes.js";
+import { makeHalo } from "./fx.js";
 
 const KNOB_LABELS = { record: "Record", replay: "Replay", talk: "Talk", mode: "Modes", map: "Map", free: "Free Marlo", lock: "Pinch lock", hand: "One hand", menu: "Menu" };
 export const STAGE = { width: 0.86, depth: 0.42, base: 0.075 };
@@ -104,21 +105,45 @@ export function buildStage(assets) {
   box(W + 0.034, 0.004, 0.004, G, 0, -B + 0.012, D / 2 + 0.016);
 
   // corner posts with gold finials, side rails at the top
-  const postH = 0.3;
+  const postH = 0.3, HEAD_RISE = 0.07; // (the header sits this far above the side posts: clear of the puppets' heads)
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
       const x = sx * (W / 2 - 0.018), z = sz * (D / 2 - 0.018);
-      box(0.026, postH, 0.026, walnutPost, x, postH / 2, z);
+      const h = sz > 0 ? postH + HEAD_RISE : postH; // (the front posts carry the proscenium header)
+      box(0.026, h, 0.026, walnutPost, x, h / 2, z);
       box(0.034, 0.012, 0.034, walnutPost, x, 0.006, z);
-      box(0.032, 0.01, 0.032, walnutPost, x, postH, z);
+      box(0.032, 0.01, 0.032, walnutPost, x, h, z);
       const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.012, 16), G);
-      collar.position.set(x, postH + 0.011, z);
+      collar.position.set(x, h + 0.011, z);
       const ball = new THREE.Mesh(new THREE.SphereGeometry(0.017, 24, 18), G);
-      ball.position.set(x, postH + 0.032, z);
+      ball.position.set(x, h + 0.032, z);
       ball.castShadow = collar.castShadow = true;
       root.add(collar, ball);
     }
     box(0.016, 0.016, D - 0.03, walnutPost, sx * (W / 2 - 0.018), postH - 0.03, 0);
+  }
+
+  // the proscenium header: a walnut board between the front posts (their gold balls its finials),
+  // gold trim along both edges, and a gilt plaque with the theatre's name at its centre
+  {
+    const hw = W - 0.07, hy = postH + HEAD_RISE - 0.017, hz = D / 2 - 0.011;
+    box(hw, 0.03, 0.016, darkPanel, 0, hy, hz);
+    box(hw + 0.004, 0.004, 0.019, G, 0, hy + 0.017, hz);
+    box(hw + 0.004, 0.004, 0.019, G, 0, hy - 0.017, hz);
+    const c = document.createElement("canvas"); c.width = 640; c.height = 200;
+    const g = c.getContext("2d");
+    const grd = g.createLinearGradient(0, 0, 0, 200); grd.addColorStop(0, "#7a1020"); grd.addColorStop(1, "#4a0812");
+    g.fillStyle = grd; g.beginPath(); g.roundRect(10, 10, 620, 180, 90); g.fill();
+    g.lineWidth = 12; g.strokeStyle = "#e6be62"; g.stroke();
+    g.lineWidth = 3; g.strokeStyle = "#ffe7a6"; g.beginPath(); g.roundRect(30, 30, 580, 140, 70); g.stroke();
+    g.fillStyle = "#f6d27a"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.font = 'italic 700 112px "Playball", Georgia, serif'; g.fillText("Strings", 320, 104);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.04), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.45, metalness: 0.25 }));
+    plaque.position.set(0, hy + 0.004, hz + 0.0095);
+    root.add(plaque);
+    // (redrawn once the script font has loaded, if it wasn't ready yet)
+    document.fonts?.load('italic 700 112px "Playball"').then(() => { g.clearRect(0, 0, 640, 200); g.fillStyle = grd; g.beginPath(); g.roundRect(10, 10, 620, 180, 90); g.fill(); g.lineWidth = 12; g.strokeStyle = "#e6be62"; g.stroke(); g.lineWidth = 3; g.strokeStyle = "#ffe7a6"; g.beginPath(); g.roundRect(30, 30, 580, 140, 70); g.stroke(); g.fillStyle = "#f6d27a"; g.font = 'italic 700 112px "Playball", Georgia, serif'; g.fillText("Strings", 320, 104); tex.needsUpdate = true; }).catch(() => {});
   }
 
   // the drapery: tied-back side curtains under fixed swags, and the main traveller
@@ -176,16 +201,19 @@ export function buildStage(assets) {
   };
   cord.update(0);
 
-  // brass footlights along the apron
-  const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffd9a0, toneMapped: false });
-  for (let i = 0; i < 7; i++) {
-    const x = -0.3 + i * 0.1;
-    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.011, 16, 10, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5), G);
+  // brass footlights along the apron: real little lights, glowing (bright enough to bloom on the
+  // desktop, with a soft halo each for the headset, which has no bloom)
+  const bulbMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd9a0).multiplyScalar(3.2), toneMapped: false });
+  for (let i = 0; i < 9; i++) {
+    const x = -0.34 + i * 0.085;
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.014, 16, 10, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5), G);
     shell.rotation.x = -0.6;
     shell.position.set(x, 0.004, D / 2 - 0.014);
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.0055, 10, 8), bulbMat);
-    bulb.position.set(x, 0.007, D / 2 - 0.012);
-    root.add(shell, bulb);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 12, 10), bulbMat);
+    bulb.position.set(x, 0.009, D / 2 - 0.011);
+    const halo = makeHalo(0xffc070, 0.05, 0.32);
+    halo.position.copy(bulb.position);
+    root.add(shell, bulb, halo);
   }
 
   // XR buttons on the apron: poke them with a fingertip (no menus in-headset)
@@ -463,5 +491,32 @@ export function buildRoom(assets, deskTop) {
     add(new THREE.PlaneGeometry(0.34, 0.44), new THREE.MeshStandardMaterial({ map: pt, roughness: 0.8, emissive: 0xffffff, emissiveMap: pt, emissiveIntensity: 0.18 }), [x, yy, backZ + 0.038]);
   });
 
+  // warm fairy lights strung along the back wall above the paintings, and over the bookshelf:
+  // a cosy glow around the theatre (no real lights: little bulbs bright enough to bloom, and halos)
+  {
+    const wire = new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.8 });
+    const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd28a).multiplyScalar(3.2), toneMapped: false });
+    const garland = (x0, x1, y, sag, z, n) => {
+      const pts = [];
+      for (let i = 0; i <= 40; i++) { const t = i / 40; pts.push(new THREE.Vector3(x0 + (x1 - x0) * t, y - sag * Math.sin(Math.PI * t), z)); }
+      const curve = new THREE.CatmullRomCurve3(pts);
+      room.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 60, 0.0025, 4), wire));
+      const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.011, 10, 8), glowMat, n);
+      const m = new THREE.Matrix4();
+      for (let i = 0; i < n; i++) {
+        const p = curve.getPoint((i + 0.5) / n);
+        m.makeTranslation(p.x, p.y - 0.012, p.z);
+        bulbs.setMatrixAt(i, m);
+        const h = makeHalo(i % 3 ? 0xffc070 : 0xffe0a8, 0.09, 0.28);
+        h.position.set(p.x, p.y - 0.012, p.z + 0.01);
+        room.add(h);
+      }
+      room.add(bulbs);
+    };
+    garland(-1.75, -0.85, 1.46, 0.09, backZ + 0.04, 10); // (under the paintings, either side of the robot)
+    garland(-0.85, 0.05, 1.44, 0.1, backZ + 0.04, 10);
+    garland(0.05, 0.6, 1.47, 0.07, backZ + 0.04, 6);
+    garland(0.62, 1.68, 1.8, 0.07, backZ + 0.39, 12); // (along the bookshelf's top shelf)
+  }
   return { room, desk, lampLight: bulb };
 }

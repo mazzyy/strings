@@ -93,6 +93,10 @@ scene.add(room);
 desk.position.set(0, DESK_TOP, -0.05);
 
 const { root: stageRoot, knobs, shadowCatcher, curtains, cord } = buildStage(assets);
+// the stage's buttons are for poking in the headset (the page has its own buttons): hidden on the
+// desktop, so the apron shows only its footlights
+for (const k of Object.values(knobs)) k.visible = false;
+function showKnobs(on) { for (const [name, k] of Object.entries(knobs)) k.visible = on && (name !== "mode" || unlockedModes().length > 1); }
 stageRoot.position.set(0, STAGE_Y, 0);
 scene.add(stageRoot);
 // batch static geometry into one mesh per material (Quest needs few draw calls)
@@ -293,7 +297,7 @@ const perfWin = { last: performance.now(), sum: 0, n: 0, settle: 0, downs: 0 };
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 // (only real lights glow: lanterns, fireflies, the glowing bars; not the brighter-lit white robot)
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.3, 0.4, 1.7);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.4, 2.0);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -668,7 +672,7 @@ let mode = MODES[0];
 const unlockedModes = () => MODES.filter((m) => freePlay || !m.unlock || playbills.list().length >= m.unlock);
 function refreshModeUi() {
   const n = unlockedModes().length;
-  knobs.mode.visible = n > 1;
+  knobs.mode.visible = !!xrMode && n > 1;
   const b = $("mode");
   if (b) { b.hidden = n < 2; b.textContent = `Mode: ${mode.name}`; }
 }
@@ -2652,6 +2656,7 @@ async function enterXR(mode) {
   await renderer.xr.setSession(session);
   xrMode = mode;
   document.body.classList.add("in-xr");
+  showKnobs(true);
   layoutRobot(true);
   setXRQuality(true);
   if (mode === "immersive-ar") {
@@ -2679,6 +2684,7 @@ async function enterXR(mode) {
   }
   session.addEventListener("end", () => {
     xrMode = null;
+    showKnobs(false);
     hitSource?.cancel?.();
     hitSource = null;
     dropAnchor();
@@ -3057,6 +3063,7 @@ renderer.setAnimationLoop((time, frame) => {
   // headset: the stars-and-goal panel, at the top right of the view (placed from this frame's head pose)
   const hudOn = !!xrMode && !!show.scene && !book.mesh.visible && !storyMap.mesh.visible;
   xrHud.mesh.visible = hudOn;
+  if (show.starGroup.visible) show.starGroup.visible = false; // (one star display: the card on the page, the panel in the headset)
   if (hudOn) {
     const act = show.state === "act" ? show.scene.acts[show.act] : null;
     xrHud.set(show.scene.title, show.stars, show.scene.acts.length, act ? act.goal.replace(/^Act \w+\.\s*/, "") : show.state === "done" || show.state === "finale" ? "Curtain call!" : "");
