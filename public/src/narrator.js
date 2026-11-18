@@ -63,6 +63,9 @@ export class Narrator {
       this.say(this.queue.shift());
       return;
     }
+    // the story comes first: while it's talking (a chapter opening, a goal being given, a task
+    // under way), Sir Pip's moves get no running commentary, so nothing holds the story up
+    if (this.quietFor?.()) { this.pending.length = 0; return; }
     if (this.pending.length === 0 || this.t - this.lastLine < 3) return;
     const events = this.pending.splice(0);
     this.busy = true;
