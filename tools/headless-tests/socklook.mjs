@@ -1,6 +1,6 @@
-// A look at Twig and the workshop: the whole set, then Twig close up from several angles,
-// before and after a fib (his nose grows and sprouts leaves).
-//   node twiglook.mjs <out-dir> [port] [quality]
+// A look at Noodle the sock puppet, the robot behind the stage and the harbour laundry:
+// the whole stage, Noodle close up from the front and side, the robot's face, Noodle talking.
+//   node socklook.mjs <out-dir> [port] [quality]
 import { chromium } from "playwright-core";
 import fs from "node:fs";
 const out = process.argv[2] || "/tmp/twig";

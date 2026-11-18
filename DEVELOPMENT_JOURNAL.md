@@ -13,16 +13,16 @@ You pinch a glowing control bar and work **Sir Pip**, a little knight marionette
 
 - **Real puppet physics.** He hangs from real strings simulated in physics: raise your hand and he walks, tip your wrist and he bows, flick up and he jumps, open your hand and he slumps.
 - **AI co-performers.** A robot puppeteer works the other marionettes. Each guest has a mood, a memory, a personality and its own voice, so they react to what you do, start things themselves, and help you when you're stuck.
-- **A seven-chapter story.** Told through an illustrated, narrated storybook and a parchment map.
+- **A seven-chapter story, and two tales along the way.** Told through an illustrated, narrated pop-up storybook and a parchment map with one winding road. Between chapters two and three Sir Pip meets **Twig**, a carved wooden boy whose nose grows when he fibs. Between three and four he meets **Noodle**, a sock puppet that the robot works on his own hand from behind the stage.
 - **A different game every chapter:** a sword duel, a riddle, sneaking past a searchlight, rescuing a princess, flying on a dragon. The story ends with a knighting and a grand finale with the whole cast.
 - **Record, replay, share.** You can record a performance, duet with your own "shadow", and share it as a link.
 - **Hands in seconds.** Start goes straight to a glowing curtain cord; the story comes after you've touched the puppet, and every book can be skipped.
-- **Free play.** No story at all: play as any of eight characters, pick the robot's co-star, any stage and a box of toys.
+- **Free play.** No story at all: play as any of nine characters (Twig included), pick the robot's co-star (Noodle the sock puppet included), any of nine stages, and a box of toys.
 - **The "wow" ending.** After the finale your applause (or the audience's) sets Marlo free: his strings snap, he flies around your head and lands on your open palm.
 - **Mixed reality with a purpose.** In passthrough the theatre sits on your real desk, and the puppets can step off the stage onto the tabletop itself.
 - **A mind you can see.** The guest remembers what you did; the puppeteer's eyes flash when it does, and a "Backstage Notes" card shows trust, mood and memories after each show.
 - **A scene partner.** When you fall or fail, the co-star turns it into theatre (a matching pratfall, a "ta-da!"), and the audience reacts to every move.
-- **Your own story.** Pick a conflict, who needs rescuing, a villain, a setting and a twist (or write it in your own words), see "Tonight's Show", and the theatre stages it, fully voiced.
+- **Your own story.** Pick a conflict, who needs rescuing, a villain (Twig and Noodle included), a setting (nine) and a twist, or write it in your own words. You see "Tonight's Show", and the theatre stages it, fully voiced.
 - **A storybook look.** A theatre-style start menu, and a storyteller robot with a glowing screen face whose sound-wave mouth moves as he speaks.
 
 ---
@@ -508,3 +508,159 @@ In the headset the storybook's picture now rises off the page like a pop-up book
 - **Problem (found by the developer):** now and then the on-screen hand (the mouse) and Sir Pip's glowing bar ended up apart, and stayed apart. On desktop a click anywhere grabs the bar, and the bar then moved by however much the mouse moved, keeping whatever gap there was. A gap could come from clicking away from the bar, from pushing the bar against its height limit, or from the story moving Sir Pip itself (the tower's searchlight sending him back to the start).
 - **Fix (`handleHands`):** while you hold a bar on desktop, it settles at its place under the hand (`DESK_HOLD`, the relation they start out in) within about half a second, so any gap closes by itself. When the story moves Sir Pip (`movePipTo(x, z, regrab)` from a task), the desktop hand lets go. He stays where the story put him, and the hand picks him up again once it reaches his bar (`deskNeedsNear`). Otherwise the bar would just glide back to the mouse and undo the searchlight's penalty. Headset hands are unchanged.
 - **Tested:** new `t63` (real mouse input): grab far from the bar, drag about, dip to the height limit and back, and the story moving him. The gap is zero each time, and he's picked up again with no gap. (The old code fails it.) Tests that place Sir Pip while holding him use a new debug `placePip()`, which moves the hand too. `t57`, `t59`, `t60` and `t62` pass.
+
+### Phase 41: a map you can read at a glance
+- **Problem (found by the developer):** with two new tales the story map was crowded. Labels overlapped (the Workshop's and the Laundry's), "along the way" was hidden, the road zigzagged back and forth across the kingdom, and trees and peaks crowded every stop.
+- **New layout** (`storymap.js`, positions in `lines.js`): a storybook board-game trail. One smooth road (a centripetal Catmull-Rom curve through the stops, in story order):
+  - from the Castle in the south-west, through the Forest;
+  - past the Workshop to the Pirate Ship moored in a bay, then the Harbour Laundry;
+  - up the river to the Troll Bridge;
+  - back west past the Clockwork Tower to the Dragon's Cave below the peaks;
+  - up to the Night Sky in a starry corner.
+- **Each place has its own country:** a forest round the forest, the sea and a pier for the ship, mountains round the cave, a crescent moon and stars round the night sky, a storm cloud over the tower, a village and windmill by the castle. A dotted footpath leads to the Grand Theatre.
+- **Labels never overlap:**
+  - Each name's box is worked out once (`_layoutLabels`), and all the scenery keeps clear of the road, the places and the names (`_clear`).
+  - Chapters have red ribbons with a wax-seal number; the tales along the way have a cream signboard. Clicking a name works like clicking its picture.
+- **The journey shows:** Sir Pip's footprints mark the road travelled so far. Choosing a place, the token walks *along the road* (through any stops in between) while the map leans in to follow.
+- **Tested:** `tools/headless-tests/maplook.mjs` draws the map with some progress and fully open; it was checked in the game with the token walking from the Forest past the Workshop to the Ship. `t58` and `t61` pass.
+
+---
+
+## 4. What's in the game now
+
+**Ways to play** (the start menu): Begin or Continue the story · Play Any Chapter · Make Your Own Story · Free Play · Pinch Lock · One Hand · Hands only. The same menu is on ☰ Menu or Esc at any time, and on the white Menu knob in the headset.
+
+**The story** (the map's road, in order). Each stop has three pop-up storybook pages, then its acts:
+
+| Stop | Guest | What you do |
+|---|---|---|
+| 1 · The Castle Courtyard | Marlo the dragon | approach shy Marlo gently, bow, high fives, jump together on his count, wave |
+| 2 · The Whispering Forest | Old Bramble | light the lantern, catch shy fireflies, follow the owls' calls, copy his spell (the forest blooms) |
+| along the way · The Toymaker's Workshop | Twig the wooden boy | true or fib? (his nose grows on fibs), teach him to dance (he copies your moves), bow together |
+| 3 · The Pirate Ship | Captain Pegg | take the sword, duel (duck high, jump low, lunge), bow |
+| along the way · The Harbour Laundry | Noodle the sock puppet (and Doodle) | peekaboo through trapdoors, find the twin on the washing line, bow |
+| 4 · The Troll Bridge | Grumble | approach, answer his riddle on the stones, give him a flower |
+| 5 · The Clockwork Tower | Clank, Princess Juniper | sneak past the searchlight, unlock her cage, jump his zaps |
+| 6 · The Dragon's Cave | Marlo | light the lantern, find the three jewels, bow |
+| 7 · The Night Sky | Marlo, Clank, the King | climb aboard, fly through rings, dodge gears, catch Clank, bow to him in kindness, be knighted. Then the curtain call (the whole cast, Twig and both socks), your applause frees Marlo onto your palm ("Unbound"), and the epilogue and credits |
+
+After the story the **Grand Theatre** has a new short show every night (six scenes), with playbills, critics and a streak.
+
+**The cast and their voices** (Kokoro, recorded ahead, `tts/build_voice.py`):
+
+| Character | What they are | Voice |
+|---|---|---|
+| Narrator | the storyteller robot's voice | `af_heart` |
+| Sir Pip | the knight you work (silent) | none |
+| Marlo | a young dragon who breathes sparkles | `am_puck` |
+| Old Bramble | a forgetful forest wizard | `bm_george` at 0.88 |
+| Captain Pegg | a boisterous pirate | `am_fenrir` at 1.02 |
+| Grumble | a grumpy bridge troll | `am_onyx` at 0.84 |
+| Clank | a lonely clockwork robot | `am_echo` at 0.92 |
+| Princess Juniper | the captive princess | `af_bella` |
+| The King | knights Sir Pip | `bm_lewis` at 0.9 |
+| Twig | a carved pine boy; his nose grows when he fibs | `bf_emma` at 1.06 |
+| Noodle | a sock puppet with yarn hair and googly eyes | `am_michael` at 1.1 |
+| Doodle | Noodle's twin sock | `af_sarah` at 1.08 |
+
+**The 21 playable tasks** (`tasks.js`): `shy`, `highfive`, `together`, `owls`, `collect`, `simon`, `duel`, `riddle`, `sneak`, `unlock`, `dodge`, `mount`, `rings`, `gears`, `chase`, `kindness`, `knight`, `fib`, `mirror`, `peekaboo`, `matchsock`.
+
+**Two kinds of puppet beyond marionettes:**
+- **Twig** is carved wood: real grain from the walnut photo, tinted and laid along every part.
+- **Noodle** is a hand puppet: no strings. The robot crouches behind the stage and reaches under it, and the sock rises through a trapdoor with his porcelain forearm inside.
+
+**Other systems:**
+- Verlet string physics for every marionette.
+- The guest's offline mind: mood, trust, memory, initiative, and Backstage Notes.
+- The co-star "saving the scene" when you fall or fail, and an audience that reacts.
+- Talk bubbles to poke.
+- Props: sword, lantern, flower, key.
+- Record, replay and share a performance as a link.
+- Moon gravity, fragile strings and party modes (unlocked with playbills).
+- Passthrough on your real desk with an anchor, with the puppets able to step onto the desk.
+- One-hand play and pinch lock.
+- The story comes first: no running commentary while the story is talking.
+
+---
+
+## 5. Where things are
+
+Everything runs from `public/` (a static site; three.js 0.170 through an import map). In `public/src/`:
+
+| File | What it does |
+|---|---|
+| `main.js` | the orchestrator: scene, input, start menu, story flow, the task context, flight and riding, hand puppets, passthrough and anchors, free play, the story maker, the render loop |
+| `puppet.js` | marionette physics (Verlet), the flight and seated poses |
+| `skins.js` / `cast.js` | how each character looks (Sir Pip, Marlo; the guests); the control bars |
+| `wood.js` | real-grain wood materials, grain-aligned UVs, log ends; Twig |
+| `handpuppet.js` | sock puppets (Noodle, Doodle), trapdoor holes, the socks on the washing line |
+| `robot.js` | the storyteller robot: screen face, sound-wave mouth, chest clock, two-bone arm IK |
+| `director.js` | detecting your moves, and the AI performer's clips |
+| `mind.js` | the guest's offline mind |
+| `show.js` | acts, stars, endings, playbills and Backstage Notes |
+| `tasks.js` | the 21 playable tasks |
+| `lines.js` | every word: chapters, guests, tasks, the story road (`CHAPTERS`, `chapterNumber`) |
+| `narrator.js` | the narrator: coach lines first, commentary only when the story isn't talking |
+| `storybook.js` / `figures.js` | the pop-up storybook, and the characters drawn for it |
+| `storymap.js` | the parchment map, the road, the token |
+| `storymaker.js` / `storypicker.js` | your own stories: written, picked, or from cards |
+| `backdrops.js` / `sets.js` | the painted backdrops, and each stage's 3D pieces and what moves |
+| `stage.js` / `drapes.js` | the theatre, its knobs and the cord; velvet drapery |
+| `playground.js` | free play |
+| `phrases.js` / `talk.js` | talk bubbles and the headset menu board; understanding what's said |
+| `props.js` | the sword, lantern, flower and key |
+| `hints.js` | hints with arrows and voice |
+| `input.js` | headset hands and the desktop (mouse) hands |
+| `audio.js` | sound effects and each stage's soundscape |
+| `unbound.js` | Marlo breaking free onto your palm |
+| `recorder.js` | record, replay and share |
+| `fx.js` / `emote.js` | confetti, sparkles, halos, dust; the little pop-up emotes |
+| `perf.js` / `batch.js` | merging static meshes; one skinned mesh per material for each puppet |
+| `assets.js` / `demo.js` | CC0 textures and lighting; the self-playing demo |
+
+Outside `public/`: `server.mjs` (the optional local server for a live language model), `tts/` (the voice builder), `tools/headless-tests/` (the tests), `tools/video/` (the demo video), `VOICE_SCRIPT.md` (lines for the developer to record), and `CLAUDE.md` (the handover).
+
+---
+
+## 6. How it was tested
+
+**How:** Playwright drives the Chromium in `~/Library/Caches/ms-playwright/` against `npm start` on port 8095 (`node tools/headless-tests/tNN.mjs`). The game exposes a debug handle, `window.strings`, for the show, puppets, map, hands, tasks and so on. Tests play chapters end to end by moving the desktop hands (or `placePip`) and by sending the move detector events. The headless browser runs about five times slower than real time, so tests wait on game state rather than the clock. Every change was also looked at in screenshots, from several angles for 3D models. After each publish, the live site is loaded and checked for errors and missing files.
+
+**The current regression set:**
+
+| Test | What it proves |
+|---|---|
+| `t57` | a frame rate capped from outside doesn't slow the game or drop the quality |
+| `t58` | every stage set loads; the sets' hooks work; layers animate; every chapter's scene change runs |
+| `t59` | Twig's tale end to end (true or fib with the nose, teaching him to dance, the bow); its place on the road; free play with Twig |
+| `t60` | Noodle's tale end to end (peekaboo, the twin, the bow); the robot crouches and stands back up; the curtain call with Twig and both socks; a written sock-puppet story |
+| `t61` | reloading with progress saved at every stop (and the theatre) reaches the menu |
+| `t62` | a player who never stops moving Sir Pip doesn't hold the story up, and no remark talks over it |
+| `t63` | desktop: the held bar stays under the hand (a far click, a drag, the height limit, the story moving him) |
+
+**Earlier tests:** `t1` to `t56` were written as each feature landed and are kept for reference. They cover the cord and curtain, props, every chapter's tasks, the map, the first visit, the finale and Unbound, flying, talk bubbles, the warm-up, free play, the headset menu and story cards, the story maker, the robot's face and the menus. `xr.mjs` and `xr2.mjs` cover headset grabbing and placing the stage on a desk. `live*.mjs` check the hosted site.
+
+**Look-checks:** `twiglook.mjs` (Twig and the workshop, several angles, before and after a fib), `socklook.mjs` (Noodle, the robot, the laundry), `pickerlook.mjs` (the story picker), `maplook.mjs` (the map), `views.mjs`, `menu.mjs`, `cards.mjs`, and in `tools/video/`: `curtaincheck.mjs`, `pelmetcheck.mjs`, `bookcheck.mjs`, `popcheck.mjs`.
+
+**Video tools** (`tools/video/`): `shots.mjs` records the takes in the headset emulator, `vo.py` the voice-over, `edit.mjs` assembles `timeline.json` into the MP4, and `frames.swift` pulls frames to check cuts.
+
+---
+
+## 7. Assets, voices and credits
+
+- **Voices:** 899 lines, all recorded ahead in natural Kokoro voices (Apache-2.0), in `public/voice/` (about 24 MB) with `manifest.json`. The builder records only new lines and removes unused ones. The browser's own speech is never used. `VOICE_SCRIPT.md` lists Marlo's 49 lines and the curtain-call cheers (including Twig's and Noodle's) for the developer to record, so human takes can replace the generated ones.
+- **Art:** drawn in code (canvas, SVG, three.js): every backdrop, set, character, storybook figure, the map and the menus. The wood grain comes from the CC0 Poly Haven veneer photo already in `public/assets/tex/`; the knit, felt and log-end textures are drawn.
+- **Licensed files** (all in `CREDITS.md`): a Poly Haven HDRI and three wood textures (CC0), CC0 music and sound effects, the IWER emulator (MIT), three.js (MIT).
+
+---
+
+## 8. Publishing, and what's left
+
+- **Publish** (GitHub Pages from a branch; only after the developer says "merge and publish"): fast-forward `main` and push; rebuild `gh-pages` with `git subtree split --prefix public`, force-push it, and trigger a build (`gh api -X POST repos/mazzyy/strings/pages/builds`). If a build reports a generic "Page build failed", trigger it again. Then load the live site and check it.
+- **Left to do:**
+  - test on a real headset (frame rate, pinching, the boards, the sock puppets and the robot crouching);
+  - re-cut the demo video to show Twig, Noodle and the new map;
+  - write the Devpost text and submit before 18 November, 12:00 PT;
+  - optionally, record Marlo's lines and the curtain-call cheers (`VOICE_SCRIPT.md`).
+- **After submitting:** tag the submitted commit, and don't publish again until the results.
+
