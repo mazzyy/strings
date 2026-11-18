@@ -2420,7 +2420,7 @@ function setXRQuality(xr) {
 // AR (passthrough): the stage is set down on YOUR real desk — a hit-test reticle
 // follows your gaze over real surfaces, and a pinch places it. VR: it appears in
 // front of you on the virtual desk.
-let placeStage = false;
+let placeStage = 0; // frames to wait before placing the stage in front of the head (0: placed)
 let placing = false;
 let hitSource = null;
 let lastFoundSurface = false;
@@ -2456,7 +2456,7 @@ async function enterXR(mode) {
     unlockAudio();
     narrator.coach("placeAR");
   } else {
-    placeStage = true;
+    placeStage = 3; // (the head's pose is only real after the first frames: before that it's the desktop camera's)
     unlockAudio();
     // (the stage is placed on the first XR frame; open the book just after)
     setTimeout(() => { if (freePlay) { playground.show(true); faceViewer(playground.group); } else if (!showStarted && !book.open && !intro.on && !preshow) { storyPending = true; startPreshow(); } }, 300);
@@ -2731,7 +2731,13 @@ renderer.setAnimationLoop((time, frame) => {
 
   let hands;
   if (xrMode) {
-    if (placeStage && renderer.xr.getCamera().matrixWorld) { placeStageInFront(); placeStage = false; }
+    if (placeStage > 0 && --placeStage === 0) {
+      placeStageInFront();
+      // the emulator's headset starts at a standing height, looking steeply down on a stage placed
+      // for someone seated: step it 25 cm back and 15 cm down, so the stage sits in the middle of
+      // the view at the angle a seated player sees it (a real headset is where the player's head is)
+      if (xrDevice) { const { fwd } = viewerFlatForward(), q = xrDevice.position; q.set(q.x - fwd.x * 0.25, q.y - 0.15, q.z - fwd.z * 0.25); }
+    }
     if (xrDevice) driveEmulatedHands(dt);
     hands = xrHands.update(stageRoot, dt);
     if (placing) updatePlacement(dt, frame, hands);
