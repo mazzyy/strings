@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marlo's voice: Kokoro or Qwen3-TTS</title>
+<style>
+  body { font: 16px/1.4 Georgia, serif; background: #1b1020; color: #f6ead0; margin: 0; padding: 24px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 18px; color: #d8c6a4; }
+  .bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  button { font: inherit; cursor: pointer; border-radius: 999px; border: 1px solid #b98a3c; background: #3a2333; color: #f6ead0; padding: 6px 14px; }
+  button:hover { background: #50304a; }
+  button.on { background: #e0a93e; color: #2a1520; }
+  table { border-collapse: collapse; width: 100%; max-width: 980px; }
+  td { padding: 7px 8px; border-bottom: 1px solid #3a2a3a; vertical-align: middle; }
+  td.n { color: #a8957a; width: 28px; text-align: right; }
+  td.feel { color: #c9b28a; font-style: italic; font-size: 14px; }
+  td.b { white-space: nowrap; width: 1%; }
+  a { color: #f0c46a; }
+</style>
+</head>
+<body>
+<h1>Marlo's voice: Kokoro or Qwen3-TTS?</h1>
+<p class="sub">Each of Marlo's lines in the current voice (Kokoro) and the new test voice (Qwen3-TTS, recorded with the feeling shown).
+  To hear it in the game, open <a href="../?marlo=qwen">the theatre with ?marlo=qwen</a>.</p>
+<div class="bar">
+  <button id="all-k">▶ Play all: Kokoro</button>
+  <button id="all-q">▶ Play all: Qwen</button>
+  <button id="all-ab">▶ Play all: each line both ways</button>
+  <button id="stop">■ Stop</button>
+</div>
+<table id="t"></table>
+<script type="module">
+const [q, k] = await Promise.all([fetch("manifest.json").then((r) => r.json()), fetch("../voice/manifest.json").then((r) => r.json())]);
+const feel = (text) => (q.feels || {})[text] || "";
+const rows = Object.entries(q.lines).map(([text, file], i) => ({ i, text, qwen: file, kokoro: k.lines[text] }));
+const audio = new Audio();
+let queue = [], cur = null;
+const mark = (b) => { document.querySelectorAll("button.on").forEach((x) => x.classList.remove("on")); if (b) b.classList.add("on"); };
+const play = (src, b) => new Promise((done) => { audio.src = src; audio.onended = done; audio.onerror = done; mark(b); audio.play().catch(done); });
+async function run(list) {
+  const token = (cur = {});
+  for (const [src, b] of list) { if (cur !== token) return; await play(src, b); await new Promise((r) => setTimeout(r, 350)); }
+  mark(null);
+}
+const t = document.getElementById("t");
+for (const r of rows) {
+  const tr = t.insertRow();
+  tr.innerHTML = `<td class="n">${r.i + 1}</td><td>${r.text}<br><span class="feel"></span></td><td class="b"></td><td class="b"></td>`;
+  tr.querySelector(".feel").textContent = feel(r.text);
+  const bk = document.createElement("button"), bq = document.createElement("button");
+  bk.textContent = "▶ Kokoro"; bq.textContent = "▶ Qwen";
+  r.bk = bk; r.bq = bq;
+  bk.disabled = !r.kokoro;
+  bk.onclick = () => run([[`../voice/${r.kokoro}`, bk]]);
+  bq.onclick = () => run([[r.qwen, bq]]);
+  tr.cells[2].append(bk); tr.cells[3].append(bq);
+}
+document.getElementById("all-k").onclick = () => run(rows.filter((r) => r.kokoro).map((r) => [`../voice/${r.kokoro}`, r.bk]));
+document.getElementById("all-q").onclick = () => run(rows.map((r) => [r.qwen, r.bq]));
+document.getElementById("all-ab").onclick = () => run(rows.flatMap((r) => [[`../voice/${r.kokoro}`, r.bk], [r.qwen, r.bq]]));
+document.getElementById("stop").onclick = () => { cur = null; audio.pause(); mark(null); };
+</script>
+</body>
+</html>
