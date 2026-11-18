@@ -697,3 +697,15 @@ Outside `public/`: `server.mjs` (the optional local server for a live language m
   - the start-menu strings now end on each title letter's ink, and on Sir Pip's and Marlo's hands and heads (`menustrings.mjs`);
   - the end credits read "Created by Abdul Musawar Soomro", with Twig, Noodle and Doodle in the cast.
 
+
+### Phase 44: a test voice for Marlo, recorded with feeling (Qwen3-TTS)
+**Why:** the developer heard Qwen3-TTS read "Hello! Hello! Oh, I love visitors!" with the instruction "excited" and liked how much more emotion it carried than Marlo's Kokoro voice. As a test, only the dragon is re-recorded, and the Kokoro voice stays as it is.
+
+- **The model:** Qwen3-TTS-12Hz-1.7B-VoiceDesign (Apache-2.0, 4.5 GB, from the Qwen page on Hugging Face), run locally on the Mac's GPU (MPS) from its own Python environment outside the repo (`../qwen-tts/.venv`, with the `qwen-tts` package). About 3 seconds per line; all 49 of Marlo's lines in under 4 minutes.
+- **How each line is spoken:** VoiceDesign speaks from a written description. Every line gets the same description of Marlo (a small, friendly cartoon dragon: a young boy's voice, bright and a little squeaky, warm and cheeky) plus the feeling of that line, written by hand for all 49: "thrilled and excited" for the hello, "sleepy and drowsy, yawning" for the yawn, "shy, nervous and hesitant" for the first meeting, "heartfelt, tender and grateful" for the thank-you. A fixed seed per line keeps takes repeatable, and a single line can be re-recorded with another seed (`--redo "<line>" --seed N`).
+- **The clips:** `public/voice-qwen/` (1.0 MB): silence trimmed, matched to the Kokoro clips' loudness, the same short breath at the end, 64 kbps MP3. `manifest.json` maps each of Marlo's Kokoro clips to its Qwen take, and keeps each line's feeling.
+- **In the game:** `?marlo=qwen` in the address plays the Qwen takes for Marlo's lines; without it nothing changes. Other characters' lines are never swapped (only Marlo's clips are in the map). Everything is still pre-recorded, so it works on the hosted site with no server.
+- **Comparing:** `voice-qwen/compare.html` lists all 49 lines with both voices, each line's feeling, and buttons to play all of either voice or each line both ways.
+- **Measured:** the Qwen takes run about 1.4 times as long as the Kokoro ones (more expressive pauses; the shy and hello lines about twice as long), at a much higher pitch (median about 460 Hz against about 120 Hz for `am_puck`). No pause inside a take is longer than 0.66 s.
+- **Tested:** with `?marlo=qwen` the hello loads `voice-qwen/…` (4.5 s); without it `voice/…` (2.2 s); no page errors.
+- **Not yet decided:** if the developer prefers it, the next step is to make it the default for Marlo (and perhaps record the other characters the same way).
