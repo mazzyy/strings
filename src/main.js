@@ -156,10 +156,12 @@ console.info(`[perf] merged away ${saved} draw calls`);
 let xrMode = null;
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 renderer.localClippingEnabled = true;
-const hand = { on: false, under: false, guest: false, holes: [], meshes: [], idle: 8, speaker: null };
+const hand = { on: false, under: false, guest: false, holes: [], meshes: [], idle: 8, speaker: null, crouch: 0 };
 function layoutRobot(xr) {
   if (xr) { robot.group.position.set(0.17, 0.17, -0.38); robot.group.scale.setScalar(1.0); }
   else { robot.group.position.set(0.17, 0.0, -0.6); robot.group.scale.setScalar(1.6); }
+  robot.baseY = robot.group.position.y;
+  robot.crouchBy = xr ? 0.25 : 0.32; // (working a sock, he sinks behind the backdrop: head and neck above it, shoulders at its edge)
 }
 layoutRobot(false);
 stageRoot.add(robot.group);
@@ -1095,6 +1097,13 @@ function handLook() {
 function updateHands(dt) {
   floorPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0).transformDirection(stageRoot.matrixWorld), stageRoot.localToWorld(new THREE.Vector3(0, 0.0004, 0)));
   hand.speakT = Math.max(0, (hand.speakT || 0) - dt);
+  // the robot crouches down behind the stage to work a sock, and stands up again after
+  const want = hand.under ? 1 : 0;
+  if (hand.crouch !== want || robot.group.position.y !== robot.baseY - robot.crouchBy * hand.crouch) {
+    hand.crouch += Math.sign(want - hand.crouch) * Math.min(Math.abs(want - hand.crouch), dt / 1.1);
+    const k = hand.crouch * hand.crouch * (3 - 2 * hand.crouch);
+    robot.group.position.y = robot.baseY - robot.crouchBy * k;
+  }
   for (const S of Object.values(socks)) { if (S.group.visible) S.lookAt = pip.get("head"); S.update(dt); }
   // free play: Noodle can't sit still, and now and then pops up somewhere else
   if (hand.guest && freePlay && !currentTask && socks.noodle) {
