@@ -35,17 +35,17 @@ CAST = {
     "doodle": f"Female, a goofy, bouncy, sing-song young woman's voice, a little nasal and full of giggles. She plays Doodle, a cheerful striped sock puppet, Noodle's twin. {EN}",
     "king": "Male, about 60 years old, a warm, deep and stately baritone, kind and proud, every word clear: a good old king in a children's puppet show. Natural, expressive British English.",
     # (these four speak in Qwen only at the curtain call, where everyone cheers at once)
-    "wizard": "Male, about 75 years old, an old wizard: a warm, slow, wise voice with a little creak in it. Natural, expressive British English.",
+    # Bramble: unlike anyone else in the cast, very old, breathy and mysterious, with a chuckle
+    "wizard": "Male, a very old wizard of about 85: a thin, breathy, crackly voice, mysterious and twinkly, slow and wise, often with a soft chuckle in it, like a storyteller by a fire. Natural, expressive British English.",
     "pirate": f"Male, a big, boisterous pirate captain: a loud, hearty, rough voice with a booming laugh. {EN}",
-    "troll": f"Male, a huge, grumpy troll: a very deep, slow, gravelly bass voice. {EN}",
+    # Grumble: a big troll with a surprisingly high-pitched, loud, shouty voice
+    "troll": f"Male, a big grumpy troll with a surprisingly high-pitched, loud, shouty voice: brash, squawky and bossy, every word nearly a shout. {EN}",
     "clank": f"Male, a small clockwork robot: a clipped, precise, slightly flat mechanical voice, very excited for once. {EN}",
     "twig": f"Male, a boy of about ten: a bright, quick, cheeky voice, a wooden puppet boy. {EN}",
 }
 # for these, only the lines listed are recorded in Qwen (their other lines keep their Kokoro voice)
 ONLY = {
-    "wizard": {"Splendid! Simply splendid!"},
     "pirate": {"Three cheers for Sir Pip! Hip hip, hooray!"},
-    "troll": {"Grumble is happy. Don't tell anyone."},
     "clank": {"Clank is happy. Beep! Very, very happy!"},
     "twig": {"Best show ever! And that's not a fib!"},
 }
@@ -158,6 +158,18 @@ FEEL = {
     "For courage, for kindness, and for very good manners.": "proud and warm, slow and ceremonial",
     "I name you Sir Pip the Brave, Knight of the Music Box!": "grand and joyful, proclaiming to the whole court",
     "Let the music play!": "joyful, a happy royal command",
+    # Bramble
+    "Watch my spell carefully.": "mysterious and hushed, drawing you in",
+    "Now you. Repeat my spell.": "encouraging and kindly",
+    "Not quite. Watch again, young knight.": "patient and kind, a little amused",
+    "Splendid! The spell works! You have the gift!": "delighted and amazed, chuckling",
+    "My fireflies! Bless you, young knight!": "overjoyed and grateful, a little teary",
+    "My owls know the way. Listen for their call.": "hushed and mysterious",
+    "Behold! Exactly as I planned.": "grand, then a sly chuckle",
+    # Grumble
+    "Hmph! Correct. Grumble is impressed.": "grudgingly impressed, loud",
+    "Wrong! Ha! Grumble asks again.": "gleeful and loud, gloating",
+    "Hrm. That was part of show.": "embarrassed but loud, pretending",
     # the curtain call: everyone cheering at once
     "Splendid! Simply splendid!": "delighted, cheering, clapping his hands",
     "Three cheers for Sir Pip! Hip hip, hooray!": "roaring with joy, cheering loudly",
@@ -169,8 +181,14 @@ FEEL = {
     "La la la! Two odd socks, one even song!": "singing happily, playful",
 }
 
+# a character's usual feeling, for lines without their own
+DEFAULT_FEEL = {"wizard": "warm, wise and gently amused", "troll": "grumpy, loud and bossy"}
+
+def feel_of(who, text):
+    return FEEL.get(text) or DEFAULT_FEEL.get(who, "cheerful and lively")
+
 def instruct_for(who, text):
-    return f"{CAST[who]} Emotion: {FEEL.get(text, 'cheerful and lively')}."
+    return f"{CAST[who]} Emotion: {feel_of(who, text)}."
 
 def trim(wav, sr, floor=0.012):
     """cut leading and trailing silence, keeping a few milliseconds either side"""
@@ -237,7 +255,7 @@ def main():
     man_path.write_text(json.dumps({
         "model": MODEL, "voices": CAST, "lines": lines,
         "who": {t: who_of[t] for t in lines},
-        "feels": {t: FEEL.get(t, "cheerful and lively") for t in lines},
+        "feels": {t: feel_of(who_of[t], t) for t in lines},
         "files": {kokoro[t]: f for t, f in lines.items() if t in kokoro},
         "seeds": {t: s for t, s in seeds.items() if t in lines},
     }, indent=1))
