@@ -1406,7 +1406,7 @@ $("credits-again")?.addEventListener("click", () => { storyMap.resetStory(); loc
 $("credits-theatre")?.addEventListener("click", () => { $("credits").classList.remove("on"); openMap(); });
 function showCredits() {
   const el = $("credits");
-  if (!el || xrMode) { openMap(); return; }
+  if (!el || xrMode) { showCaption("Strings · created by Abdul Musawar Soomro · thank you for playing"); openMap(); return; }
   el.classList.add("on");
 }
 
@@ -2066,6 +2066,36 @@ function fitTheatre() {
   wrap.style.transform = `translate(-50%, -50%) scale(${k.toFixed(3)})`;
 }
 addEventListener("resize", fitTheatre);
+// The title's strings run down to each letter's ink. The script font's lowercase letters start
+// well below the top of their box, so a fixed length left those strings stopping in mid-air. Each
+// letter is drawn once on a canvas in the same font, the topmost ink near its middle is found,
+// and its string is tied there (running a few pixels on, behind the letter).
+async function tieTitleStrings() {
+  try { await document.fonts.load('400 138px "Playball"'); await document.fonts.ready; } catch { /* measure what's there */ }
+  for (const ml of loadingEl?.querySelectorAll(".ml") || []) {
+    const b = ml.querySelector("b"), str = ml.querySelector(".mstr");
+    if (!b || !str) continue;
+    const cs = getComputedStyle(b), w = Math.ceil(b.offsetWidth), h = Math.ceil(b.offsetHeight);
+    if (!w || !h) continue;
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    g.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const m = g.measureText(b.textContent);
+    const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.06;
+    const A = m.fontBoundingBoxAscent ?? m.actualBoundingBoxAscent, D = m.fontBoundingBoxDescent ?? m.actualBoundingBoxDescent;
+    g.fillText(b.textContent, parseFloat(cs.paddingLeft) || 0, (lh - (A + D)) / 2 + A);
+    const px = g.getImageData(0, 0, w, h).data;
+    let best = null;
+    for (let x = Math.floor(w * 0.22); x < w * 0.78; x++) {
+      for (let y = 0; y < h; y++) if (px[(y * w + x) * 4 + 3] > 140) { if (!best || y < best.y - 3 || (y <= best.y + 3 && Math.abs(x - w / 2) < Math.abs(best.x - w / 2))) best = { x, y }; break; }
+    }
+    if (!best) continue;
+    const len = parseFloat(ml.style.getPropertyValue("--len")) || 0;
+    str.style.left = `${best.x - 0.8}px`;
+    str.style.height = `${len + best.y + 9}px`;
+    ml.dataset.tied = `${best.x},${best.y}`;
+  }
+}
 function renderStartMenu(midGame = false) {
   if (!loadingEl) return;
   const at = storyMap.current();
@@ -2121,7 +2151,18 @@ function renderStartMenu(midGame = false) {
   // the storybook, and three story cards (made once)
   if (!menuArt) {
     try {
-      const pic = (kind, x, flip) => { const c = document.createElement("canvas"); c.width = 360; c.height = 400; figure(c.getContext("2d"), kind, x, 388, 1.9, flip); return c.toDataURL(); };
+      // a puppet on its strings: they come down out of the picture's top edge (and carry on above it
+      // in CSS, at the same x) onto its hands and the top of its head, drawn first so the figure
+      // covers their ends, as if tied on
+      const TIES = { pip: [[-36, -52], [0, -142], [43, -56]], marlo: [[-28, -58], [8, -149], [46, -62]] };
+      const pic = (kind, x, flip) => {
+        const c = document.createElement("canvas"); c.width = 360; c.height = 400;
+        const g = c.getContext("2d"), ties = TIES[kind].map(([fx, fy]) => [x + (flip ? -fx : fx) * 1.9, 388 + fy * 1.9]);
+        g.strokeStyle = "rgba(255,244,214,0.7)"; g.lineWidth = 3;
+        for (const [sx, sy] of ties) { g.beginPath(); g.moveTo(sx, 0); g.lineTo(sx, sy + 8); g.stroke(); }
+        figure(g, kind, x, 388, 1.9, flip);
+        return { src: c.toDataURL(), xs: ties.map(([sx]) => sx).sort((p, q) => p - q).map((sx) => `${((sx / 360) * 100).toFixed(2)}%`) }; // (left to right, for the CSS stripes)
+      };
       const sky = document.createElement("canvas"); sky.width = 1600; sky.height = 900; paintBackdrop("sky", sky.getContext("2d"), 1600, 900, 0.7);
       menuArt = { sky: sky.toDataURL("image/jpeg", 0.86), pip: pic("pip", 170), marlo: pic("marlo", 186, true), chapters: cardImage("place", "bridge", 504, 256).toDataURL(), story: cardImage("villain", "troll", 504, 256).toDataURL(), free: cardImage("who", "marlo", 504, 256).toDataURL() };
     } catch { menuArt = {}; }
@@ -2144,7 +2185,7 @@ function renderStartMenu(midGame = false) {
     `<div class="mcur l">${drape}</div><div class="mcur r">${drape}</div><div class="mval">${valance}${I.crest}</div>` +
     `<div class="theatre-wrap mq">` +
       `<div class="mtitle"><div class="mbar"></div><div class="mletters">${letters}</div></div>` +
-      (menuArt.pip ? `<div class="mpup l"><img alt="" src="${menuArt.pip}"></div><div class="mpup r"><img alt="" src="${menuArt.marlo}"></div>` : "") +
+      (menuArt.pip ? [["l", menuArt.pip], ["r", menuArt.marlo]].map(([side, a]) => `<div class="mpup ${side}" style="--s1:${a.xs[0]};--s2:${a.xs[1]};--s3:${a.xs[2]}"><img alt="" src="${a.src}"></div>`).join("") : "") +
       `<div class="msub">A marionette theatre with an AI co-performer</div>` +
       (midGame ? `<div><button id="backtoshow" class="mback">× Back to the show</button></div>` : "") +
       `<div class="xrrow" hidden>` +
@@ -2175,6 +2216,7 @@ function renderStartMenu(midGame = false) {
   loadingEl.classList.add("ready");
   loadingEl.classList.remove("done");
   fitTheatre();
+  tieTitleStrings();
   const enter = () => { loadingEl.classList.add("done"); unlockAudio(); };
   const begin = () => {
     enter();
