@@ -281,7 +281,9 @@
     #credits .cast { display: grid; grid-template-columns: auto auto; gap: 6px 18px; justify-content: center; font: 18px Georgia, serif; }
     #credits .cast span { text-align: right; color: #f3dfb0; }
     #credits .cast i { text-align: left; color: var(--muted); }
-    #credits .thanks { margin: 26px 0 18px; color: var(--muted); font: 14px ui-sans-serif, system-ui, sans-serif; }
+    #credits .maker { margin: 28px 0 0; font: italic 20px Georgia, serif; color: #e8d2a6; }
+    #credits .maker b { display: block; margin-top: 6px; font: 600 30px Georgia, serif; font-style: normal; color: #f3dfb0; letter-spacing: .02em; text-shadow: 0 2px 18px rgba(224,178,58,0.35); }
+    #credits .thanks { margin: 22px 0 18px; color: var(--muted); font: 14px ui-sans-serif, system-ui, sans-serif; }
     #credits .more { display: flex; gap: 10px; justify-content: center; }
     #credits.on .roll { animation: rise 2.4s ease-out; }
     @keyframes rise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -380,7 +382,8 @@
   <div id="credits"><div class="roll">
     <h1>The End</h1>
     <p class="sub">The Tale of Sir Pip</p>
-    <div class="cast"><span>Sir Pip the Brave</span><i>you</i><span>Marlo the dragon</span><i>himself</i><span>Old Bramble</span><i>the wizard</i><span>Captain Pegg</span><i>the pirate</i><span>Grumble</span><i>the troll</i><span>Clank</span><i>the clockwork robot</i><span>Princess Juniper</span><i>the princess</i><span>The King</span><i>the king</i><span>The Narrator</span><i>the robot puppeteer</i></div>
+    <div class="cast"><span>Sir Pip the Brave</span><i>you</i><span>Marlo the dragon</span><i>himself</i><span>Old Bramble</span><i>the wizard</i><span>Captain Pegg</span><i>the pirate</i><span>Grumble</span><i>the troll</i><span>Clank</span><i>the clockwork robot</i><span>Princess Juniper</span><i>the princess</i><span>The King</span><i>the king</i><span>Twig</span><i>the wooden boy</i><span>Noodle and Doodle</span><i>the sock puppets</i><span>The Narrator</span><i>the robot puppeteer</i></div>
+    <p class="maker">Created by <b>Abdul Musawar Soomro</b></p>
     <p class="thanks">A marionette theatre for VR · thank you for playing</p>
     <div class="more"><button id="credits-again">Play the story again</button><button id="credits-theatre">Visit the Grand Theatre</button></div>
   </div></div>
