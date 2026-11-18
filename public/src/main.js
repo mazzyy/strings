@@ -224,6 +224,32 @@ const xrCaption = (() => {
       shown.forEach((l, i) => g.fillText(l, c.width / 2, c.height / 2 + (i - (shown.length - 1) / 2) * 60));
       tex.needsUpdate = true;
       this.fresh = true;
+      this.goalKey = null;
+    },
+    // tonight's stars (drawn, not typed) and the act's goal, with a gold edge to tell it from a line
+    goal(stars, total, text) {
+      const key = `${stars}/${total}|${text}`;
+      if (key === this.goalKey) return;
+      this.goalKey = key;
+      g.clearRect(0, 0, c.width, c.height);
+      g.fillStyle = "rgba(20,12,30,0.82)"; g.strokeStyle = "rgba(216,172,79,0.9)"; g.lineWidth = 5;
+      g.beginPath(); g.roundRect(5, 5, c.width - 10, c.height - 10, 40); g.fill(); g.stroke();
+      const star = (x, y, r, on) => {
+        g.beginPath();
+        for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+        g.closePath(); g.fillStyle = on ? "#f0c24a" : "rgba(240,194,74,0.18)"; g.fill();
+        g.strokeStyle = "rgba(240,194,74,0.8)"; g.lineWidth = 2.5; g.stroke();
+      };
+      for (let i = 0; i < total; i++) star(60 + i * 44, c.height / 2, 19, i < stars);
+      const x0 = 60 + total * 44 + 10, w = c.width - x0 - 40;
+      g.fillStyle = "#fff6e4"; g.font = "44px Georgia, serif"; g.textAlign = "left"; g.textBaseline = "middle";
+      const words = text.split(" "), lines = [""];
+      for (const wd of words) { const t = lines[lines.length - 1] ? lines[lines.length - 1] + " " + wd : wd; if (g.measureText(t).width > w && lines[lines.length - 1]) lines.push(wd); else lines[lines.length - 1] = t; }
+      const shown = lines.slice(0, 2);
+      if (lines.length > 2) shown[1] += " …";
+      shown.forEach((l, i) => g.fillText(l, x0, c.height / 2 + (i - (shown.length - 1) / 2) * 54));
+      tex.needsUpdate = true;
+      this.fresh = true;
     },
   };
 })();
@@ -943,11 +969,13 @@ function handleHands(hands, desktop) {
       }
       if (fresh && !g && props.tryGrab(h)) continue;
     }
-    if (h.pinch && !g) {
+    if (h.pinch && !g && !(xrMode && storyMap.mesh.visible)) { // (the open map takes the pinch)
       let bar = null;
       if (desktop) {
         bar = h === sim.main ? pip.main : pip.hands;
-        if (deskNeedsNear && grabScore(bar, h) === Infinity) bar = null; // (after the story moved him: reach his bar first)
+        // after the story moved him, a button still held from before has to reach his bar first (so he
+        // isn't yanked back at once); a new click anywhere picks him up, and he glides to the hand
+        if (deskNeedsNear && !fresh && grabScore(bar, h) === Infinity) bar = null;
       }
       else if (fresh) {
         let best = Infinity;
@@ -989,7 +1017,11 @@ function handleHands(hands, desktop) {
       // bar about itself — so closing your fingers never jerks the puppet
       _gd.subVectors(h.anchor, g.anchor).multiply(desktop ? GAIN_DESK : GAIN_XR);
       g.bar.position.copy(g.barPos).add(_gd);
-      const cy = THREE.MathUtils.clamp(g.bar.position.y, 0.22, 0.95);
+      // desktop: the main bar stops a little below its rest height, so with the mouse held low (on
+      // the puppet rather than his bar) he stays on his feet and still walks where the mouse goes,
+      // instead of folding up on the floor and staying put (flying keeps the full range)
+      const lo = desktop && g.bar === pip.main && !flying ? pip.rootRest.y + 0.43 : 0.22;
+      const cy = THREE.MathUtils.clamp(g.bar.position.y, lo, 0.95);
       if (cy !== g.bar.position.y) { g.barPos.y += cy - g.bar.position.y; g.bar.position.y = cy; }
       g.bar.quaternion.copy(h.quaternion).multiply(g.qOff);
       near.set(g.bar, 0.9);
@@ -1489,6 +1521,22 @@ const taskCtx = {
   princessSay: (k) => { const l = GUESTS.princess.task[k]; if (l) marloSay(l, GUESTS.princess.name, true); },
   // desktop: the riddle written large on the left of the screen
   riddleCard: (q) => { const el = $("riddlecard"); if (!el) return; if (q && !xrMode) { el.querySelector(".q").textContent = q; el.classList.add("on"); } else el.classList.remove("on"); },
+  // desktop: a spell (a run of moves to copy) on a card on the left, each move with its key
+  spellCard: (spec) => {
+    const el = $("spellcard"); if (!el) return;
+    if (!spec || xrMode) { el.classList.remove("on"); return; }
+    el.querySelector(".h").textContent = spec.note || "";
+    const ol = el.querySelector("ol"); ol.textContent = "";
+    for (const m of spec.moves) {
+      const li = document.createElement("li"); li.className = m.state;
+      const n = document.createElement("b"); n.textContent = m.state === "hidden" ? "?" : m.name;
+      const k = document.createElement("kbd"); k.textContent = m.keys;
+      li.append(n, k); ol.append(li);
+    }
+    el.classList.add("on");
+  },
+  // someone is speaking (the narrator, or a guest's line still waiting its turn)
+  talking: () => narrator.speaking || narrator.busy || marloLines.length > 0,
   emote: (id, sym, at, text, life, yOff) => emotes.pop(id, sym, at, text, life, yOff),
   clearEmote: (id) => emotes.clear(id),
   sfx: (n, at, o) => sfx.play(n, at, o),
@@ -1562,7 +1610,7 @@ function startChapterShow() {
 }
 
 const storyMap = new StoryMap({ onChoose: (place) => changeScene(place) });
-storyMap.mesh.position.set(-0.56, 0.4, 0.1);
+storyMap.mesh.position.set(-0.48, 0.52, 0.16); // (headset: beside the stage, near eye height)
 storyMap.mesh.scale.setScalar(1.3);
 stageRoot.add(storyMap.mesh);
 storyMap.onDepart = () => { narrator.coach(STORY_LINES.travel); sfx.play("step", null, { volume: 0.3, rate: 0.9 }); };
@@ -2611,7 +2659,7 @@ const knobCool = { record: 0, replay: 0, talk: 0, mode: 0, map: 0, free: 0, lock
 let recenterHold = 0;
 function xrGestures(dt, hands, t) {
   // poke the floating storybook map
-  if (storyMap.mesh.visible) for (const h of hands) if (h.present && storyMap.poke(stageRoot.localToWorld(h.tip.clone()))) break;
+  if (storyMap.mesh.visible) for (const h of hands) if (h.present && storyMap.poke(stageRoot.localToWorld(h.tip.clone()), h.id, h.pinch)) break;
   if (book.mesh.visible) for (const h of hands) if (h.present && book.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (phrases.group.visible) for (const h of hands) if (h.present && phrases.poke(stageRoot.localToWorld(h.tip.clone()))) break;
   if (gameBoard.group.visible) for (const h of hands) if (h.present && gameBoard.poke(stageRoot.localToWorld(h.tip.clone()))) break;
@@ -2779,7 +2827,10 @@ renderer.setAnimationLoop((time, frame) => {
   robotBatch?.update();
 
   if (captionTimer > 0 && (captionTimer -= dt) <= 0) caption.classList.remove("on");
-  xrCaption.mesh.visible = !!xrMode && captionTimer > 0 && !book.mesh.visible;
+  // headset: between lines, the strip shows tonight's stars and the act's goal (the page's top card)
+  const goalAct = xrMode && show.scene && show.state === "act" && !storyMap.mesh.visible ? show.scene.acts[show.act] : null;
+  if (captionTimer <= 0 && goalAct) xrCaption.goal(show.stars, show.scene.acts.length, goalAct.goal.replace(/^Act \w+\.\s*/, ""));
+  xrCaption.mesh.visible = !!xrMode && (captionTimer > 0 || !!goalAct) && !book.mesh.visible;
   // (Sir Pip's glowing bar rests just behind the book: it stays dark while the book is open)
   if (pip.skin.bars) pip.skin.bars.visible = !(xrMode && book.mesh.visible);
   if (xrMode && book.mesh.visible && hints.current) hints.hide(); // (no pointing arrows over the open book)
@@ -2855,4 +2906,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMovePip: (x, z) => movePipTo(x, z, true), placePip: (x, z) => { movePipTo(x, z); sim.mainPos.set(x - DESK_HOLD.main.x, sim.mainPos.y, z - DESK_HOLD.main.z); }, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { xrCaption, socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMovePip: (x, z) => movePipTo(x, z, true), placePip: (x, z) => { movePipTo(x, z); sim.mainPos.set(x - DESK_HOLD.main.x, sim.mainPos.y, z - DESK_HOLD.main.z); }, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };

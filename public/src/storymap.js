@@ -241,11 +241,17 @@ export class StoryMap {
     this.onDepart?.(p);
   }
 
-  // headset: poke the parchment with a fingertip (stage-space point)
-  poke(tipWorld) {
-    if (!this.mesh.visible || this.pokeCool > 0) return false;
+  // headset: poke the parchment with a fingertip, or pinch over a place (a fingertip that went
+  // right through the page between two frames counts as a poke too)
+  poke(tipWorld, id = "", pinch = false) {
     const local = this.mesh.worldToLocal(tipWorld.clone());
-    if (Math.abs(local.z) > 0.02 || Math.abs(local.x) > 0.2 || Math.abs(local.y) > 0.125) return false;
+    const last = (this._hands ||= {})[id] || {}, now = { z: local.z, pinch };
+    this._hands[id] = now;
+    if (!this.mesh.visible || this.pokeCool > 0) return false;
+    if (Math.abs(local.x) > 0.2 || Math.abs(local.y) > 0.125) return false;
+    const touch = Math.abs(local.z) <= 0.025 || (last.z > 0 && local.z < 0 && last.z - local.z < 0.2);
+    const pinched = pinch && !last.pinch && local.z > -0.04 && local.z < 0.12;
+    if (!touch && !pinched) return false;
     this.pokeCool = 0.8;
     this.pick((local.x / 0.4 + 0.5) * VIEW.w, (0.5 - local.y / 0.25) * VIEW.h);
     return true;
@@ -576,7 +582,7 @@ export class StoryMap {
     g.fillStyle = "#8c1d24"; g.beginPath(); g.roundRect(tx0, ty0, tw0, 46, 6); g.fill();
     g.strokeStyle = "#d8ac4f"; g.lineWidth = 2; g.beginPath(); g.roundRect(tx0 + 5, ty0 + 5, tw0 - 10, 36, 4); g.stroke();
     g.fillStyle = "#f3dfb0"; g.font = "600 27px Georgia, serif"; g.textAlign = "center"; g.fillText("The Tale of Sir Pip", tx0 + tw0 / 2, ty0 + 32);
-    if (!this.travel) { g.font = "italic 20px Georgia, serif"; g.fillStyle = "#3a2414"; g.fillText(this.xr ? "Poke a place to travel there" : "Choose where the story goes next", VIEW.w / 2, VIEW.h - 22); }
+    if (!this.travel) { g.font = "italic 20px Georgia, serif"; g.fillStyle = "#3a2414"; g.fillText(this.xr ? "Poke or pinch a place to travel there" : "Choose where the story goes next", VIEW.w / 2, VIEW.h - 22); }
     this.tex && (this.tex.needsUpdate = true);
   }
 }

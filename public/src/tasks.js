@@ -151,29 +151,52 @@ function collect(spec, c, done) {
 
 // ---------------------------------------------------------------------------
 const MOVE_NAMES = { jump: "Jump", bow: "Bow", wave: "Wave", turn: "Spin" };
+const MOVE_KEYS = { jump: "Space", bow: "W", wave: "Shift + mouse ↑", turn: "A / D" }; // (desktop)
 function simon(spec, c, done) {
   const pool = Object.keys(MOVE_NAMES);
   const seq = [];
   while (seq.length < (spec.length || 3)) { const m = pool[Math.floor(Math.random() * pool.length)]; if (m !== seq[seq.length - 1]) seq.push(m); }
-  let phase = "watch", t = 0, shown = 0, idx = 0, lastGood = -9;
-  const watch = () => { phase = "watch"; t = 0; shown = 0; idx = 0; c.guestSay("watch"); };
+  // the show waits for quiet: the moves start once the act's goal and the guest's "watch" are
+  // spoken (or after 14 s at most), so they aren't over before the player has looked up
+  let phase = "watch", t = 0, shown = 0, idx = 0, lastGood = -9, started = false, held = 0, idle = 0;
+  const watch = () => { phase = "watch"; t = 0; shown = 0; idx = 0; started = false; held = 0; c.guestSay("watch"); card(); };
+  // desktop: the spell written on a card, each move with its key, ticked off as it's copied
+  function card() {
+    c.spellCard?.({
+      note: phase === "repeat" ? "Your turn: the same moves, in the same order" : phase === "won" ? "The spell works!" : "Watch closely…",
+      moves: seq.map((m, i) => ({ name: MOVE_NAMES[m], keys: MOVE_KEYS[m],
+        state: phase === "watch" ? (i < shown - 1 ? "shown" : i === shown - 1 ? "now" : "hidden") : phase === "won" || i < idx ? "done" : i === idx ? "now" : "shown" })),
+    });
+  }
   watch();
   return {
-    debug: () => ({ seq, phase, idx }),
+    debug: () => ({ seq, phase, idx, started }),
     target() { return c.guest().get("head").clone(); },
     update(dt) {
       t += dt;
       if (phase === "watch") {
-        if (shown < seq.length && t > 1.8 + shown * 2.9) {
+        if (!started) {
+          held += dt;
+          if (held < 1 || (held < 14 && c.talking?.())) { t = 0; return; }
+          started = true; t = 0;
+        }
+        if (shown < seq.length && t > 1.2 + shown * 3.0) {
           c.ai.react(seq[shown], { force: true });
-          c.emote("marlo", "★", () => c.guest().get("head"), `${shown + 1}. ${MOVE_NAMES[seq[shown]]}`, 2.4);
+          c.emote("marlo", "★", () => c.guest().get("head"), `${shown + 1}. ${MOVE_NAMES[seq[shown]]}`, 2.8);
+          c.sfx("chime", null, { volume: 0.35, rate: 0.8 + shown * 0.12 });
           shown++;
-        } else if (shown === seq.length && t > 1.8 + seq.length * 2.9 + 0.8) {
-          phase = "repeat";
+          card();
+        } else if (shown === seq.length && t > 1.2 + seq.length * 3.0 + 0.6) {
+          phase = "repeat"; idle = 0;
           c.guestSay("yourTurn");
           c.emote("marlo", "?", () => c.guest().get("head"), "Your turn", 2.5);
           c.showHint("simon");
+          card();
         }
+      } else if (phase === "repeat") {
+        // nothing copied for a while (the player missed it, or is still finding the bar): show it again
+        idle += dt;
+        if (idle > 16 && !c.talking?.()) watch();
       }
     },
     hear(ev) {
@@ -182,13 +205,15 @@ function simon(spec, c, done) {
       if (ev.type === seq[idx]) {
         idx++;
         lastGood = t;
+        idle = 0;
         c.sfx("chime", null, { volume: 0.3, rate: 1.2 + idx * 0.12 });
         c.emote("pip", "✦", () => c.pip.get("head"), `${idx} / ${seq.length}`, 1.4);
         if (idx === seq.length) {
           phase = "won"; c.guestSay("spellDone"); c.confetti("grace");
+          card(); setTimeout(() => c.spellCard?.(null), 2500);
           if (spec.bloom) { setTimeout(() => { c.bloom?.(); c.coach(TASK_LINES.bloom); }, 1400); setTimeout(() => c.guestSay("bloomed"), 5200); setTimeout(done, 7600); }
           else setTimeout(done, 1200);
-        }
+        } else card();
       } else {
         // leftovers right after a good move (landing from a jump, settling from a spin), or a
         // repeat of the move just made, are forgiven; only a clearly different move is a mistake
@@ -199,7 +224,7 @@ function simon(spec, c, done) {
         setTimeout(watch, 1800);
       }
     },
-    end() {},
+    end() { c.spellCard?.(null); },
   };
 }
 
