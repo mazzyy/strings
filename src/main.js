@@ -310,7 +310,7 @@ if (qwenVoices) fetch("voice-qwen/manifest.json").then((r) => (r.ok ? r.json() :
 // the buzz, a short comb for the metal, a brighter top), so he sounds like a machine, not a man
 const clankLines = new Set(["says", "talk", "task"].flatMap((k) => Object.values(GUESTS.clank?.[k] || {})));
 let clankFiles = null;
-const robotFx = (() => {
+const makeRobotFx = () => {
   const ctx = listener.context;
   const pre = ctx.createGain(), dry = ctx.createGain(), out = ctx.createGain(), tone = ctx.createBiquadFilter();
   dry.gain.value = 0.5;
@@ -326,15 +326,20 @@ const robotFx = (() => {
   pre.connect(delay); delay.connect(fb).connect(delay); delay.connect(comb).connect(out);
   tone.type = "peaking"; tone.frequency.value = 2200; tone.Q.value = 0.8; tone.gain.value = 5;
   return [pre, dry, out, tone]; // (chained by three.js: pre -> dry -> out -> tone is the dry path)
-})();
+};
+const robotFx = makeRobotFx();
+// which recorded clip to play for a line's clip: the Qwen take where there is one, and whether
+// it's Clank's (robot filter)
+function voiceClip(url) {
+  if (!clankFiles && Object.keys(narrator.manifest).length) clankFiles = new Set([...clankLines].map((t) => narrator.manifest[t]).filter(Boolean));
+  const file = String(url).split("/").pop(), robot = !!clankFiles?.has(file);
+  const q = qwenVoices && qwenFiles[file];
+  return { url: q ? `voice-qwen/${q}` : url, robot };
+}
 const voicePlayer = {
   async play(url, who = "narrator") {
-    let robot = false;
-    if (who === "marlo") {
-      if (!clankFiles && Object.keys(narrator.manifest).length) clankFiles = new Set([...clankLines].map((t) => narrator.manifest[t]).filter(Boolean));
-      robot = !!clankFiles?.has(String(url).split("/").pop());
-    }
-    if (qwenVoices) { const q = qwenFiles[String(url).split("/").pop()]; if (q) url = `voice-qwen/${q}`; }
+    const v = voiceClip(url), robot = who === "marlo" && v.robot;
+    url = v.url;
     if (listener.context.state !== "running") await listener.context.resume().catch(() => {});
     if (!clipCache.has(url)) clipCache.set(url, audioLoader.loadAsync(url));
     const buffer = await clipCache.get(url);
@@ -1455,8 +1460,8 @@ function grandFinale() {
   const dance = () => { if (show.state === "ending" || show.state === "finale") { ai.react("dance", { force: true }); for (const S of Object.values(socks)) S.wiggleFor(1.4); setTimeout(dance, 3400); } };
   dance();
   narrator.coach(TASK_LINES.finale);
-  [["princess", "finale"], ["pirate", "finale"], ["wizard", "finale"], ["troll", "finale"], ["clank", "finale"], ["twig", "finale"], ["noodle", "finale"], ["marlo", "finale"]]
-    .forEach(([who, k], i) => setTimeout(() => sayAs(who, k), 1800 + i * 1850));
+  // everyone cheers at once (see chorus), just after the narrator's "Three cheers for the whole company!"
+  setTimeout(() => chorus([["princess", "finale"], ["pirate", "finale"], ["wizard", "finale"], ["troll", "finale"], ["clank", "finale"], ["twig", "finale"], ["noodle", "finale"], ["marlo", "finale"]]), 2600);
   for (let i = 0; i < 8; i++) setTimeout(() => { confetti.burst(["grace", "slapstick", "grace", "drama"][i % 4]); sfx.play("pop", null, { volume: 0.5, rate: 0.6 + (i % 3) * 0.3 }); }, i * 1900);
   sfx.play("applause", null, { volume: 0.9 });
   setTimeout(() => sfx.play("cheer", null, { volume: 0.6 }), 2500);
@@ -1464,6 +1469,49 @@ function grandFinale() {
 }
 show.onGrandFinale = grandFinale;
 function sayAs(who, key) { const l = GUESTS[who]?.task?.[key]; if (l) marloSay(l, GUESTS[who].name, true); }
+// The curtain call: the whole company cheers at once, as a real cast would, not one after the
+// other. Each cheer plays on its own voice, from where that character stands, starting within
+// about two and a half seconds of each other, with the words over their heads.
+const chorusVoices = new Map();
+const chorusRobot = makeRobotFx();
+function castHead(who) {
+  if (who === "marlo") return marlo.get("head");
+  if (who === "princess") return princess?.group.visible ? princess.get("head") : null;
+  if (who === "noodle" || who === "doodle") return socks[who]?.isUp ? socks[who].headPos() : null;
+  const e = extras.get(who);
+  return e?.on ? e.pup.get("head") : null;
+}
+function chorus(list) {
+  let longest = 0;
+  list.forEach(([who, key], i) => {
+    const text = GUESTS[who]?.task?.[key], file = text && narrator.manifest[text];
+    if (!file) return;
+    setTimeout(async () => {
+      if (narrator.muted) return;
+      const { url, robot } = voiceClip(`voice/${file}`);
+      let a = chorusVoices.get(who);
+      if (!a) {
+        const holder = new THREE.Object3D(); stageRoot.add(holder);
+        a = new THREE.PositionalAudio(listener); a.setRefDistance(0.6); a.setVolume(0.95); holder.add(a);
+        if (robot) a.setFilters(chorusRobot);
+        chorusVoices.set(who, a);
+      }
+      const head = castHead(who);
+      a.parent.position.copy(head || new THREE.Vector3(0, 0.25, 0));
+      if (listener.context.state !== "running") await listener.context.resume().catch(() => {});
+      if (!clipCache.has(url)) clipCache.set(url, audioLoader.loadAsync(url));
+      const buffer = await clipCache.get(url).catch(() => null);
+      if (!buffer) return;
+      if (a.isPlaying) a.stop();
+      a.setBuffer(buffer);
+      a.play();
+      longest = Math.max(longest, buffer.duration);
+      narrator.speakingUntil = Math.max(narrator.speakingUntil, narrator.t + buffer.duration + 0.4); // (no other line on top)
+      if (head) emotes.pop(`cheer-${who}`, "♪", () => castHead(who) || head, text, Math.max(2.2, buffer.duration + 0.4));
+    }, i * 300 + Math.random() * 250);
+  });
+  showCaption("The whole company: “Hooray for Sir Pip!”");
+}
 
 // ---- EXPERIMENT: Marlo breaks free into your room, and real applause (see unbound.js) -----
 const _hv = new THREE.Vector3();
@@ -2969,4 +3017,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { xrCaption, xrHud, socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMovePip: (x, z) => movePipTo(x, z, true), placePip: (x, z) => { movePipTo(x, z); sim.mainPos.set(x - DESK_HOLD.main.x, sim.mainPos.y, z - DESK_HOLD.main.z); }, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { chorus, xrCaption, xrHud, socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMovePip: (x, z) => movePipTo(x, z, true), placePip: (x, z) => { movePipTo(x, z); sim.mainPos.set(x - DESK_HOLD.main.x, sim.mainPos.y, z - DESK_HOLD.main.z); }, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
