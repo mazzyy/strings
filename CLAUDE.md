@@ -29,7 +29,7 @@ Everything is merged into `main` and published. The live site is the intended su
   - an offline guest "mind" (mood, memory, initiative, Backstage Notes);
   - Marlo saving the scene when you fail, and the audience reacting to moves;
   - 17 tasks;
-  - natural pre-recorded voices (Kokoro, 687 lines) and a CC0 soundscape;
+  - natural pre-recorded voices (Kokoro for the narrator and most of the cast; Qwen3-TTS, recorded with feeling, for Marlo, Princess Juniper, Noodle and Doodle; `?voices=kokoro` brings back their Kokoro voices) and a CC0 soundscape;
   - poke-to-talk speech bubbles (the Quest Browser has no speech recognition);
   - passthrough: the stage sits on your real desk with a WebXR anchor, and the puppets can step onto the desk;
   - the "Unbound" ending: your applause frees Marlo, who lands on your palm;
@@ -61,7 +61,7 @@ npm start                        # serves public/ at http://localhost:8080 (PORT
 ```
 - `?emulate` adds Meta's IWER Quest emulator; `?autostart` skips the menu; `?quality=low|...` forces a quality tier.
 - **Headless tests:** `tools/headless-tests/` holds the playwright scripts used throughout (`t*.mjs`, plus `live*.mjs` for the live site). They use the Chromium in `~/Library/Caches/ms-playwright/` with CPU rendering and drive the game through `window.strings` (a debug handle exposing the show, puppets, `sim` hands, `storyMap`, `playStory`, `setFlight`…). Run them with `node tools/headless-tests/tNN.mjs <screenshot-dir>` while the server runs on 8095 (`npm i playwright-core` in that folder first). The headless browser runs about 5× slower than real time, so allow for timing. Stub `renderer.render` for speed; restore it for screenshots.
-- **Voice lines:** `tts/.venv/bin/python tts/build_voice.py af_heart am_puck` (records only new lines and removes unused ones).
+- **Voice lines:** `tts/.venv/bin/python tts/build_voice.py af_heart am_puck` (records only new lines and removes unused ones). Then, for Marlo, the princess, Noodle and Doodle: `../qwen-tts/.venv/bin/python tts/build_qwen.py` (Qwen3-TTS VoiceDesign, its own environment in `../qwen-tts`, the model in the Hugging Face cache; each line's feeling is written in `FEEL`, each character's voice in `CAST`; it maps the Kokoro clips, so run it after the Kokoro builder). The side-by-side page is `voice-qwen/compare.html`.
 - **Publish** (GitHub Actions is unavailable on this account, so Pages deploys from a branch):
   ```bash
   git push origin main
