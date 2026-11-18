@@ -13,7 +13,7 @@ You pinch a glowing control bar and work **Sir Pip**, a little knight marionette
 
 - **Real puppet physics.** He hangs from real strings simulated in physics: raise your hand and he walks, tip your wrist and he bows, flick up and he jumps, open your hand and he slumps.
 - **AI co-performers.** A robot puppeteer works the other marionettes. Each guest has a mood, a memory, a personality and its own voice, so they react to what you do, start things themselves, and help you when you're stuck.
-- **A seven-chapter story, and two tales along the way.** Told through an illustrated, narrated pop-up storybook and a parchment map with one winding road. Between chapters two and three Sir Pip meets **Twig**, a carved wooden boy whose nose grows when he fibs. Between three and four he meets **Noodle**, a sock puppet that the robot works on his own hand from behind the stage.
+- **A nine-chapter story.** Told through an illustrated, narrated pop-up storybook and a parchment map with one winding road. In chapter three Sir Pip meets **Twig**, a carved wooden boy whose nose grows when he fibs. In chapter five he meets **Noodle**, a sock puppet that the robot works on his own hand from behind the stage.
 - **A different game every chapter:** a sword duel, a riddle, sneaking past a searchlight, rescuing a princess, flying on a dragon. The story ends with a knighting and a grand finale with the whole cast.
 - **Record, replay, share.** You can record a performance, duet with your own "shadow", and share it as a link.
 - **Hands in seconds.** Start goes straight to a glowing curtain cord; the story comes after you've touched the puppet, and every book can be skipped.
@@ -536,13 +536,13 @@ In the headset the storybook's picture now rises off the page like a pop-up book
 |---|---|---|
 | 1 · The Castle Courtyard | Marlo the dragon | approach shy Marlo gently, bow, high fives, jump together on his count, wave |
 | 2 · The Whispering Forest | Old Bramble | light the lantern, catch shy fireflies, follow the owls' calls, copy his spell (the forest blooms) |
-| along the way · The Toymaker's Workshop | Twig the wooden boy | true or fib? (his nose grows on fibs), teach him to dance (he copies your moves), bow together |
-| 3 · The Pirate Ship | Captain Pegg | take the sword, duel (duck high, jump low, lunge), bow |
-| along the way · The Harbour Laundry | Noodle the sock puppet (and Doodle) | peekaboo through trapdoors, find the twin on the washing line, bow |
-| 4 · The Troll Bridge | Grumble | approach, answer his riddle on the stones, give him a flower |
-| 5 · The Clockwork Tower | Clank, Princess Juniper | sneak past the searchlight, unlock her cage, jump his zaps |
-| 6 · The Dragon's Cave | Marlo | light the lantern, find the three jewels, bow |
-| 7 · The Night Sky | Marlo, Clank, the King | climb aboard, fly through rings, dodge gears, catch Clank, bow to him in kindness, be knighted. Then the curtain call (the whole cast, Twig and both socks), your applause frees Marlo onto your palm ("Unbound"), and the epilogue and credits |
+| 3 · The Toymaker's Workshop | Twig the wooden boy | true or fib? (his nose grows on fibs), teach him to dance (he copies your moves), bow together |
+| 4 · The Pirate Ship | Captain Pegg | take the sword, duel (duck high, jump low, lunge), bow |
+| 5 · The Harbour Laundry | Noodle the sock puppet (and Doodle) | peekaboo through trapdoors, find the twin on the washing line, bow |
+| 6 · The Troll Bridge | Grumble | approach, answer his riddle on the stones, give him a flower |
+| 7 · The Clockwork Tower | Clank, Princess Juniper | sneak past the searchlight, unlock her cage, jump his zaps |
+| 8 · The Dragon's Cave | Marlo | light the lantern, find the three jewels, bow |
+| 9 · The Night Sky | Marlo, Clank, the King | climb aboard, fly through rings, dodge gears, catch Clank, bow to him in kindness, be knighted. Then the curtain call (the whole cast, Twig and both socks), your applause frees Marlo onto your palm ("Unbound"), and the epilogue and credits |
 
 After the story the **Grand Theatre** has a new short show every night (six scenes), with playbills, critics and a streak.
 
@@ -599,7 +599,7 @@ Everything runs from `public/` (a static site; three.js 0.170 through an import 
 | `mind.js` | the guest's offline mind |
 | `show.js` | acts, stars, endings, playbills and Backstage Notes |
 | `tasks.js` | the 21 playable tasks |
-| `lines.js` | every word: chapters, guests, tasks, the story road (`CHAPTERS`, `chapterNumber`) |
+| `lines.js` | every word: chapters, guests, tasks, the story road (`CHAPTERS` in order; `chapterNumber` is the place on it) |
 | `narrator.js` | the narrator: coach lines first, commentary only when the story isn't talking |
 | `storybook.js` / `figures.js` | the pop-up storybook, and the characters drawn for it |
 | `storymap.js` | the parchment map, the road, the token |
@@ -663,4 +663,17 @@ Outside `public/`: `server.mjs` (the optional local server for a live language m
   - write the Devpost text and submit before 18 November, 12:00 PT;
   - optionally, record Marlo's lines and the curtain-call cheers (`VOICE_SCRIPT.md`).
 - **After submitting:** tag the submitted commit, and don't publish again until the results.
+
+### Phase 42: every chapter numbered, and real mountains on the map
+- **Why the two tales had no number (the developer asked):** when they were added, the instruction was to keep the existing chapters exactly as recorded. Those chapters' intros say "Chapter three: The Pirate Ship" and so on, so the tales were left unnumbered to keep the spoken numbers matching the map.
+- **Now:** every stop is a numbered chapter, 1 to 9: Courtyard, Forest, Toymaker's Workshop, Pirate Ship, Harbour Laundry, Troll Bridge, Clockwork Tower, Dragon's Cave, Night Sky.
+  - `chapterNumber()` is the place on the road.
+  - The storybook says "Chapter Three" for the Workshop; the start menu says "nine chapters" and "All nine are unlocked"; the map shows a wax seal on every chapter.
+  - The seven intros whose number changed were re-recorded in the same narrator voice (`af_heart`), so the sound still matches. For example "Chapter four: The Pirate Ship." and "Chapter nine: The Night Sky. The final adventure."
+- **Mountains:** they were flat triangles with a white tip. Now each peak is drawn like an engraved storybook map:
+  - its own shape: a skewed summit, a notch on one slope, a shoulder on the other;
+  - a sunlit west face shading darker to its foot, with gullies, and a shaded, hatched east face split by a jagged ridge;
+  - a big ragged snowcap cut to the peak's shape, blue in shadow beyond the ridge; scree at the foot.
+  - They stand in overlapping ranges: a hazy back row, then nearer rows on green foothills, round the Dragon's Cave and at the river's source. The rolling hills are now drawn first, so they never sit on a peak.
+- **Tested:** `maplook.mjs` (whole map, and the ranges enlarged); `t59` (the Workshop is chapter three, the Ship four), `t60` (the road reads courtyard 1 … sky 9), `t61` and `t58` pass. All 899 voice lines are recorded.
 

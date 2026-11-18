@@ -17,7 +17,7 @@ Captain Pegg, Grumble the troll, Clank the robot, Princess Juniper, the King).
 ## Current state (as of 17 Nov 2026)
 Everything is merged into `main` and published. The live site is the intended submission build.
 - **Ways to play (start menu, a gold-framed theatre):**
-  - Begin/Continue the story: 7 chapters plus a prologue, two unnumbered tales along the way (the Toymaker's Workshop with Twig, between 2 and 3; the Harbour Laundry with Noodle the sock puppet, between 3 and 4), the night-sky finale, a knighting and the curtain call;
+  - Begin/Continue the story: 9 chapters plus a prologue (3 is the Toymaker's Workshop with Twig, 5 the Harbour Laundry with Noodle the sock puppet), the night-sky finale, a knighting and the curtain call;
   - Play Any Chapter (all unlocked);
   - Make Your Own Story (an illustrated picker with a "Tonight's Show" preview, or typed);
   - Free Play (play as any of 8 characters);

@@ -1,4 +1,4 @@
-// The Harbour Laundry: Noodle the sock puppet's tale between chapters three and four. The
+// The Harbour Laundry: Noodle the sock puppet's chapter (five), between the ship and the bridge. The
 // robot stays standing behind the stage (face in view) and reaches down under it to work Noodle: peekaboo through three holes, finding the twin sock on the washing line (and
 // Doodle popping up on his other hand), the bow. Then: the curtain call has Twig and both
 // socks, the story maker stages a sock-puppet story, and the robot comes back up afterwards.
@@ -21,7 +21,7 @@ await page.addInitScript(() => localStorage.clear());
 await page.goto(`http://localhost:${port}/?autostart&quality=low`);
 await waitFor(() => window.strings?.show.state === "intro");
 const R = {};
-R.order = await S(async () => { const L = await import("/src/lines.js"); return L.CHAPTERS.map((c) => c.id + (c.side ? "*" : L.chapterNumber(c))).join(" "); });
+R.order = await S(async () => { const L = await import("/src/lines.js"); return L.CHAPTERS.map((c) => c.id + L.chapterNumber(c)).join(" "); });
 await S(() => { const s = window.strings; s.storyMap.unlockAll(); s.changeScene(s.storyMap.places.find((p) => p.id === "laundry")); });
 R.book = await waitFor(() => window.strings.book.open, null, 30000);
 await page.waitForTimeout(2000);
@@ -80,7 +80,7 @@ R.story = await S(async () => {
 });
 console.log(JSON.stringify(R, null, 1));
 console.log("errors:", errors.length ? errors.slice(0, 8) : "none");
-const ok = !errors.length && R.order.includes("forest2 workshop* ship3 laundry* bridge4") && R.book && R.staged.guest === "noodle" && R.staged.under && R.staged.robotY < -0.1 && R.staged.robotY > -0.4 && R.staged.robotScale > 1 && R.staged.holes === 3 && R.staged.noodle &&
+const ok = !errors.length && R.order === "courtyard1 forest2 workshop3 ship4 laundry5 bridge6 tower7 cave8 sky9" && R.book && R.staged.guest === "noodle" && R.staged.under && R.staged.robotY < -0.1 && R.staged.robotY > -0.4 && R.staged.robotScale > 1 && R.staged.holes === 3 && R.staged.noodle &&
   R.act1 && R.act2 && R.found && R.act3 && R.finale && R.done && !R.robotBack.under && R.robotBack.scale > 1 && Math.abs(R.robotBack.y) < 0.01 && R.curtainCall.twig && R.curtainCall.noodle && R.curtainCall.doodle &&
   R.story.guest === "noodle" && R.story.under;
 console.log(ok ? "PASS" : "FAIL");

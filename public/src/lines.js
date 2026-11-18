@@ -526,7 +526,7 @@ export const CHAPTERS = [
   },
   {
     id: "ship", set: "ship", guest: "pirate", title: "The Pirate Ship", map: [950, 846],
-    intro: "Chapter three: The Pirate Ship.",
+    intro: "Chapter four: The Pirate Ship.",
     pages: [
       "The tower stood across the sea, and only one ship would sail there.",
       "Its captain had one wooden leg, one noisy parrot, and one condition: beat him in a duel.",
@@ -540,7 +540,7 @@ export const CHAPTERS = [
   },
   {
     id: "bridge", set: "bridge", guest: "troll", title: "The Troll Bridge", map: [1290, 520],
-    intro: "Chapter four: The Troll Bridge.",
+    intro: "Chapter six: The Troll Bridge.",
     pages: [
       "Across the sea, the road climbed to an old stone bridge, silver in the moonlight.",
       "Under it lived Grumble, the grumpiest troll in all the land.",
@@ -554,7 +554,7 @@ export const CHAPTERS = [
   },
   {
     id: "tower", set: "tower", guest: "clank", title: "The Clockwork Tower", map: [1000, 430], princess: true,
-    intro: "Chapter five: The Clockwork Tower.",
+    intro: "Chapter seven: The Clockwork Tower.",
     pages: [
       "At last, the Clockwork Tower, ticking and whirring in the storm. No one ever came to visit. Clank had made quite sure of that.",
       "Inside, Princess Juniper waited in a cage, while Clank's searchlight swept the floor.",
@@ -568,7 +568,7 @@ export const CHAPTERS = [
   },
   {
     id: "cave", set: "cave", guest: "marlo", title: "The Dragon's Cave", map: [640, 330],
-    intro: "Chapter six: The Dragon's Cave.",
+    intro: "Chapter eight: The Dragon's Cave.",
     pages: [
       "With the princess free, one thing was still missing: the music box's three jewels.",
       "Clank had hidden them in the Dragon's Cave, among the glittering crystals. Luckily, it was Marlo's home.",
@@ -582,7 +582,7 @@ export const CHAPTERS = [
   },
   {
     id: "sky", set: "sky", guest: "marlo", title: "The Night Sky", map: [370, 165], finale: true,
-    intro: "Chapter seven: The Night Sky. The final adventure.",
+    intro: "Chapter nine: The Night Sky. The final adventure.",
     pages: [
       "Back at the castle, the jewels were set into the music box, and the whole kingdom gathered to hear it play.",
       "But Clank had one last trick. With a whir of clockwork wings, he snatched the music box and flew off into the night.",
@@ -663,12 +663,12 @@ export const RIDDLES = [
 // the Grand Theatre: once the first chapter is done, a new show every night
 export const THEATRE = { id: "theatre", set: "courtyard", guest: "marlo", title: "The Grand Theatre", map: [200, 470] };
 
-// Two tales along the way, between the numbered chapters (so the chapters keep their
-// numbers): the toymaker's workshop on the road to the sea, where Twig the wooden boy's nose
-// grows when he fibs; and the harbour laundry, where Noodle the sock puppet has lost its twin.
+// Two more chapters on the road (three and five): the toymaker's workshop on the way to the
+// sea, where Twig the wooden boy's nose grows when he fibs; and the harbour laundry, where
+// Noodle the sock puppet has lost its twin.
 export const WORKSHOP = {
-  id: "workshop", set: "workshop", guest: "twig", title: "The Toymaker's Workshop", map: [705, 790], side: true,
-  intro: "Along the way: The Toymaker's Workshop. Sir Pip meets a puppet who can't tell a fib without being caught.",
+  id: "workshop", set: "workshop", guest: "twig", title: "The Toymaker's Workshop", map: [705, 790],
+  intro: "Chapter three: The Toymaker's Workshop. Sir Pip meets a puppet who can't tell a fib without being caught.",
   pages: [
     "On the road to the sea stood a crooked little workshop, full of sawdust and ticking clocks, where an old toymaker once carved a puppet from a log of pine that hummed when you tapped it.",
     "His name was Twig. He was clever and cheeky, and terribly fond of fibs. And every time he told one, his wooden nose grew a little longer.",
@@ -692,8 +692,8 @@ export const WORKSHOP = {
   },
 };
 export const LAUNDRY = {
-  id: "laundry", set: "laundry", guest: "noodle", title: "The Harbour Laundry", map: [1130, 760], side: true, hand: true,
-  intro: "Along the way: The Harbour Laundry. Tonight, the robot puppeteer has a hand in the show.",
+  id: "laundry", set: "laundry", guest: "noodle", title: "The Harbour Laundry", map: [1130, 760], hand: true,
+  intro: "Chapter five: The Harbour Laundry. Tonight, the robot puppeteer has a hand in the show.",
   pages: [
     "The pirate ship landed in a harbour town where the washing never stops flapping. And from a laundry basket, somebody was sniffling.",
     "It was Noodle: a sock with wild yarn hair, wobbly eyes, and a very big mouth. Noodle had lost its twin in the wash. And a sock without its pair is only half a sock.",
@@ -715,11 +715,11 @@ export const LAUNDRY = {
     drama: { title: "The Soggy Encore", line: "Such drama! Noodle weeps so hard it needs a good wring.", clip: "faint", critics: ["Damp, dramatic, and deeply moving.", "Not a dry sock in the house.", "Bold. Woolly. Unforgettable."] },
   },
 };
-// the tales along the way join the road between the numbered chapters
+// they join the road in story order: courtyard, forest, workshop, ship, laundry, bridge, tower, cave, sky
 CHAPTERS.splice(CHAPTERS.findIndex((c) => c.id === "ship"), 0, WORKSHOP);
 CHAPTERS.splice(CHAPTERS.findIndex((c) => c.id === "bridge"), 0, LAUNDRY);
-// a chapter's number, counting only the numbered chapters (the tales along the way have none)
-export const chapterNumber = (place) => (place?.side ? 0 : CHAPTERS.filter((c) => !c.side).indexOf(place) + 1);
+// a chapter's number on the road (1 to 9; places off the road, like the theatre, have none)
+export const chapterNumber = (place) => CHAPTERS.indexOf(place) + 1;
 export const TWIG_LINES = {
   nose: "Look! His nose is growing!",
   noFib: "His nose didn't move.",

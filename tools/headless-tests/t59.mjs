@@ -22,13 +22,13 @@ await page.goto(`http://localhost:${port}/?autostart&quality=low`);
 await waitFor(() => window.strings?.show.state === "intro");
 const R = {};
 // the map: the workshop is there, open, and not numbered
-// the map: the workshop sits on the road between chapters two and three (locked until you get there)
+// the map: the workshop is chapter three, on the road between the forest and the ship (locked until you get there)
 R.map = await S(async () => {
   const L = await import("/src/lines.js");
   const m = window.strings.storyMap, p = m.places.find((q) => q.id === "workshop"), ids = L.CHAPTERS.map((c) => c.id);
   const lockedAtFirst = !m.unlocked(p);
   m.unlockAll(); m.show(false);
-  return { there: !!p, open: m.unlocked(p), side: !!p?.side, lockedAtFirst, between: ids.indexOf("workshop") === ids.indexOf("forest") + 1 && ids.indexOf("ship") === ids.indexOf("workshop") + 1, shipStillThree: L.chapterNumber(L.CHAPTERS.find((c) => c.id === "ship")) === 3 };
+  return { there: !!p, open: m.unlocked(p), lockedAtFirst, between: ids.indexOf("workshop") === ids.indexOf("forest") + 1 && ids.indexOf("ship") === ids.indexOf("workshop") + 1, numbered: L.chapterNumber(p) === 3 && L.chapterNumber(L.CHAPTERS.find((c) => c.id === "ship")) === 4 };
 });
 await page.waitForTimeout(600);
 await page.screenshot({ path: `${out}/1-map.png` });
@@ -87,7 +87,7 @@ await page.screenshot({ path: `${out}/5-freeplay.png` });
 R.voice = played.length;
 console.log(JSON.stringify(R, null, 1));
 console.log("errors:", errors.length ? errors.slice(0, 8) : "none");
-const ok = !errors.length && R.map.there && R.map.open && R.map.lockedAtFirst && R.map.between && R.map.shipStillThree && R.book && R.cast.guest === "twig" && R.cast.set === "workshop" && R.rounds.every((r) => r.ok) &&
+const ok = !errors.length && R.map.there && R.map.open && R.map.lockedAtFirst && R.map.between && R.map.numbered && R.book && R.cast.guest === "twig" && R.cast.set === "workshop" && R.rounds.every((r) => r.ok) &&
   R.rounds.some((r) => !r.truth && r.nose > 0.02) && R.act2 && R.noseAfterConfess < 0.02 && R.act3 && R.ending && R.done.done &&
   R.freeFib.after > R.freeFib.before && R.player === "twig";
 console.log(ok ? "PASS" : "FAIL");
