@@ -133,6 +133,10 @@ export const COACH = {
   hintFlyDodge: "Move up or down to dodge the gears as they fly at you.",
   hintChase: "Fly right up to Clank to catch him.",
   hintSimon: "Watch the moves, then do the same moves, in the same order.",
+  hintTeach: "Show Twig a move. Jump, bow, wave, or spin, and he'll copy you.",
+  hintFib: "Watch Twig's nose. Then walk Sir Pip onto True, or onto Fib.",
+  hintPeek: "When Noodle pops up, walk Sir Pip over to it, and boop!",
+  hintSock: "Look at Noodle's stripes. Then walk Sir Pip under the sock that matches.",
   hintGentle: "Walk Sir Pip toward Marlo slowly and gently. Rush, and he'll hide.",
   hintHighFive: "Walk up to Marlo, and lift Sir Pip's arm to meet his paw.",
   hintTogether: "When Marlo says jump, jump at the very same moment.",
@@ -383,7 +387,91 @@ export const GUESTS = {
     says: {}, talk: {},
     task: { help: "Help! Please, somebody help me!", key: "The key! Clank keeps it on the pedestal!", hero: "My hero! Thank you, Sir Pip!", lookOut: "Look out! He's charging his zapper!", finale: "Hooray for Sir Pip!" },
   },
+  // Twig, the wooden boy of the toymaker's workshop: cheeky, boastful, kind underneath,
+  // and he can't fib without his nose growing (the lines in TWIG_FIBS grow it)
+  twig: {
+    name: "Twig", title: "Twig the wooden boy",
+    personality: { joy: 0.7, trust: 0.55, energy: 0.9, sword: "wary", sulkAfter: 35, patience: 8 },
+    says: {
+      copyMe: "Copy me! If you can!", yourTurn: "Your turn! I'm watching!", yay: "Ha! Not bad, for a knight!", yay2: "Perfect! Almost as good as me.",
+      aww: "Aww. Never mind. I never get it wrong. Ever.", careful: "Careful! I'm made of wood. Very splintery wood.", forMe: "For me? Nobody ever gives presents to a puppet!",
+      forMeAsk: "Is that for me? It is, isn't it?", forYou: "Here! I carved it myself. Well, the toymaker did.", fetching: "Wait there! I know just the thing!",
+      hmph: "Hmph. I didn't want to play anyway.", cheerUp: "You came back! I wasn't worried. Not one bit.", yawn: "Yawn. Puppets never get sleepy.", wake: "I wasn't asleep! I was resting my paint.",
+      giggle: "Ha ha! You fell! I never fall over. Never ever.", ohNo: "Oh no! Here, take my hand. It's wooden, but it's strong.", overHere: "Over here! By the workbench!", likeThis: "Like this! Watch my feet.",
+      lookThere: "Look! Over there, by the edge. Take your pick!",
+    },
+    talk: {
+      hello: "Hello! I'm the most famous puppet in the whole world!", dance: "Dance? Of course I can dance! Watch this!", bow: "A bow? I invented bowing.",
+      jump: "Boing! I can jump higher than the moon.", come: "Coming! Clickety-clack!", go: "Fine! I'll go and talk to the clocks.", friend: "A friend? A real one? Oh, yes please!",
+      name: "I'm Twig. Carved from pine, painted by hand, and only a little bit splintery.", sorry: "That's all right. I forgive you. Truly. Look, my nose didn't grow.",
+      fire: "Fire? Keep it away! I'm made of wood!", unknown: "Hmm? Say it again. My ears are only painted on.",
+    },
+    task: {
+      taDa: "Ta-da! I meant to do that. Honest.",
+      hello: "Oh! A real knight! Welcome to the workshop!",
+      boast1: "I was carved from a log of pine that hummed when you tapped it.",
+      boast2: "I could beat a dragon in a race. With my eyes shut!",
+      boast3: "The toymaker painted my cheeks pink, so I would always look happy.",
+      boast4: "I'm made of solid gold. Under the paint.",
+      boast5: "I'm the best dancer in the whole kingdom!",
+      caught: "Caught me! How did you know?",
+      fooled: "Ha! Fooled you! Look at my nose!",
+      trueRight: "See? Every word true. My nose didn't budge.",
+      trueWrong: "But that one was true! Look, my nose didn't grow.",
+      confess: "All right. The truth? I can't dance. Not one single step. Will you teach me?",
+      teach: "Show me a move. Any move, and I'll copy you!",
+      learned1: "Like this? Oh! I did it!",
+      learned2: "Again! Again! I'm getting it!",
+      learned3: "I'm dancing! I'm really, truly dancing!",
+      thanks: "Thank you, Sir Pip. That's the truth. Look, my nose stayed put!",
+      finale: "Best show ever! And that's not a fib!",
+    },
+  },
 };
+// Noodle the sock puppet (and its twin, Doodle): not on strings. The robot puppeteer works
+// them from under the stage, one on each hand.
+GUESTS.noodle = {
+  name: "Noodle", title: "Noodle the sock puppet", hand: true,
+  personality: { joy: 0.85, trust: 0.6, energy: 1, sword: "wary", sulkAfter: 40, patience: 9 },
+  says: {
+    copyMe: "Copy me! Wiggle, wiggle!", yourTurn: "Your turn! Wiggle!", yay: "Woo! You're good at this!", yay2: "Perfect! Sock-tacular!",
+    aww: "Aww. Never mind!", careful: "Eek! Careful! Socks can rip!", forMe: "For me? I'll keep it in my mouth. That's where I keep everything.",
+    forMeAsk: "Is that for me? Is it a snack?", forYou: "Here! I found it in the wash.", fetching: "Wait there! I'll dig something out!",
+    hmph: "Hmph. Nobody plays with a sock.", cheerUp: "You're back! Wheee!", yawn: "Yawn. Time to curl up in the sock drawer.", wake: "I'm up! I'm up! I'm a bit crumpled.",
+    giggle: "Hee hee! You fell! Like a sock off a line!", ohNo: "Oh no! Are you all right, Sir Pip?", overHere: "Over here! Over here! Down here!", likeThis: "Like this! Watch me wiggle!",
+    lookThere: "Look! By the edge! Go and get it!",
+  },
+  talk: {
+    hello: "Hiya! I'm Noodle! I'm a sock! Well, mostly a sock.", dance: "Dance? I'll wiggle! Wiggle, wiggle, wiggle!", bow: "A bow? I can only fold in half. Like this!",
+    jump: "Boing! Straight up out of my hole!", come: "Coming! Wheee!", go: "Okay! Back down the hole I go!", friend: "Friends? Best friends! Like a sock and a shoe!",
+    name: "I'm Noodle. I'm named after my hair.", sorry: "That's okay! I'm soft. Nothing hurts a sock.", fire: "Fire? No thanks! I'd rather stay fluffy.",
+    unknown: "Huh? Sorry, I've got yarn in my ears.",
+  },
+  task: {
+    taDa: "Ta-da! I meant to fall in the laundry basket.",
+    peek: "Peekaboo!", peek2: "Over here! Peekaboo!", peek3: "Bet you can't catch me!",
+    boop: "Hee hee! That tickles!", boop2: "Boop! Again, again!", booped: "Ha! You found me! Three boops!", miss: "Too slow! Wheee!",
+    stripes: "Look at my stripes! Red, yellow, green. Find the sock that matches!",
+    wrongSock: "Nope! That one belongs to a grandma.", wrongSock2: "Not that one! Look at my stripes!",
+    found: "My twin! Doodle! You found Doodle!",
+    thanks: "Thank you, Sir Pip! We're a pair again!",
+    finale: "Hooray for Sir Pip! You're a perfect fit!",
+  },
+};
+GUESTS.doodle = {
+  name: "Doodle", title: "Doodle the sock puppet", hand: true, says: {}, talk: {},
+  task: { hello: "Noodle! There you are! I've been hanging around all day!", sing: "La la la! Two odd socks, one even song!" },
+};
+
+// what Twig says that isn't true (his nose grows), and the truths that shrink it back
+export const TWIG_FIBS = new Set([
+  GUESTS.twig.task.boast2, GUESTS.twig.task.boast4, GUESTS.twig.task.boast5, GUESTS.twig.task.taDa,
+  GUESTS.twig.talk.hello, GUESTS.twig.talk.dance, GUESTS.twig.talk.bow, GUESTS.twig.talk.jump,
+  GUESTS.twig.says.aww, GUESTS.twig.says.hmph, GUESTS.twig.says.cheerUp, GUESTS.twig.says.yawn, GUESTS.twig.says.giggle, GUESTS.twig.says.wake,
+]);
+export const TWIG_TRUTHS = new Set([GUESTS.twig.task.confess, GUESTS.twig.task.thanks, GUESTS.twig.talk.sorry, GUESTS.twig.talk.friend, GUESTS.twig.task.caught]);
+// the true-or-fib game: [line key, is it true?]
+export const TWIG_BOASTS = { truths: ["boast1", "boast3"], fibs: ["boast2", "boast4"], last: "boast5" };
 
 // The prologue: why Sir Pip sets out at all. Read once, before the very first
 // chapter (each page names the painting and the characters it shows).
@@ -574,6 +662,68 @@ export const RIDDLES = [
 
 // the Grand Theatre: once the first chapter is done, a new show every night
 export const THEATRE = { id: "theatre", set: "courtyard", guest: "marlo", title: "The Grand Theatre", map: [330, 250] };
+
+// Two tales along the way, between the numbered chapters (so the chapters keep their
+// numbers): the toymaker's workshop on the road to the sea, where Twig the wooden boy's nose
+// grows when he fibs; and the harbour laundry, where Noodle the sock puppet has lost its twin.
+export const WORKSHOP = {
+  id: "workshop", set: "workshop", guest: "twig", title: "The Toymaker's Workshop", map: [800, 628], side: true,
+  intro: "Along the way: The Toymaker's Workshop. Sir Pip meets a puppet who can't tell a fib without being caught.",
+  pages: [
+    "On the road to the sea stood a crooked little workshop, full of sawdust and ticking clocks, where an old toymaker once carved a puppet from a log of pine that hummed when you tapped it.",
+    "His name was Twig. He was clever and cheeky, and terribly fond of fibs. And every time he told one, his wooden nose grew a little longer.",
+    "Tonight, Twig wanted to be the star of the show. There was just one problem. He had never danced a single step, and he would never, ever admit it.",
+  ],
+  art: [
+    { set: "workshop", night: true, cast: [["twig", 0.5]] },
+    { set: "workshop", cast: [["twigLong", 0.5]] },
+    { set: "workshop", cast: [["pip", 0.3], ["twig", 0.66, true]] },
+  ],
+  acts: [
+    { goal: "Act one. Twig loves to boast. Is it true, or a fib? Watch his nose, then walk Sir Pip onto your answer.", task: { type: "fib" }, hint: "fib" },
+    { goal: "Act two. Twig can't dance. Teach him! Show him a jump, a bow, a wave or a spin, and he'll copy you.", task: { type: "mirror", count: 3 }, hint: "teach" },
+    { goal: "Act three. Twig can dance at last. Take a bow together.", check: "bow", hint: "bow" },
+  ],
+  // the side tale ends its own way (Marlo isn't in it)
+  endings: {
+    grace: { title: "The Honest Bow", line: "What grace! Twig bows so low his nose touches the floor. And not one fib all night.", clip: "grandbow", critics: ["A wooden performance, in the very best way.", "Charming, honest, and beautifully varnished.", "I believed every word. Which, with this puppet, is a first."] },
+    slapstick: { title: "The Wooden Tumble", line: "Twig trips over his own nose, and the audience roars. He says he meant to. His nose grows anyway.", clip: "pratfall", critics: ["Clattering good fun. Mind the splinters.", "A pratfall worthy of the finest pine.", "I laughed so hard my seat creaked."] },
+    drama: { title: "The Sappy Encore", line: "Such drama! Twig is so moved, he weeps a single drop of pine sap.", clip: "faint", critics: ["Knotty, gnarled, and utterly gripping.", "There wasn't a dry plank in the house.", "Bold, baffling, and beautifully grained."] },
+  },
+};
+export const LAUNDRY = {
+  id: "laundry", set: "laundry", guest: "noodle", title: "The Harbour Laundry", map: [1058, 600], side: true, hand: true,
+  intro: "Along the way: The Harbour Laundry. Tonight, the robot puppeteer has a hand in the show.",
+  pages: [
+    "The pirate ship landed in a harbour town where the washing never stops flapping. And from a laundry basket, somebody was sniffling.",
+    "It was Noodle: a sock with wild yarn hair, wobbly eyes, and a very big mouth. Noodle had lost its twin in the wash. And a sock without its pair is only half a sock.",
+    "Now, a sock can't dance on strings. So the robot puppeteer ducked under the stage, slipped Noodle onto his hand, and up it popped!",
+  ],
+  art: [
+    { set: "laundry", cast: [["noodle", 0.52]] },
+    { set: "laundry", cast: [["noodle", 0.36], ["doodle", 0.72, true]] },
+    { set: "laundry", cast: [["pip", 0.28], ["robotpeek", 0.62], ["noodle", 0.8, true]] },
+  ],
+  acts: [
+    { goal: "Act one. Noodle wants to play peekaboo! When Noodle pops up, walk Sir Pip over, and boop that nose. Three boops!", task: { type: "peekaboo", count: 3 }, hint: "peek" },
+    { goal: "Act two. Find Noodle's twin. Walk Sir Pip under the sock on the washing line with the very same stripes.", task: { type: "matchsock" }, hint: "sock" },
+    { goal: "Act three. The twins are together again! Take a bow, and they'll sing for you.", check: "bow", hint: "bow" },
+  ],
+  endings: {
+    grace: { title: "The Clean Finish", line: "What manners! Noodle and Doodle bow so low, their yarn hair sweeps the stage.", clip: "grandbow", critics: ["Fresh, soft, and folded to perfection.", "A perfectly matched pair of performances.", "I came for the knight. I stayed for the socks."] },
+    slapstick: { title: "The Spin Cycle", line: "Noodle and Doodle get so excited, they tie themselves in a knot. The robot has to untangle his own hands.", clip: "pratfall", critics: ["A tangle of joy. Mind the static.", "Utterly woolly, wonderfully silly.", "The funniest thing to come out of a laundry basket."] },
+    drama: { title: "The Soggy Encore", line: "Such drama! Noodle weeps so hard it needs a good wring.", clip: "faint", critics: ["Damp, dramatic, and deeply moving.", "Not a dry sock in the house.", "Bold. Woolly. Unforgettable."] },
+  },
+};
+// the tales along the way join the road between the numbered chapters
+CHAPTERS.splice(CHAPTERS.findIndex((c) => c.id === "ship"), 0, WORKSHOP);
+CHAPTERS.splice(CHAPTERS.findIndex((c) => c.id === "bridge"), 0, LAUNDRY);
+// a chapter's number, counting only the numbered chapters (the tales along the way have none)
+export const chapterNumber = (place) => (place?.side ? 0 : CHAPTERS.filter((c) => !c.side).indexOf(place) + 1);
+export const TWIG_LINES = {
+  nose: "Look! His nose is growing!",
+  noFib: "His nose didn't move.",
+};
 export const STORY_LINES = {
   mapOpen: "Where shall our story go next? Choose a place on the map.",
   unlocked: "A new chapter of the story is unlocked!",
@@ -605,7 +755,8 @@ export function allLines() {
   Object.values(MARLO_TALK).forEach((l) => say(l, "marlo"));
   Object.values(MARLO_SAYS).forEach((l) => say(l, "marlo"));
   Object.values(ENDINGS).forEach((e) => say(e.line));
-  for (const ch of CHAPTERS) { say(ch.intro); ch.acts.forEach((a) => say(a.goal)); ch.pages.forEach((l) => say(l)); }
+  for (const ch of CHAPTERS) { say(ch.intro); ch.acts.forEach((a) => say(a.goal)); ch.pages.forEach((l) => say(l)); Object.values(ch.endings || {}).forEach((e) => say(e.line)); }
+  Object.values(TWIG_LINES).forEach((l) => say(l));
   PROLOGUE.pages.forEach((l) => say(l));
   EPILOGUE.pages.forEach((l) => say(l));
   Object.values(TASK_LINES).forEach((l) => say(l));

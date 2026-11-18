@@ -4,15 +4,15 @@
 //   Desktop: a big illustrated picker (cards drawn in the storybook's own style).
 //   Headset: the same choices as a board of cards, and the preview as a poster.
 // Typing a story is still there as "write it yourself".
-import { VILLAINS, CAPTIVES, DEFAULT_CHALLENGE, DEFAULT_PLACE, buildStory, parseStory, STORY_EXAMPLES } from "./storymaker.js";
+import { VILLAINS, CAPTIVES, DEFAULT_CHALLENGE, DEFAULT_PLACE, buildStory, parseStory, STORY_EXAMPLES, fitChallenge } from "./storymaker.js";
 import { figure } from "./figures.js";
 import { paintBackdrop } from "./sets.js";
 
 export const PICKS = {
   conflict: [["rescue", "Rescue", "🗝️"], ["duel", "Duel", "⚔️"], ["treasure", "Treasure Hunt", "💰"], ["outsmart", "Outsmart", "❓"], ["befriend", "Befriend", "🌸"]],
-  who: [["princess", "Princess Juniper"], ["king", "The King"], ["marlo", "Marlo"], ["wizard", "Bramble"], ["troll", "Grumble"], ["pirate", "Captain Pegg"], ["clank", "Clank"]],
-  villain: [["marlo", "Marlo"], ["clank", "Clank"], ["troll", "Grumble"], ["pirate", "Captain Pegg"], ["wizard", "Bramble"]],
-  place: [["cave", "Dragon's Cave"], ["ship", "Pirate Ship"], ["tower", "Clockwork Tower"], ["forest", "Whispering Forest"], ["bridge", "Troll Bridge"], ["courtyard", "Castle Courtyard"], ["sky", "Night Sky"]],
+  who: [["princess", "Princess Juniper"], ["king", "The King"], ["marlo", "Marlo"], ["wizard", "Bramble"], ["troll", "Grumble"], ["pirate", "Captain Pegg"], ["clank", "Clank"], ["twig", "Twig"]],
+  villain: [["marlo", "Marlo"], ["clank", "Clank"], ["troll", "Grumble"], ["pirate", "Captain Pegg"], ["wizard", "Bramble"], ["twig", "Twig"], ["noodle", "Noodle"]],
+  place: [["cave", "Dragon's Cave"], ["ship", "Pirate Ship"], ["tower", "Clockwork Tower"], ["forest", "Whispering Forest"], ["bridge", "Troll Bridge"], ["courtyard", "Castle Courtyard"], ["sky", "Night Sky"], ["workshop", "Toymaker's Workshop"], ["laundry", "Harbour Laundry"]],
   twist: [["none", "No twist", "✨"], ["moon", "Moon Gravity", "🌙"], ["fragile", "Fragile Strings", "🧵"], ["night", "Night Mode", "🌃"]],
 };
 // hand-drawn vector icons (gold line art), for the conflict cards and the twist buttons
@@ -42,8 +42,9 @@ export function storyFromPicks(c) {
   if (conflict === "rescue") { p.plot = "kidnap"; p.captive = who; }
   else if (conflict === "duel") p.challenge = "duel";
   else if (conflict === "treasure") p.plot = "steal";
-  else if (conflict === "outsmart") p.challenge = villain === "troll" ? "riddle" : "spell";
+  else if (conflict === "outsmart") p.challenge = villain === "troll" ? "riddle" : villain === "twig" ? "fib" : "spell";
   else if (conflict === "befriend") { p.plot = "lonely"; p.friendly = true; p.extras = ["flower"]; }
+  p.challenge = fitChallenge(p.challenge, villain, p.place);
   p.challenges = [p.challenge];
   return p;
 }
@@ -64,6 +65,10 @@ function actPhrase(a, V, named = false) {
   if (t === "highfive") return "share a high five";
   if (t === "together") return "dance together";
   if (t === "shy") return `approach ${V.the} gently`;
+  if (t === "fib") return "catch the fibs";
+  if (t === "mirror") return "teach a dance";
+  if (t === "peekaboo") return "play peekaboo";
+  if (t === "matchsock") return "find the missing twin";
   if (a.check === "approach") return `face ${V.the}`;
   if (a.check === "hold:lantern") return "light the lantern";
   if (a.check === "give:flower") return "give a flower";

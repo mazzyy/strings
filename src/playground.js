@@ -7,19 +7,20 @@ import * as THREE from "three";
 export const PLAY_SECTIONS = [
   { id: "you", title: "You play", items: [
     ["knight", "Sir Pip"], ["dragon", "Marlo"], ["wizard", "Bramble"], ["pirate", "Captain Pegg"],
-    ["troll", "Grumble"], ["clank", "Clank"], ["princess", "Juniper"], ["king", "The King"],
+    ["troll", "Grumble"], ["clank", "Clank"], ["princess", "Juniper"], ["king", "The King"], ["twig", "Twig"],
   ] },
   { id: "costar", title: "Co-star", items: [
-    ["marlo", "Marlo"], ["wizard", "Bramble"], ["pirate", "Captain Pegg"], ["troll", "Grumble"], ["clank", "Clank"], ["solo", "Nobody (solo)"],
+    ["marlo", "Marlo"], ["wizard", "Bramble"], ["pirate", "Captain Pegg"], ["troll", "Grumble"], ["clank", "Clank"], ["twig", "Twig"], ["noodle", "Noodle (sock)"], ["solo", "Nobody (solo)"],
   ] },
   { id: "stage", title: "Stage", items: [
     ["courtyard", "Castle"], ["forest", "Forest"], ["ship", "Pirate ship"], ["bridge", "Troll bridge"],
-    ["tower", "Clock tower"], ["cave", "Dragon cave"], ["sky", "Night sky"],
+    ["tower", "Clock tower"], ["cave", "Dragon cave"], ["sky", "Night sky"], ["workshop", "Workshop"], ["laundry", "Harbour laundry"],
   ] },
   { id: "toys", title: "Toys", items: [
     ["fireworks", "Fireworks"], ["applause", "Applause"], ["flowers", "Magic flowers"], ["night", "Day / night"],
     ["music", "Next music"], ["moon", "Moon gravity"], ["party", "Party lights"], ["fragile", "Fragile strings"],
     ["normal", "Normal physics"], ["fly", "Fly with Marlo"], ["free", "Set co-star free"], ["talk", "Say something"],
+    ["fib", "Twig tells a fib"], ["truth", "Twig owns up"],
   ] },
 ];
 

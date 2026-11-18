@@ -38,7 +38,78 @@ function tools(g) {
 }
 
 const SKIN = "#f4cda8";
+// Twig, the wooden boy: pine limbs and ball joints, a painted waistcoat, a sugarloaf cap,
+// and a nose as long as his latest fib
+function twigFigure(T, nose = 16, leaves = false) {
+  const { g } = T, pine = T.lin(-20, 0, 20, 0, "#f2c690", "#e2ab6c", "#b07a44"), stain = "#7a4626";
+  T.shadow(30);
+  // legs, knees, clogs
+  T.limb("M-9 -46L-10 -8", 7, "#e2ab6c"); T.limb("M9 -46L10 -8", 7, "#e2ab6c");
+  T.oval(-9.5, -27, 4.6, 4.6, stain, 1.6); T.oval(9.5, -27, 4.6, 4.6, stain, 1.6);
+  T.path("M-22 0H-3V-7Q-12 -12 -20 -7Q-26 -6 -24 -2Z", "#40271a", 2); T.path("M22 0H3V-7Q12 -12 20 -7Q26 -6 24 -2Z", "#40271a", 2);
+  // ochre shorts, green waistcoat open over a pine chest, wooden buttons
+  T.path("M-17 -68H17L19 -42H3L0 -50L-3 -42H-19Z", T.lin(0, -68, 0, -42, "#d8a040", "#b07a24"));
+  T.path("M-16 -104Q0 -110 16 -104L17 -68H-17Z", T.lin(-17, 0, 17, 0, "#4f9a5c", "#3f7f4c", "#2e5e38"));
+  T.path("M-4.5 -104H4.5L3.5 -68H-3.5Z", pine, 1.6);
+  T.dot(7, -92, 2, stain); T.dot(7, -80, 2, stain);
+  // arms: one at his side, one waving
+  T.limb("M-17 -100Q-28 -84 -27 -66", 6, "#e2ab6c"); T.oval(-27, -63, 5, 6, pine, 1.8);
+  T.limb("M17 -100Q30 -110 34 -128", 6, "#e2ab6c"); T.oval(35, -131, 5, 6, pine, 1.8);
+  T.oval(-17, -100, 4.5, 4.5, stain, 1.6); T.oval(17, -100, 4.5, 4.5, stain, 1.6);
+  // the scalloped collar
+  g.beginPath(); for (let k = 0; k <= 24; k++) { const a = (k / 24) * Math.PI * 2, rr = 1 + 0.12 * Math.cos(a * 8); g.lineTo(Math.cos(a) * 20 * rr, -106 + Math.sin(a) * 6 * rr); } g.closePath();
+  g.fillStyle = "#f2e7cf"; g.fill(); g.strokeStyle = OUT; g.lineWidth = 2; g.stroke();
+  // head, carved hair, cap with a bead
+  T.oval(0, -126, 16, 18, T.rad(-6, -134, 24, "#f8d4a0", "#e2ab6c", "#b07a44"));
+  T.path("M-16 -128Q-18 -146 0 -146Q16 -146 16 -132Q8 -140 -2 -138Q-10 -137 -16 -128Z", stain, 1.8);
+  T.path("M-15 -136Q0 -146 15 -138L6 -184Z", T.lin(-15, 0, 15, 0, "#d04a3a", "#b8352b", "#8a241e"), 2);
+  T.oval(6, -186, 3.6, 3.6, stain, 1.4);
+  T.face(-1, -126, 6, true, 2.6);
+  // the nose (and, after a big fib, leaves)
+  const tipX = 3 + nose;
+  T.path(`M2 -122L${tipX} -125L2 -128Z`, "#e2ab6c", 1.8);
+  T.dot(tipX, -125, 1.8, "#e2ab6c");
+  if (leaves) {
+    const mx = 2 + nose * 0.62;
+    g.strokeStyle = "#6a4426"; g.lineWidth = 1.6; g.beginPath(); g.moveTo(mx, -126); g.lineTo(mx + 3, -136); g.stroke();
+    T.path(`M${mx + 3} -136q8 -6 12 -2q-6 6 -12 2z`, "#5aa83a", 1.4); T.path(`M${mx + 2} -132q-8 -6 -10 0q6 4 10 0z`, "#6ab84a", 1.4);
+  }
+}
+// a sock puppet on the robot's forearm: knitted sock, striped cuff, a big open mouth,
+// googly eyes, a pompom nose and a mop of yarn
+function sockFigure(T, { hair, nose }) {
+  const { g } = T, knit = T.lin(-22, 0, 22, 0, "#ddd2b6", "#cbbd9c", "#a8987a");
+  T.box(-15, -26, 30, 30, 4, T.lin(-15, 0, 15, 0, "#ffffff", "#f0ede6", "#c8c4bc"));
+  T.box(-16, -14, 32, 4, 2, "#8fe6ff", 1.4);
+  T.path("M-20 -26Q-24 -70 -18 -98H18Q24 -70 20 -26Z", knit);
+  for (const [y, c] of [[-34, "#d8322a"], [-42, "#f0c030"], [-50, "#2fa84a"]]) T.box(-20.5, y, 41, 5, 1, c, 1.4);
+  // the mouth: upper jaw tipped back, lower jaw, the dark inside and a red tongue
+  T.path("M-28 -104Q-30 -124 0 -128Q30 -124 28 -104Q0 -112 -28 -104Z", "#1a0a0a", 2.2);
+  T.path("M-14 -108Q0 -98 14 -108Q0 -116 -14 -108Z", "#d8383a", 1.6);
+  T.path("M-30 -104Q-26 -90 0 -88Q26 -90 30 -104Q0 -98 -30 -104Z", knit);
+  T.path("M-30 -126Q-34 -158 0 -160Q34 -158 30 -126Q0 -136 -30 -126Z", knit);
+  T.path("M-30 -126Q0 -136 30 -126", null, 4, "#e9cfa8");
+  // yarn hair
+  g.lineCap = "round";
+  hair.forEach((c, i) => { for (let k = 0; k < 4; k++) { const a = -Math.PI * (0.15 + 0.7 * ((i * 4 + k) / (hair.length * 4))); g.strokeStyle = c; g.lineWidth = 3.2; g.beginPath(); g.moveTo(Math.cos(a) * 10, -156 + Math.sin(a) * 4); g.quadraticCurveTo(Math.cos(a) * 26, -170 + Math.sin(a) * 18, Math.cos(a) * 34, -164 + Math.sin(a) * 26); g.stroke(); } });
+  // googly eyes, and the pompom
+  for (const sx of [-1, 1]) { T.oval(sx * 12, -156, 11, 11, "#ffffff", 2); T.dot(sx * 12 + 2, -152, 5, "#0a0a0a"); }
+  T.oval(0, -134, 8, 8, nose, 2);
+}
 const FIGURES = {
+  twig(T) { twigFigure(T); },
+  twigLong(T) { twigFigure(T, 52, true); },
+  noodle(T) { sockFigure(T, { hair: ["#d8322a", "#f0c030", "#3aa858", "#2f9ad8", "#9a4ad8", "#f07a2a"], nose: "#5cc85a" }); },
+  doodle(T) { sockFigure(T, { hair: ["#4a9ae8", "#6ab8f0", "#3a7ad0", "#8acdf8"], nose: "#e8487a" }); },
+  // the robot puppeteer, ducked under the stage: just his face peeking up over the boards
+  robotpeek(T) {
+    const { g } = T;
+    T.path("M-46 0Q-50 -70 0 -74Q50 -70 46 0Z", T.lin(-46, 0, 46, 0, "#ffffff", "#f0ede6", "#c8c4bc"));
+    T.box(-34, -58, 68, 40, 14, "#0a0c10", 2);
+    for (const sx of [-1, 1]) { T.glow(sx * 13, -40, 14, "120,230,255", 0.6); T.oval(sx * 13, -40, 6, 8, "#dffbff", 0); }
+    g.strokeStyle = "#4fe0ff"; g.lineWidth = 2; g.beginPath(); for (let x = -12; x <= 12; x += 2) g.lineTo(x, -26 + Math.sin(x * 0.8) * 2); g.stroke();
+    g.fillStyle = "#3a2414"; g.fillRect(-60, -4, 120, 8);
+  },
   // Sir Pip: shiny armour, a blue tabard, a plume, and a very small sword
   pip(T) {
     const { g } = T, steel = T.lin(-26, 0, 26, 0, "#f4f7fa", "#c4ccd6", "#8a94a4");

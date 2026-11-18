@@ -9,7 +9,7 @@ import { span, pin, shadowed, makeBars } from "./skins.js";
 import { mergeStatic } from "./perf.js";
 
 // A generic humanoid skin. `build(api)` adds meshes and says where they hang.
-function humanoidSkin(assets, build, opts = {}) {
+export function humanoidSkin(assets, build, opts = {}) {
   return (m) => {
     const group = new THREE.Group();
     const head = new THREE.Group();

@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { mergeStatic } from "./perf.js";
 import { makeHalo } from "./fx.js";
+import { woodMat, grainUV, boxGrain, endGrainTexture } from "./wood.js";
 import { LW, LH, hasBackdrop, skyLayer, foreLayer, driftLayer, paintBackdrop } from "./backdrops.js";
 
 const W = 0.79, H = 0.29, BACK_Z = -0.188;
@@ -334,6 +335,167 @@ PIECES.tower = (g, anims) => {
   return [door, gear, rain, flash, ...wheels];
 };
 
+// The toymaker's workshop: everything here is real-grain wood (see wood.js)
+PIECES.workshop = (g, anims, assets) => {
+  const W = (o) => woodMat(assets, o);
+  const oak = W({ color: 0xb07a46, contrast: 1.5, rough: 0.55, normal: 0.8 });
+  const darkOak = W({ color: 0x6a4024, contrast: 1.3, rough: 0.5, normal: 0.7 });
+  const pine = W({ color: 0xe7b277, contrast: 1.7, rough: 0.6, normal: 0.6 });
+  const iron = std({ color: 0x2c2c30, metalness: 0.7, roughness: 0.45 }), steel = std({ color: 0xc4c8d0, metalness: 1, roughness: 0.25 }), brass = std({ color: 0xc9a14a, metalness: 1, roughness: 0.3 });
+  const box = (w, h, d, mat, x, y, z, axis = "x", ry = 0) => piece(g, boxGrain(new THREE.BoxGeometry(w, h, d), axis), mat, x, y, z, ry);
+  const rod = (r1, r2, len, mat, x, y, z) => piece(g, grainUV(new THREE.CylinderGeometry(r1, r2, len, 12), len, Math.PI * (r1 + r2)), mat, x, y, z);
+
+  // the workbench, upstage left: a thick oak top, square legs, a stretcher, a wooden vise
+  const bx = -0.315, bz = -0.13, top = 0.074;
+  box(0.15, 0.011, 0.056, oak, bx, top, bz, "x");
+  for (const [dx, dz] of [[-0.066, -0.022], [0.066, -0.022], [-0.066, 0.022], [0.066, 0.022]]) box(0.009, top - 0.006, 0.009, darkOak, bx + dx, (top - 0.006) / 2, bz + dz, "y");
+  box(0.13, 0.007, 0.006, darkOak, bx, 0.02, bz, "x");
+  box(0.02, 0.022, 0.014, darkOak, bx + 0.062, top - 0.008, bz + 0.034, "y");
+  rod(0.0016, 0.0016, 0.03, steel, bx + 0.062, top - 0.006, bz + 0.046).rotation.z = Math.PI / 2;
+  // on the bench: a half-carved block (a puppet's head appearing), a mallet, chisels, a paint pot
+  box(0.022, 0.026, 0.02, pine, bx - 0.04, top + 0.018, bz - 0.006, "y", 0.3);
+  piece(g, grainUV(new THREE.SphereGeometry(0.011, 16, 12), 0.03, 0.07), pine, bx - 0.04, top + 0.04, bz - 0.006);
+  rod(0.0025, 0.0025, 0.045, oak, bx + 0.01, top + 0.009, bz + 0.012).rotation.set(0, 0.4, Math.PI / 2);
+  box(0.016, 0.014, 0.014, darkOak, bx - 0.012, top + 0.012, bz + 0.002, "x", 0.4);
+  for (let k = 0; k < 3; k++) {
+    const h = rod(0.0018, 0.0018, 0.016, oak, bx + 0.03 + k * 0.008, top + 0.008, bz + 0.016);
+    h.rotation.set(Math.PI / 2, 0, 0.1 * k);
+    const b = piece(g, new THREE.BoxGeometry(0.003, 0.0012, 0.012), steel, bx + 0.03 + k * 0.008, top + 0.008, bz + 0.03);
+    b.rotation.y = 0.1 * k;
+  }
+  const pot = piece(g, new THREE.CylinderGeometry(0.008, 0.007, 0.014, 16), std({ color: 0xb8352b, roughness: 0.4 }), bx + 0.052, top + 0.012, bz - 0.012);
+  pot.castShadow = true;
+  rod(0.001, 0.0012, 0.03, oak, bx + 0.054, top + 0.024, bz - 0.012).rotation.z = -0.35;
+  // shavings: pale curls on the bench and on the floor around it
+  const curlG = new THREE.TorusGeometry(0.0045, 0.0013, 4, 14, Math.PI * 1.7); curlG.scale(1, 1, 0.3);
+  const curl = W({ color: 0xf0c890, contrast: 1.2, rough: 0.7, normal: 0.3, side: THREE.DoubleSide });
+  const r = rnd(23);
+  for (let i = 0; i < 26; i++) {
+    const onBench = i < 7;
+    const x = onBench ? bx + (r() - 0.5) * 0.12 : bx + 0.02 + (r() - 0.5) * 0.17, z = onBench ? bz + (r() - 0.5) * 0.04 : bz + 0.06 + r() * 0.11;
+    if (!onBench && x > -0.24 && z > -0.03) continue; // never under the puppets' feet
+    const c = piece(g, curlG, curl, x, onBench ? top + 0.007 : 0.003, z, r() * 6);
+    c.rotation.x = Math.PI / 2 + (r() - 0.5) * 0.8; c.scale.setScalar(0.7 + r() * 0.7); c.castShadow = false;
+  }
+
+  // the grandfather clock, upstage right: its pendulum really swings
+  const cx = 0.355, cz = -0.155;
+  box(0.06, 0.012, 0.042, darkOak, cx, 0.006, cz, "x");
+  box(0.05, 0.19, 0.034, oak, cx, 0.105, cz, "y");
+  box(0.058, 0.07, 0.04, darkOak, cx, 0.235, cz, "y");
+  piece(g, new THREE.ConeGeometry(0.036, 0.022, 4), darkOak, cx, 0.281, cz, Math.PI / 4).scale.set(1, 1, 0.7);
+  const faceTex = canvas(128, 128, (c, w) => {
+    c.fillStyle = "#f4ead2"; c.beginPath(); c.arc(64, 64, 62, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = "#b8893a"; c.lineWidth = 5; c.stroke();
+    c.fillStyle = "#3a2414"; c.font = "bold 15px Georgia"; c.textAlign = "center"; c.textBaseline = "middle";
+    ["XII", "III", "VI", "IX"].forEach((n, k) => { const a = k * Math.PI / 2 - Math.PI / 2; c.fillText(n, 64 + Math.cos(a) * 46, 64 + Math.sin(a) * 46); });
+    for (let k = 0; k < 60; k++) { const a = k * Math.PI / 30; c.lineWidth = k % 5 ? 1 : 2.5; c.beginPath(); c.moveTo(64 + Math.cos(a) * 54, 64 + Math.sin(a) * 54); c.lineTo(64 + Math.cos(a) * 58, 64 + Math.sin(a) * 58); c.stroke(); }
+  });
+  const face = piece(g, new THREE.CircleGeometry(0.019, 32), std({ map: faceTex, roughness: 0.5, emissive: 0xffffff, emissiveMap: faceTex, emissiveIntensity: 0.15 }), cx, 0.238, cz + 0.0205);
+  face.castShadow = false;
+  const hand = (len, wid) => { const h = new THREE.Mesh(new THREE.BoxGeometry(wid, len, 0.0008).translate(0, len / 2, 0), iron); h.position.set(cx, 0.238, cz + 0.0218); g.add(h); return h; };
+  const hourH = hand(0.01, 0.0018), minH = hand(0.015, 0.0012);
+  // a glass door over the pendulum
+  const glass = piece(g, new THREE.PlaneGeometry(0.034, 0.13), new THREE.MeshStandardMaterial({ color: 0xcfe0ff, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.18, depthWrite: false }), cx, 0.115, cz + 0.0212);
+  glass.castShadow = false;
+  piece(g, new THREE.PlaneGeometry(0.036, 0.135), std({ color: 0x2a1a10, roughness: 0.9 }), cx, 0.115, cz + 0.0171).castShadow = false;
+  const pend = new THREE.Group();
+  pend.position.set(cx, 0.175, cz + 0.0188);
+  const pRod = new THREE.Mesh(new THREE.CylinderGeometry(0.0007, 0.0007, 0.09, 6).translate(0, -0.045, 0), brass);
+  const bob = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.002, 24).rotateX(Math.PI / 2).translate(0, -0.092, 0), brass);
+  pend.add(pRod, bob);
+  g.add(pend);
+  anims.push((t) => {
+    pend.rotation.z = Math.sin(t * Math.PI) * 0.22;
+    minH.rotation.z = -t * 0.35; hourH.rotation.z = -t * 0.35 / 12 - 1.2;
+  });
+
+  // a stack of logs, downstage right, end grain showing
+  const ends = std({ map: endGrainTexture(), roughness: 0.8 }), bark = std({ color: 0x4a2f1c, roughness: 0.95 });
+  for (const [x, y, z, rad] of [[0.358, 0.013, 0.045, 0.013], [0.385, 0.013, 0.045, 0.013], [0.371, 0.035, 0.045, 0.012]]) {
+    const lg = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, 0.07, 18), [bark, ends, ends]);
+    lg.rotation.x = Math.PI / 2; lg.position.set(x, y, z); lg.castShadow = lg.receiveShadow = true;
+    g.add(lg);
+  }
+  // a toy chest, downstage left, lid open, a striped ball beside it
+  box(0.05, 0.03, 0.032, darkOak, -0.365, 0.015, 0.07, "x", 0.25);
+  const lid = box(0.05, 0.004, 0.032, oak, -0.37, 0.042, 0.052, "x", 0.25); lid.rotation.x = -1.1;
+  for (const [dx, dz, mat] of [[0, 0, brass]]) piece(g, new THREE.BoxGeometry(0.008, 0.006, 0.002), mat, -0.362 + dx, 0.025, 0.087 + dz, 0.25);
+  const ballTex = canvas(64, 32, (c, w, h) => { const cols = ["#d8322a", "#f2ead8", "#2f66c8", "#f2ead8", "#e8b838", "#f2ead8"]; cols.forEach((col, k) => { c.fillStyle = col; c.fillRect((k * w) / cols.length, 0, w / cols.length + 1, h); }); });
+  piece(g, new THREE.SphereGeometry(0.011, 18, 12), std({ map: ballTex, roughness: 0.35 }), -0.33, 0.011, 0.105);
+
+  // a hanging oil lamp, swaying a little, warm light in its glass
+  const lamp = new THREE.Group();
+  lamp.position.set(-0.2, 0.29, -0.11);
+  const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.0007, 0.0007, 0.05, 5).translate(0, -0.025, 0), iron);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.01, 12).translate(0, -0.055, 0), brass);
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 14, 10).translate(0, -0.066, 0), new THREE.MeshStandardMaterial({ color: 0xffe2a8, emissive: 0xffb050, emissiveIntensity: 2.2, toneMapped: false }));
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.009, 0.006, 12).translate(0, -0.077, 0), brass);
+  const halo = makeHalo(0xffb860, 0.09, 0.35); halo.position.y = -0.066;
+  lamp.add(chain, cap, glow, base, halo);
+  g.add(lamp);
+  anims.push((t) => { lamp.rotation.z = Math.sin(t * 0.9) * 0.05; lamp.rotation.x = Math.sin(t * 0.7 + 1) * 0.03; halo.material.opacity = 0.3 + Math.sin(t * 7) * 0.02 + Math.sin(t * 13) * 0.015; });
+  // dust in the lamplight
+  twinkles(g, anims, Array.from({ length: 18 }, () => [-0.3 + r() * 0.22, 0.12 + r() * 0.14, 0xffe0b0]), { size: 0.0035, z: -0.1, order: 0, speed: 0.5 });
+  return [pend, minH, hourH, lamp];
+};
+
+// The harbour laundry: a washing line across the back (the twin-sock game hangs its socks
+// on it), a wooden washtub full of suds with bubbles drifting up, a wicker basket
+PIECES.laundry = (g, anims, assets) => {
+  const W = (o) => woodMat(assets, o);
+  const oak = W({ color: 0xb07a46, contrast: 1.5, rough: 0.6, normal: 0.8 });
+  const stave = W({ color: 0x9a6a3c, contrast: 1.4, rough: 0.55, normal: 0.7 });
+  const iron = std({ color: 0x3a3a40, metalness: 0.7, roughness: 0.45 });
+  const LY = 0.248, LZ = -0.115, X = 0.372;
+  for (const x of [-X, X]) {
+    piece(g, grainUV(new THREE.CylinderGeometry(0.0045, 0.0055, 0.262, 10), 0.26, 0.03), oak, x, 0.131, LZ);
+    piece(g, grainUV(new THREE.CylinderGeometry(0.003, 0.003, 0.03, 8), 0.03, 0.02), oak, x, LY, LZ).rotation.z = Math.PI / 2;
+  }
+  // the rope, sagging a little in the middle
+  const pts = []; for (let k = 0; k <= 16; k++) { const u = k / 16; pts.push(new THREE.Vector3(-X + u * 2 * X, LY - Math.sin(u * Math.PI) * 0.006, LZ)); }
+  const rope = piece(g, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, 0.0011, 5), std({ color: 0xe8dcc0, roughness: 0.9 }), 0, 0, 0);
+  rope.castShadow = false;
+  // a tea towel and a little shirt pegged at the ends
+  const cloth = (w, h, color, x, stripes) => {
+    const tex = canvas(64, 64, (c) => { c.fillStyle = color; c.fillRect(0, 0, 64, 64); if (stripes) { c.fillStyle = stripes; for (const y of [8, 18, 46, 56]) c.fillRect(0, y, 64, 4); } });
+    const m = piece(g, new THREE.PlaneGeometry(w, h, 4, 4), std({ map: tex, roughness: 0.9, side: THREE.DoubleSide }), x, LY - h / 2, LZ + 0.003);
+    const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 90) * 0.003); m.geometry.computeVertexNormals();
+    anims.push((t) => { m.rotation.x = Math.sin(t * 1.4 + x * 9) * 0.08; });
+    return m;
+  };
+  const towel = cloth(0.045, 0.05, "#f6f0e4", -0.34, "#d8322a"), shirt = cloth(0.04, 0.042, "#7ab8e8", 0.338);
+  // the washtub: oak staves, iron hoops, a hill of suds
+  const tubPts = []; for (let k = 0; k <= 8; k++) { const u = k / 8; tubPts.push(new THREE.Vector2(0.034 + u * 0.008, u * 0.042)); }
+  const tx = -0.355, tz = 0.075;
+  piece(g, grainUV(new THREE.LatheGeometry(tubPts, 24), 0.045, 0.24), stave, tx, 0, tz).material.side = THREE.DoubleSide;
+  for (const y of [0.008, 0.034]) { const h = piece(g, new THREE.TorusGeometry(0.0355 + y * 0.19, 0.0016, 6, 32), iron, tx, y, tz); h.rotation.x = Math.PI / 2; }
+  const suds = std({ color: 0xffffff, roughness: 0.4, emissive: 0x404850, emissiveIntensity: 0.3 });
+  const r = rnd(29);
+  for (let k = 0; k < 16; k++) { const a = r() * Math.PI * 2, d = r() * 0.03; piece(g, new THREE.SphereGeometry(0.008 + r() * 0.008, 10, 8), suds, tx + Math.cos(a) * d, 0.04 + r() * 0.012, tz + Math.sin(a) * d).castShadow = false; }
+  // bubbles drifting up out of the tub, wobbling, then popping
+  const bubM = new THREE.MeshStandardMaterial({ color: 0xdff4ff, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.32, depthWrite: false, emissive: 0x6a7aa8, emissiveIntensity: 0.25 });
+  const bubbles = Array.from({ length: 9 }, (_, i) => { const b = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), bubM); g.add(b); return { b, t: i * 0.8, s: 0.004 + r() * 0.005, dx: (r() - 0.5) * 0.12 }; });
+  anims.push((t, dt = 0.016) => {
+    for (const B of bubbles) {
+      B.t += dt; const k = B.t / 6;
+      if (k > 1) { B.t = 0; B.dx = (Math.random() - 0.5) * 0.14; }
+      B.b.position.set(tx + B.dx * k + Math.sin(B.t * 2) * 0.006, 0.05 + k * 0.2, tz - k * 0.05);
+      B.b.scale.setScalar(B.s * (k > 0.94 ? (1 - k) * 16 : 1));
+    }
+  });
+  // a wicker basket, downstage right, a sheet spilling out of it
+  const wicker = canvas(128, 64, (c) => { c.fillStyle = "#b8894a"; c.fillRect(0, 0, 128, 64); for (let y = 0; y < 64; y += 8) for (let x = (y / 8) % 2 * 8; x < 128; x += 16) { c.fillStyle = "#d8a860"; c.fillRect(x, y, 10, 6); c.fillStyle = "rgba(60,30,10,0.4)"; c.fillRect(x, y + 6, 10, 1.5); } });
+  wicker.wrapS = THREE.RepeatWrapping; wicker.repeat.set(3, 1);
+  const bx = 0.355, bz = 0.08;
+  const basket = piece(g, new THREE.CylinderGeometry(0.04, 0.032, 0.036, 24, 1, true), std({ map: wicker, roughness: 0.9, side: THREE.DoubleSide }), bx, 0.018, bz);
+  basket.scale.z = 0.75;
+  const rim = piece(g, new THREE.TorusGeometry(0.04, 0.003, 6, 28), std({ color: 0x9a6a34, roughness: 0.8 }), bx, 0.036, bz); rim.rotation.x = Math.PI / 2; rim.scale.y = 0.75;
+  const sheet = piece(g, new THREE.SphereGeometry(0.034, 14, 10), std({ color: 0xf2ece0, roughness: 0.9 }), bx, 0.034, bz); sheet.scale.set(1, 0.4, 0.72);
+  g.userData.refs = { line: { y: LY, z: LZ } };
+  return [towel, shirt, ...bubbles.map((B) => B.b)];
+};
+
 // how each backdrop behaves on stage: how much it glows by itself, and how fast its clouds or mist drift
 const LOOK = {
   courtyard: { glow: 0.32, drift: 0.004 },
@@ -343,6 +505,8 @@ const LOOK = {
   tower: { glow: 0.45 },
   cave: { glow: 0.6 },
   sky: { glow: 0.7, drift: 0.012 },
+  workshop: { glow: 0.42 },
+  laundry: { glow: 0.36, drift: 0.005 },
 };
 
 // lighting for each set: spot colour and how dark it is (0 day .. 1 night)
@@ -354,6 +518,8 @@ export const SET_LIGHT = {
   cave: { spot: 0xc0b0ff, night: 0.82 },
   tower: { spot: 0xffc8a0, night: 0.5 },
   sky: { spot: 0xc8d8ff, night: 0.45 },
+  workshop: { spot: 0xffd6a8, night: 0.38 }, // an evening indoors, by lamplight
+  laundry: { spot: 0xfff2dc, night: 0 },       // a bright, breezy harbour morning
 };
 
 export class Sets {
@@ -388,7 +554,7 @@ export class Sets {
     fore.receiveShadow = true;
     g.add(fore); keep.push(fore);
     g.userData.layers = { back, fore };
-    const animated = PIECES[name](g, anims) || [];
+    const animated = PIECES[name](g, anims, this.assets) || [];
     mergeStatic(g, [...keep, ...animated]);
     g.visible = false;
     this.root.add(g);

@@ -292,6 +292,8 @@ const BEDS = {
   cave:      { amb: ["amb_cave", 0.38] },
   sky:       { music: ["music_story", 0.1], amb: ["amb_birds", 0.12] },
   finale:    { music: ["music_finale", 0.22] },
+  workshop:  { music: ["music_courtyard", 0.1], extras: [["creak", 7, 13]] }, // a cosy workshop: a tune, and old floorboards
+  laundry:   { music: ["music_ship", 0.1], amb: ["amb_sea", 0.08], extras: [["bird", 8, 15]] }, // the harbour: gulls and waves
 };
 export class Soundscape {
   constructor(listener, sfx) {
