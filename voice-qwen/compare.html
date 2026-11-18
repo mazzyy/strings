@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Marlo's voice: Kokoro or Qwen3-TTS</title>
+<title>Voices: Kokoro or Qwen3-TTS</title>
 <style>
   body { font: 16px/1.4 Georgia, serif; background: #1b1020; color: #f6ead0; margin: 0; padding: 24px; }
   h1 { font-size: 26px; margin: 0 0 4px; }
@@ -17,13 +17,15 @@
   td.n { color: #a8957a; width: 28px; text-align: right; }
   td.feel { color: #c9b28a; font-style: italic; font-size: 14px; }
   td.b { white-space: nowrap; width: 1%; }
+  tr.who td { padding-top: 22px; font-size: 20px; color: #f0c46a; border-bottom: 2px solid #b98a3c; }
+  tr.who small { color: #c9b28a; font-size: 13px; font-style: italic; display: block; max-width: 900px; }
   a { color: #f0c46a; }
 </style>
 </head>
 <body>
-<h1>Marlo's voice: Kokoro or Qwen3-TTS?</h1>
-<p class="sub">Each of Marlo's lines in the current voice (Kokoro) and the new test voice (Qwen3-TTS, recorded with the feeling shown).
-  To hear it in the game, open <a href="../?marlo=qwen">the theatre with ?marlo=qwen</a>.</p>
+<h1>Voices: Kokoro or Qwen3-TTS?</h1>
+<p class="sub">Every line of Marlo, Princess Juniper and the socks Noodle and Doodle, in the current voice (Kokoro) and the new test voice (Qwen3-TTS, recorded with the feeling shown).
+  To hear them in the game, open <a href="../?voices=qwen">the theatre with ?voices=qwen</a>.</p>
 <div class="bar">
   <button id="all-k">▶ Play all: Kokoro</button>
   <button id="all-q">▶ Play all: Qwen</button>
@@ -34,7 +36,10 @@
 <script type="module">
 const [q, k] = await Promise.all([fetch("manifest.json").then((r) => r.json()), fetch("../voice/manifest.json").then((r) => r.json())]);
 const feel = (text) => (q.feels || {})[text] || "";
-const rows = Object.entries(q.lines).map(([text, file], i) => ({ i, text, qwen: file, kokoro: k.lines[text] }));
+const NAMES = { marlo: "Marlo the dragon", princess: "Princess Juniper", noodle: "Noodle the sock", doodle: "Doodle the sock" };
+const order = Object.keys(q.voices || {});
+const rows = Object.entries(q.lines).map(([text, file]) => ({ text, qwen: file, kokoro: k.lines[text], who: (q.who || {})[text] || "marlo" }))
+  .sort((a, b) => order.indexOf(a.who) - order.indexOf(b.who)).map((r, i) => ({ ...r, i }));
 const audio = new Audio();
 let queue = [], cur = null;
 const mark = (b) => { document.querySelectorAll("button.on").forEach((x) => x.classList.remove("on")); if (b) b.classList.add("on"); };
@@ -45,7 +50,9 @@ async function run(list) {
   mark(null);
 }
 const t = document.getElementById("t");
+let last = null;
 for (const r of rows) {
+  if (r.who !== last) { last = r.who; const h = t.insertRow(); h.className = "who"; h.innerHTML = `<td colspan="4"></td>`; h.cells[0].textContent = NAMES[r.who] || r.who; const sm = document.createElement("small"); sm.textContent = "Voice: " + ((q.voices || {})[r.who] || ""); h.cells[0].append(sm); }
   const tr = t.insertRow();
   tr.innerHTML = `<td class="n">${r.i + 1}</td><td>${r.text}<br><span class="feel"></span></td><td class="b"></td><td class="b"></td>`;
   tr.querySelector(".feel").textContent = feel(r.text);
