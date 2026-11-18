@@ -259,14 +259,15 @@ marloVoice.setVolume(1.15);
 marloMouth.add(marloVoice);
 const clipCache = new Map();
 const audioLoader = new THREE.AudioLoader();
-// a test voice for Marlo (Qwen3-TTS, recorded with feeling), beside the Kokoro one: ?marlo=qwen
-// (voice-qwen/manifest.json maps each of Marlo's Kokoro clips to its Qwen take)
-const qwenMarlo = new URLSearchParams(location.search).get("marlo") === "qwen";
+// test voices (Qwen3-TTS, recorded with feeling) for Marlo, the princess and the socks, beside
+// the Kokoro ones: ?voices=qwen (or ?marlo=qwen). voice-qwen/manifest.json maps each of their
+// Kokoro clips to its Qwen take; no one else's lines are in it, so no one else changes.
+const qp = new URLSearchParams(location.search), qwenVoices = qp.get("voices") === "qwen" || qp.get("marlo") === "qwen";
 let qwenFiles = {};
-if (qwenMarlo) fetch("voice-qwen/manifest.json").then((r) => (r.ok ? r.json() : null)).then((m) => { if (m) { qwenFiles = m.files; console.info(`Marlo speaks in the Qwen3-TTS test voice (${Object.keys(qwenFiles).length} lines)`); } }).catch(() => {});
+if (qwenVoices) fetch("voice-qwen/manifest.json").then((r) => (r.ok ? r.json() : null)).then((m) => { if (m) { qwenFiles = m.files; console.info(`Qwen3-TTS test voices: ${Object.keys(m.voices || {}).join(", ")} (${Object.keys(qwenFiles).length} lines)`); } }).catch(() => {});
 const voicePlayer = {
   async play(url, who = "narrator") {
-    if (who === "marlo" && qwenMarlo) { const q = qwenFiles[String(url).split("/").pop()]; if (q) url = `voice-qwen/${q}`; }
+    if (qwenVoices) { const q = qwenFiles[String(url).split("/").pop()]; if (q) url = `voice-qwen/${q}`; }
     if (listener.context.state !== "running") await listener.context.resume().catch(() => {});
     if (!clipCache.has(url)) clipCache.set(url, audioLoader.loadAsync(url));
     const buffer = await clipCache.get(url);
