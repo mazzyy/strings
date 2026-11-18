@@ -286,11 +286,10 @@ export class StoryMap {
   _layoutLabels() {
     const g = this.g, out = new Map();
     for (const p of this.places) {
-      const side = !!p.side;
-      g.font = side ? "italic 600 21px Georgia, serif" : "600 23px Georgia, serif";
-      const w = g.measureText(p.title).width + (side ? 34 : 64);
+      g.font = "600 23px Georgia, serif";
+      const w = g.measureText(p.title).width + 64;
       const above = LABEL_ABOVE.has(p.id);
-      out.set(p.id, { x: p.map[0] + (side ? 0 : 10), y: p.map[1] + (above ? -84 : 62), w, side, above });
+      out.set(p.id, { x: p.map[0] + 10, y: p.map[1] + (above ? -84 : 62), w, above });
     }
     return out;
   }
@@ -362,23 +361,71 @@ export class StoryMap {
     river(); g.strokeStyle = "rgba(80,140,175,0.75)"; g.lineWidth = 13; g.stroke();
     river(); g.strokeStyle = "rgba(220,240,250,0.6)"; g.lineWidth = 3; g.setLineDash([14, 22]); g.stroke(); g.setLineDash([]);
 
-    // mountains round the dragon's cave, and the river's source in the north-east
-    const mountain = (x, y, s) => {
-      g.fillStyle = "#b39a76"; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x, y - s * 1.25); g.lineTo(x + s, y); g.closePath(); g.fill();
-      g.fillStyle = "#8a7354"; g.beginPath(); g.moveTo(x, y - s * 1.25); g.lineTo(x + s, y); g.lineTo(x + s * 0.15, y); g.closePath(); g.fill();
-      g.fillStyle = "#f6f1e4"; g.beginPath(); g.moveTo(x - s * 0.32, y - s * 0.85); g.lineTo(x, y - s * 1.25); g.lineTo(x + s * 0.32, y - s * 0.85); g.lineTo(x + s * 0.1, y - s * 0.92); g.lineTo(x - s * 0.05, y - s * 0.8); g.closePath(); g.fill();
-      g.strokeStyle = "rgba(70,50,30,0.6)"; g.lineWidth = 2; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x, y - s * 1.25); g.lineTo(x + s, y); g.stroke();
-    };
-    const peaks = [];
-    for (let i = 0; i < 400 && peaks.length < 26; i++) {
-      const inRange = r() < 0.7;
-      const x = inRange ? 560 + r() * 380 : 1340 + r() * 200, y = inRange ? 150 + r() * 180 : 120 + r() * 260, sz = 30 + r() * 30;
-      if (clear(x, y - sz * 0.6, 4) && clear(x, y, -10) && !peaks.some(([px, py]) => Math.hypot(px - x, py - y) < 38)) peaks.push([x, y, sz]);
-    }
-    peaks.sort((a, b) => a[1] - b[1]).forEach(([x, y, sz]) => mountain(x, y, sz));
     // rolling hills in the open country
     g.strokeStyle = "rgba(90,70,40,0.5)"; g.lineWidth = 2;
     for (let i = 0; i < 44; i++) { const x = 120 + r() * 1350, y = 120 + r() * 760; if (!clear(x, y, 8) || (x > 1100 && y < 420) || y > 840) continue; g.fillStyle = "rgba(150,170,100,0.35)"; g.beginPath(); g.ellipse(x, y, 26, 12, 0, Math.PI, 0); g.fill(); g.beginPath(); g.ellipse(x, y, 26, 12, 0, Math.PI, 0); g.stroke(); }
+    // mountains round the dragon's cave, and the river's source in the north-east: drawn like
+    // an engraved storybook map. Each peak has its own shape (a skewed summit, a notch on one
+    // slope, a shoulder on the other), a sunlit west face and a shaded east face split by a
+    // jagged ridge, hatching in the shade, a snowcap with a ragged edge, and scree at its foot.
+    // The far rows are paler (a little haze), the near rows sit on green foothills.
+    const mountain = (x, y, s, far, seed) => {
+      const q = rnd(seed);
+      const h = s * (1.6 + q() * 0.45), skew = (q() - 0.5) * s * 0.36;
+      const px = x + skew, py = y - h;
+      const left = [[x - s, y], [x - s * 0.62, y - h * (0.38 + q() * 0.08)], [x - s * 0.5, y - h * 0.44], [x - s * 0.28 + skew * 0.4, y - h * 0.7], [px, py]];
+      const shY = 0.52 + q() * 0.14;
+      const right = [[px, py], [px + s * 0.22, y - h * (shY + 0.12)], [x + s * 0.36 + skew * 0.3, y - h * shY], [x + s * 0.48, y - h * (shY - 0.05)], [x + s, y]];
+      const ridge = [[px, py], [px + s * 0.06, y - h * 0.72], [px + s * 0.02 + 4, y - h * 0.5], [x + s * 0.16 + skew * 0.3, y - h * 0.26], [x + s * 0.22, y]];
+      const poly = (pts) => { g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.closePath(); };
+      const lit = far ? "#d6c3a0" : "#d2b187", lit2 = far ? "#c4ae8a" : "#b08c5e", shade = far ? "#a38f72" : "#7f6043", ink = far ? "rgba(95,75,50,0.55)" : "rgba(52,34,20,0.9)";
+      // the sunlit face, darker towards the foot
+      poly([...left, ...right.slice(1)]);
+      const lg = g.createLinearGradient(0, py, 0, y); lg.addColorStop(0, lit); lg.addColorStop(1, lit2);
+      g.fillStyle = lg; g.fill();
+      // the shaded face, east of the ridge
+      poly([...right, ...[...ridge].reverse().slice(0, -1)]);
+      g.fillStyle = shade; g.fill();
+      // hatching in the shade, following the slope
+      g.save(); poly([...right, ...[...ridge].reverse().slice(0, -1)]); g.clip();
+      g.strokeStyle = far ? "rgba(90,70,50,0.25)" : "rgba(60,40,25,0.35)"; g.lineWidth = 1.2;
+      for (let k = 0; k < 9; k++) { const t = 0.22 + k * 0.09, ax = px + (x + s - px) * t, ay = py + (y - py) * t; g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax - s * 0.28, ay + s * 0.42); g.stroke(); }
+      g.restore();
+      // gullies down the sunlit face
+      g.strokeStyle = far ? "rgba(110,85,55,0.25)" : "rgba(90,62,38,0.4)"; g.lineWidth = 1.1;
+      for (let k = 0; k < 3; k++) { const t = 0.35 + k * 0.17, ax = px + (left[0][0] - px) * t * 0.55, ay = py + h * t * 0.75; g.beginPath(); g.moveTo(ax, ay); g.quadraticCurveTo(ax - s * 0.05, ay + h * 0.12, ax - s * 0.12 + q() * 4, ay + h * 0.24); g.stroke(); }
+      // the snowcap: everything above a ragged line about half way down, cut to the peak's own
+      // shape; its east side (beyond the ridge) in blue shadow
+      const sy = py + h * (0.46 + q() * 0.1);
+      const snow = () => { g.beginPath(); g.moveTo(x - s * 1.2, py - 20); g.lineTo(x + s * 1.2, py - 20); for (let k = 8; k >= 0; k--) { const t = k / 8, xx = x - s * 1.2 + t * s * 2.4; g.lineTo(xx, sy + (k % 2 ? -h * 0.13 : h * 0.03) + (sd[k] - 0.5) * 6); } g.closePath(); };
+      const sd = Array.from({ length: 9 }, () => q());
+      g.save(); poly([...left, ...right.slice(1)]); g.clip();
+      snow(); g.fillStyle = "#fbf8f1"; g.fill();
+      snow(); g.clip();
+      poly([...right, ...[...ridge].reverse().slice(0, -1)]); g.fillStyle = "rgba(150,172,200,0.75)"; g.fill();
+      g.restore();
+      // the outline, and the ridge line
+      poly([...left, ...right.slice(1)]); g.strokeStyle = ink; g.lineWidth = far ? 1.4 : 2.2; g.stroke();
+      g.beginPath(); ridge.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.lineWidth = far ? 1 : 1.5; g.stroke();
+      // scree at the foot
+      if (!far) { g.fillStyle = "rgba(90,70,45,0.45)"; for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(x - s * 0.6 + q() * s * 1.2, y - 2 - q() * 5, 1.4 + q() * 1.4, 0, Math.PI * 2); g.fill(); } }
+    };
+    // ranges in rows, back (higher on the page, larger, hazier) to front (lower, on foothills)
+    const range = (x0, x1, rows, seed) => {
+      const q = rnd(seed), peaks = [];
+      rows.forEach(([y, s0, s1, far, gap], row) => {
+        for (let x = x0 + q() * gap; x < x1; x += gap * (0.75 + q() * 0.5)) {
+          const yy = y + (q() - 0.5) * 18, sz = s0 + q() * (s1 - s0);
+          if (clear(x, yy - sz * 0.7, 2) && clear(x, yy, -12)) peaks.push([x, yy, sz, far, row * 1000 + Math.floor(x)]);
+        }
+      });
+      // foothills under the front row
+      g.fillStyle = "rgba(140,150,95,0.35)";
+      for (const [x, y, sz, far] of peaks) if (!far && clear(x, y + 6, -16)) { g.beginPath(); g.ellipse(x, y + 2, sz * 1.3, sz * 0.32, 0, Math.PI, 0); g.fill(); }
+      peaks.sort((a, b) => a[1] - b[1]).forEach(([x, y, sz, far, sd]) => mountain(x, y, sz, far, sd + seed));
+    };
+    range(545, 960, [[172, 50, 64, true, 72], [236, 40, 52, false, 66], [296, 28, 36, false, 58]], 11);
+    range(1350, 1560, [[156, 46, 58, true, 70], [246, 38, 48, false, 64], [336, 30, 40, false, 56], [418, 24, 32, false, 56]], 23);
     // the forest: round-canopy trees and pines, thick round the forest and thinning out
     const tree = (x, y, s, pine) => {
       g.fillStyle = "rgba(60,40,20,0.22)"; g.beginPath(); g.ellipse(x + 5, y + 3, 12 * s, 4 * s, 0, 0, Math.PI * 2); g.fill();
@@ -487,24 +534,15 @@ export class StoryMap {
         g.strokeStyle = `rgba(200,140,40,${0.8 * (1 - k)})`; g.lineWidth = 5;
         g.beginPath(); g.arc(x, y, 48 + k * 24, 0, Math.PI * 2); g.stroke();
       }
-      // a soft shadow, then the place's picture (the tales along the way a little smaller)
-      const sc = p.side ? 0.92 : 1.08;
+      // a soft shadow, then the place's picture
+      const sc = 1.08;
       g.fillStyle = "rgba(60,35,10,0.25)"; g.beginPath(); g.ellipse(x + 6, y + 26 * sc, 44 * sc, 11 * sc, 0, 0, Math.PI * 2); g.fill();
       g.save(); g.translate(x, y); g.scale(sc, sc); icon(g, p.id, 0, 0, locked); g.restore();
-      // its name: a red ribbon with a wax-seal number for a chapter; a cream signboard for a tale along the way
+      // its name: a red ribbon with a wax-seal number (the theatre's has none)
       const n = chapterNumber(p) - 1;
       const by = L.y, tw = L.w;
       g.textAlign = "center";
-      if (L.side) {
-        g.fillStyle = locked ? "rgba(200,185,155,0.85)" : "#f6ecd2";
-        g.strokeStyle = locked ? "rgba(120,100,70,0.5)" : "#6a4426"; g.lineWidth = 2;
-        g.beginPath(); g.roundRect(L.x - tw / 2, by - 16, tw, 32, 14); g.fill(); g.stroke();
-        g.setLineDash([4, 4]); g.beginPath(); g.roundRect(L.x - tw / 2 + 4, by - 12, tw - 8, 24, 10); g.stroke(); g.setLineDash([]);
-        g.font = "italic 600 21px Georgia, serif"; g.fillStyle = locked ? "rgba(58,36,20,0.5)" : "#3a2414";
-        g.fillText(p.title, L.x, by + 7);
-        g.font = "italic 15px Georgia, serif"; g.fillStyle = locked ? "rgba(122,29,34,0.45)" : "#7a1d22";
-        g.fillText("along the way", L.x, by + 34);
-      } else {
+      {
         g.font = "600 23px Georgia, serif";
         g.fillStyle = locked ? "rgba(150,130,100,0.8)" : "#8c2a2a";
         for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(L.x + sx * (tw / 2 - 6), by - 13); g.lineTo(L.x + sx * (tw / 2 + 18), by - 13); g.lineTo(L.x + sx * (tw / 2 + 9), by); g.lineTo(L.x + sx * (tw / 2 + 18), by + 13); g.lineTo(L.x + sx * (tw / 2 - 6), by + 13); g.closePath(); g.fill(); }
@@ -521,7 +559,7 @@ export class StoryMap {
         if (p.id === "theatre" && !locked) { g.font = "italic 16px Georgia, serif"; g.fillStyle = "#7a1d22"; g.fillText("a new show every night", L.x, by + 36); }
       }
       const done = this.state.done[p.id];
-      if (done) { g.font = "22px Georgia, serif"; g.fillStyle = "#b8862a"; g.fillText("★".repeat(done.stars), L.x, L.above ? by - 24 : by + (L.side ? 56 : 40)); }
+      if (done) { g.font = "22px Georgia, serif"; g.fillStyle = "#b8862a"; g.fillText("★".repeat(done.stars), L.x, L.above ? by - 24 : by + 40); }
     }
     // the token: a little blue shield with Sir Pip's crest
     const bob = this.travel ? Math.abs(Math.sin(this.t * 10)) * 8 : Math.sin(this.t * 2) * 2;

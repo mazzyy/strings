@@ -6,6 +6,7 @@
 import * as THREE from "three";
 import { paintBackdrop, paintLayer } from "./backdrops.js";
 import { figure } from "./figures.js";
+import { chapterNumber } from "./lines.js";
 
 const W = 1200, H = 750;
 const SEAL = { x: 1085, y: 640 }; // the "skip" wax seal (headset)
@@ -281,7 +282,7 @@ export class StoryBook {
 
     // right page: the words
     const tx = mid + 64, tw = pw - 112, cx = mid + 6 + pw / 2;
-    const head = n === 0 ? (ch.id === "prologue" ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.id === "custom" ? "Your Story" : ch.side ? "Along the Way" : "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six", "Seven"][this._index()]) : "";
+    const head = n === 0 ? (ch.id === "prologue" ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.id === "custom" ? "Your Story" : "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"][this._index()]) : "";
     g.textAlign = "center";
     if (head) { g.fillStyle = "#8a1c22"; g.font = "600 22px Georgia, serif"; try { g.letterSpacing = "5px"; } catch { /* older browsers */ } g.fillText(head.toUpperCase(), cx + 2, 104); try { g.letterSpacing = "0px"; } catch { /* older browsers */ } }
     // a flourish under the heading (or alone, on later pages)
@@ -383,5 +384,5 @@ export class StoryBook {
     }
   }
 
-  _index() { return Math.max(0, ["courtyard", "forest", "ship", "bridge", "tower", "cave", "sky"].indexOf(this.chapter.id)); }
+  _index() { return Math.max(0, chapterNumber(this.chapter) - 1); }
 }

@@ -2069,7 +2069,7 @@ addEventListener("resize", fitTheatre);
 function renderStartMenu(midGame = false) {
   if (!loadingEl) return;
   const at = storyMap.current();
-  const where = at.id === "theatre" ? "The Grand Theatre" : at.side ? at.title : `Chapter ${chapterNumber(at)}: ${at.title}`;
+  const where = at.id === "theatre" ? "The Grand Theatre" : `Chapter ${chapterNumber(at)}: ${at.title}`;
   const resume = storyMap.hasProgress();
   // the start menu, as a little theatre: marquee bulbs, curtains, a swinging marionette,
   // and hand-gesture icons that act out what each option means
@@ -2151,10 +2151,10 @@ function renderStartMenu(midGame = false) {
         `<button id="go-vr" class="xrgo" hidden><i>${I.vr}</i><span><b>Play in VR</b><small>The theatre appears in front of you</small></span></button>` +
         `<button id="go-ar" class="xrgo" hidden><i>${I.vr}</i><span><b>Play on Your Real Desk</b><small>Mixed reality · the stage sits in your room</small></span></button>` +
       `</div>` +
-      `<button id="begin" class="cta"><i class="pl">${I.play}</i><span class="tx"><b>${resume ? "Continue the Story" : "Begin the Story"}<em class="here" hidden> · on this screen</em></b><small>${resume ? where : "The Tale of Sir Pip · seven chapters, about ten minutes each"}</small></span>${thumb ? `<span class="thumb" style="background-image:url(${thumb})"></span>` : ""}</button>` +
+      `<button id="begin" class="cta"><i class="pl">${I.play}</i><span class="tx"><b>${resume ? "Continue the Story" : "Begin the Story"}<em class="here" hidden> · on this screen</em></b><small>${resume ? where : "The Tale of Sir Pip · nine chapters, about ten minutes each"}</small></span>${thumb ? `<span class="thumb" style="background-image:url(${thumb})"></span>` : ""}</button>` +
       (resume ? `<div><button id="newstory" class="mlink">↺ Start a new story</button></div>` : "") +
       `<div class="mcards">` +
-        card("chapters", menuArt.chapters, I.book, "Play Any Chapter", "All seven are unlocked", -2.2) +
+        card("chapters", menuArt.chapters, I.book, "Play Any Chapter", "All nine are unlocked", -2.2) +
         card("mystory", menuArt.story, I.pen, "Make Your Own Story", "Pick a villain, a place, a twist", 1.2) +
         card("freeplay", menuArt.free, I.pad, "Free Play", "No story, just fun", -1.4) +
       `</div>` +
