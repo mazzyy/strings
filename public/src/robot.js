@@ -18,8 +18,8 @@ export class Robot {
   constructor() {
     this.group = new THREE.Group();
     // an ivory porcelain shell, black rubber joints, polished brass trim
-    const shell = new THREE.MeshPhysicalMaterial({ color: 0xf0ede6, roughness: 0.22, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.08, sheen: 0.35, sheenColor: new THREE.Color(0xb8c8ff), envMapIntensity: 1.3 });
-    const face = new THREE.MeshPhysicalMaterial({ color: 0xf1efe9, roughness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.18 });
+    const shell = new THREE.MeshPhysicalMaterial({ color: 0xe0d9cc, roughness: 0.3, metalness: 0.0, clearcoat: 0.7, clearcoatRoughness: 0.14, sheen: 0.35, sheenColor: new THREE.Color(0xb8c8ff), envMapIntensity: 1.3 });
+    const face = new THREE.MeshPhysicalMaterial({ color: 0xe2ddd3, roughness: 0.34, clearcoat: 0.6, clearcoatRoughness: 0.2 });
     const joint = new THREE.MeshStandardMaterial({ color: 0x23252a, roughness: 0.55, metalness: 0.35 });
     const mech = new THREE.MeshStandardMaterial({ color: 0x3a3d44, roughness: 0.4, metalness: 0.75 });
     const dark = new THREE.MeshStandardMaterial({ color: 0x121316, roughness: 0.5, metalness: 0.2 });

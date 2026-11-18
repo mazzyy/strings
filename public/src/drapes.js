@@ -382,6 +382,12 @@ export function buildDrapes({ W, D, postH, gold }) {
     group.add(val.group);
   }
 
+  // the proscenium's own valance: a fixed swag across the whole opening, under the header board
+  // (the traveller's pelmet gathers into the corners when the curtain opens; this one stays)
+  const top = swag({ x0: -(W / 2 - 0.034), dir: 1, width: W - 0.068, scallops: 5, top: postH + 0.036, h0: 0.02, dip: 0.014, z: D / 2 + 0.001, velvet, fringeMat, goldMat: gold, cols: 96 }); // (hangs from the header, clear of the puppets' heads)
+  top.set(1);
+  group.add(top.group);
+
   let kBot = 0, kTop = -1, t = 0, frame = 0;
   return {
     group, velvet,

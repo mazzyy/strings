@@ -766,3 +766,12 @@ The game looked too dark next to other headset games. What changed:
 - **His glow** (a soft blue haze behind him) read as a grey disc in the headset: it's now smaller and fainter there (0.55 and 10%, against 0.95 and 22% on the desktop), and off on the real desk, where there is nothing dark behind him to glow on.
 - **On the real desk** (passthrough), the showcase floated in mid-air (the room isn't drawn there). It's part of the room now, so it goes with it.
 - **Sir Pip and Twig** reached back into the books with their raised arms: the figures now stand at the shelf's front edge, and their arms reach forward.
+
+### Phase 53: a proper little theatre (proscenium, footlights, fairy lights), and one star display
+Worked in rounds, each checked in pictures on the desktop page and in the headset emulator.
+- **The proscenium.** The top of the stage was open (the traveller's pelmet gathers into the corners when the curtain opens), so the backdrop's straight top edge and the gap above it showed. Now the front posts rise 7 cm higher (their gold finials on top) and carry a walnut header board with gold trim, a gilt "Strings" plaque at its centre (drawn on a canvas, in the menu's script), and a fixed velvet valance with gold fringe and tassels across the whole opening. Round one hung it too low (it hid Sir Pip's and Marlo's heads from the desktop camera); it now clears them. In the headset it sits above the line of sight to the stage floor.
+- **The apron.** The eight headset buttons (Replay, Talk, Map...) cluttered the front of the stage on the desktop, where the page has its own buttons: they now show only in the headset.
+- **Footlights:** nine larger brass footlights whose bulbs really glow (bright enough for the desktop bloom, with a soft halo each in the headset).
+- **Fairy lights:** warm strings of little bulbs (instanced, with halos; no real lights) across the back wall under the paintings, either side of the robot, and along the bookshelf's top shelf. Round one strung them at 2.2 m, above every view; they now hang where you look.
+- **The robot** is a warm ivory (it was pure white, which blew out under the brighter lights), slightly less glossy; the desktop glow now starts at 2.0, so only real lights (footlights, fairy lights, lanterns, the glowing bars) glow.
+- **One star display:** the small 3D star row above the stage repeated the stars on the page's card (and, in the headset, on the panel at the top right); it's gone. In the headset the page's card is hidden too (in the emulator it showed through, beside the panel).
