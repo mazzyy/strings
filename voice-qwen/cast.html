@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The cast's voices</title>
+<style>
+  body { font: 16px/1.4 Georgia, serif; background: #1b1020; color: #f6ead0; margin: 0; padding: 24px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 16px; color: #d8c6a4; max-width: 900px; }
+  .bar { display: flex; gap: 10px; margin: 0 0 18px; flex-wrap: wrap; }
+  button { font: inherit; cursor: pointer; border-radius: 999px; border: 1px solid #b98a3c; background: #3a2333; color: #f6ead0; padding: 6px 14px; }
+  button:hover { background: #50304a; }
+  button.on { background: #e0a93e; color: #2a1520; }
+  button:disabled { opacity: 0.35; cursor: default; }
+  button.big { padding: 9px 18px; font-size: 17px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
+  .card { background: #2a1a2e; border: 1px solid #5a3a5a; border-radius: 14px; padding: 12px 14px; }
+  .card h2 { margin: 0; font-size: 19px; color: #f0c46a; }
+  .card .v { font-size: 13px; color: #c9b28a; font-style: italic; margin: 2px 0 8px; }
+  .row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid #3a2a3a; }
+  .row .t { font-size: 15px; }
+  .row button { font-size: 13px; padding: 4px 10px; white-space: nowrap; }
+  .game { display: block; font: 10px ui-sans-serif, system-ui, sans-serif; letter-spacing: .04em; color: #9fe39f; text-align: center; margin-top: 2px; }
+  .na { font-size: 12px; color: #7a6a7a; text-align: center; }
+</style>
+</head>
+<body>
+<h1>The cast's voices, side by side</h1>
+<p class="sub">A few lines from every character. <b>Old</b> is the earlier voice (Kokoro); <b>Qwen</b> is the new one, recorded with feeling.
+  <span style="color:#9fe39f">IN GAME</span> marks the one the game plays now. Clank plays through his robot filter, as in the game.</p>
+<div class="bar">
+  <button class="big" id="chorus">▶ Curtain call: everyone cheers at once</button>
+  <button class="big" id="all">▶ One line from each character</button>
+  <button class="big" id="stop">■ Stop</button>
+</div>
+<div class="grid" id="grid"></div>
+<script type="module">
+const CAST = [
+  ["narrator", "The narrator (the robot puppeteer)", "Kokoro af_heart", ["Once upon a time, in a kingdom no bigger than a desk, Princess Juniper wound a little golden music box every night, and everyone fell asleep smiling.", "Chapter one: The Castle Courtyard. Our story begins with a knight, a dragon, and a very small stage.", "Three cheers for the whole company!"]],
+  ["marlo", "Marlo the dragon", null, ["Hello! Hello! Oh, I love visitors!", "Hmph. Nobody plays with me.", "Thank you, Sir Pip. You're the best friend a dragon ever had."]],
+  ["princess", "Princess Juniper", null, ["Help! Please, somebody help me!", "My hero! Thank you, Sir Pip!", "Hooray for Sir Pip!"]],
+  ["king", "The King", null, ["Kneel, brave knight.", "I name you Sir Pip the Brave, Knight of the Music Box!", "Let the music play!"]],
+  ["noodle", "Noodle the sock", null, ["Hiya! I'm Noodle! I'm a sock! Well, mostly a sock.", "Hee hee! That tickles!", "My twin! Doodle! You found Doodle!"]],
+  ["doodle", "Doodle the sock", null, ["Noodle! There you are! I've been hanging around all day!", "La la la! Two odd socks, one even song!"]],
+  ["twig", "Twig the wooden boy", "Kokoro bf_emma (his cheer: Qwen)", ["Oh! A real knight! Welcome to the workshop!", "I'm made of solid gold. Under the paint.", "Best show ever! And that's not a fib!"]],
+  ["wizard", "Old Bramble the wizard", "Kokoro bm_george (his cheer: Qwen)", ["Watch my spell carefully.", "Splendid! The spell works! You have the gift!", "Splendid! Simply splendid!"]],
+  ["pirate", "Captain Pegg the pirate", "Kokoro am_fenrir (his cheer: Qwen)", ["En garde, little knight!", "Arr! We meant to do that!", "Three cheers for Sir Pip! Hip hip, hooray!"]],
+  ["troll", "Grumble the troll", "Kokoro am_onyx (his cheer: Qwen)", ["Hmph! Correct. Grumble is impressed.", "Wrong! Ha! Grumble asks again.", "Grumble is happy. Don't tell anyone."]],
+  ["clank", "Clank the clockwork robot", "Kokoro am_echo, through a robot filter (his cheer: Qwen)", ["Intruder detected!", "Overheating! Overheating!", "Clank is happy. Beep! Very, very happy!"]],
+];
+const CHEERS = ["Hooray for Sir Pip!", "Three cheers for Sir Pip! Hip hip, hooray!", "Splendid! Simply splendid!", "Grumble is happy. Don't tell anyone.",
+  "Clank is happy. Beep! Very, very happy!", "Best show ever! And that's not a fib!", "Hooray for Sir Pip! You're a perfect fit!", "Best adventure ever!"];
+const [k, q] = await Promise.all([fetch("../voice/manifest.json").then((r) => r.json()), fetch("manifest.json").then((r) => r.json())]);
+const ctx = new AudioContext();
+// Clank's robot filter, the same as in the game: a ring modulator, a short comb, a brighter top
+function robot(dest) {
+  const pre = ctx.createGain(), dry = ctx.createGain(), out = ctx.createGain(), tone = ctx.createBiquadFilter();
+  dry.gain.value = 0.5; pre.connect(dry).connect(out);
+  const ring = ctx.createGain(); ring.gain.value = 0;
+  const osc = ctx.createOscillator(); osc.frequency.value = 62; const depth = ctx.createGain(); depth.gain.value = 1;
+  osc.connect(depth).connect(ring.gain); osc.start();
+  const ringLevel = ctx.createGain(); ringLevel.gain.value = 0.75; pre.connect(ring).connect(ringLevel).connect(out);
+  const delay = ctx.createDelay(0.05); delay.delayTime.value = 0.0065; const fb = ctx.createGain(); fb.gain.value = 0.5; const comb = ctx.createGain(); comb.gain.value = 0.4;
+  pre.connect(delay); delay.connect(fb).connect(delay); delay.connect(comb).connect(out);
+  tone.type = "peaking"; tone.frequency.value = 2200; tone.Q.value = 0.8; tone.gain.value = 5; out.connect(tone).connect(dest);
+  return pre;
+}
+const buffers = new Map();
+const load = (url) => { if (!buffers.has(url)) buffers.set(url, fetch(url).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b))); return buffers.get(url); };
+let playing = [], token = null;
+const stopAll = () => { token = null; for (const s of playing) try { s.stop(); } catch {} playing = []; document.querySelectorAll("button.on").forEach((b) => b.classList.remove("on")); };
+async function play(url, isRobot, when = 0, vol = 1) {
+  await ctx.resume();
+  const buf = await load(url), src = ctx.createBufferSource(), g = ctx.createGain();
+  src.buffer = buf; g.gain.value = vol; src.connect(g); g.connect(isRobot ? robot(ctx.destination) : ctx.destination);
+  src.start(ctx.currentTime + when); playing.push(src);
+  return new Promise((done) => { src.onended = done; });
+}
+const gameUrl = (text) => (q.lines[text] ? `${q.lines[text]}` : k.lines[text] ? `../voice/${k.lines[text]}` : null);
+const grid = document.getElementById("grid"), firsts = [];
+for (const [who, name, voice, lines] of CAST) {
+  const card = document.createElement("div"); card.className = "card";
+  const h = document.createElement("h2"); h.textContent = name;
+  const v = document.createElement("div"); v.className = "v"; v.textContent = "Voice: " + (voice || ("Qwen: " + (q.voices?.[who] || "")));
+  card.append(h, v);
+  for (const text of lines) {
+    const row = document.createElement("div"); row.className = "row";
+    const t = document.createElement("div"); t.className = "t"; t.textContent = text;
+    const ko = k.lines[text], qw = q.lines[text], isRobot = who === "clank";
+    const cell = (label, url, inGame) => {
+      const d = document.createElement("div");
+      if (!url) { d.className = "na"; d.textContent = label === "Qwen" ? "(no Qwen)" : ""; return d; }
+      const b = document.createElement("button"); b.textContent = "▶ " + label;
+      b.onclick = async () => { stopAll(); const my = (token = {}); b.classList.add("on"); await play(url, isRobot); if (token === my) b.classList.remove("on"); };
+      d.append(b);
+      if (inGame) { const s = document.createElement("span"); s.className = "game"; s.textContent = "IN GAME"; d.append(s); }
+      return d;
+    };
+    row.append(t, cell("Old", ko && `../voice/${ko}`, !qw), cell("Qwen", qw, !!qw));
+    card.append(row);
+  }
+  firsts.push([lines[0], who === "clank"]);
+  grid.append(card);
+}
+document.getElementById("stop").onclick = stopAll;
+document.getElementById("all").onclick = async (e) => {
+  stopAll(); const my = (token = {}); e.target.classList.add("on");
+  for (const [text, isRobot] of firsts) { if (token !== my) return; const u = gameUrl(text); if (u) await play(u, isRobot); await new Promise((r) => setTimeout(r, 350)); }
+  e.target.classList.remove("on");
+};
+// the curtain call as the game plays it: all eight cheers, each starting within about 2.5 s of the first
+document.getElementById("chorus").onclick = async (e) => {
+  stopAll(); e.target.classList.add("on");
+  await Promise.all(CHEERS.map((text, i) => play(gameUrl(text), text.startsWith("Clank"), i * 0.3 + Math.random() * 0.25, 0.8)));
+  e.target.classList.remove("on");
+};
+</script>
+</body>
+</html>
