@@ -97,7 +97,8 @@ export class Sparkles {
     parent.add(this.points);
     this.t = 0; this.fade = 0;
   }
-  start(from, to) { this.from = from; this.to = to; this.t = 0; this.fade = 1; this.stopping = false; this.points.visible = true; }
+  // (scale: the size of the one they swirl around, so the spiral fits his head however big he's drawn)
+  start(from, to, scale = 1.6) { this.from = from; this.to = to; this.scale = scale; this.t = 0; this.fade = 1; this.stopping = false; this.points.visible = true; this.points.material.size = 0.0056 * scale; }
   stop() { this.stopping = true; }
   update(dt) {
     if (!this.points.visible) return;
@@ -108,10 +109,10 @@ export class Sparkles {
       const [ph, ang, sp] = this.seed[i];
       // each mote travels a helix from a to b, then starts over
       const k = (ph + this.t * 0.22 * sp) % 1;
-      const r = 0.06 + Math.sin(k * Math.PI) * 0.12;
+      const sc = this.scale || 1.6, r = (0.0375 + Math.sin(k * Math.PI) * 0.075) * sc;
       const w = ang + this.t * 2.4 * sp + k * 9;
       const x = a.x + (b.x - a.x) * k + Math.cos(w) * r;
-      const y = a.y + (b.y - a.y) * k + Math.sin(k * Math.PI) * 0.12 + Math.sin(w) * r * 0.4;
+      const y = a.y + (b.y - a.y) * k + Math.sin(k * Math.PI) * 0.075 * sc + Math.sin(w) * r * 0.4;
       const z = a.z + (b.z - a.z) * k + Math.sin(w) * r;
       this.pos.set([x, y, z], i * 3);
     }

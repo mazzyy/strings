@@ -170,6 +170,36 @@ let pip = new Marionette({ root: PIP_ROOT, yaw: 0.35, skin: knightSkin(assets), 
 const GUEST_ROOT = [0.17, 0, -0.02];
 let marlo = new Marionette({ root: GUEST_ROOT, yaw: -0.45, skin: dragonSkin(assets) });
 const guests = { marlo };
+// the showcase: the whole company stands on the bookshelf behind, like figures on display,
+// posed once (a moment of their own physics, hanging from their bars), then the bars and strings
+// taken away and everything merged into a few meshes, so it costs nothing per frame
+(function buildShowcase() {
+  const holder = new THREE.Group();
+  scene.add(holder);
+  const SHELF = { x: 1.15, z: -1.3 }, FRONT = SHELF.z + 0.13;
+  const rows = [
+    { y: 0.935, ids: ["pip", "marlo", "princess", "king", "twig"] },
+    { y: 1.355, ids: ["wizard", "pirate", "troll", "clank"] },
+  ];
+  const SKIN = { pip: knightSkin, marlo: dragonSkin, princess: princessSkin, king: kingSkin, wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin, clank: clankSkin, twig: twigSkin };
+  const skinOf = (id) => SKIN[id](assets);
+  for (const row of rows) {
+    row.ids.forEach((id, i) => {
+      const sub = new THREE.Group();
+      const x = SHELF.x - 0.38 + (i + (5 - row.ids.length) / 2) * 0.19;
+      sub.position.set(x, row.y, FRONT);
+      sub.rotation.y = Math.atan2(-x, 1.2 - FRONT); // (turned a little towards the stage)
+      sub.scale.setScalar(0.85);
+      holder.add(sub);
+      const p = new Marionette({ root: [0, 0, 0], yaw: 0, skin: skinOf(id) });
+      sub.add(p.group);
+      for (let k = 0; k < 120; k++) p.update(1 / 60);
+      for (const o of [p.skin.bars, p.stringLines]) o?.parent?.remove(o);
+      p.group.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+    });
+  }
+  mergeStatic(holder);
+})();
 let guestId = "marlo";
 // (a hand puppet's "marionette" is an empty stand-in: the sock itself lives in handpuppet.js)
 const noStrings = () => () => ({ group: new THREE.Group(), bars: new THREE.Group(), update() {} });
@@ -1968,7 +1998,7 @@ function storytellerIntro(first, next) {
   robot.excite = 1;
   const sc = robot.group.scale.x;
   // sparkles drift up around his face as he speaks
-  sparkles.start(() => robotHeadLocal().add(new THREE.Vector3(0, -0.14 * sc, 0.1 * sc)), () => robotHeadLocal().add(new THREE.Vector3(0, 0.14 * sc, 0.16 * sc)));
+  sparkles.start(() => robotHeadLocal().add(new THREE.Vector3(0, -0.14 * sc, 0.1 * sc)), () => robotHeadLocal().add(new THREE.Vector3(0, 0.14 * sc, 0.16 * sc)), sc);
   if (!xrMode) {
     // a close-up on his face (his hands stay on the puppet bars, out of shot)
     const hw = robot.head.getWorldPosition(new THREE.Vector3());
