@@ -109,10 +109,10 @@ export class Sparkles {
       const [ph, ang, sp] = this.seed[i];
       // each mote travels a helix from a to b, then starts over
       const k = (ph + this.t * 0.22 * sp) % 1;
-      const sc = this.scale || 1.6, r = (0.0375 + Math.sin(k * Math.PI) * 0.075) * sc;
+      const sc = this.scale || 1.6, r = (0.045 + Math.sin(k * Math.PI) * 0.05) * sc; // (a ring round his face, widest at its middle)
       const w = ang + this.t * 2.4 * sp + k * 9;
       const x = a.x + (b.x - a.x) * k + Math.cos(w) * r;
-      const y = a.y + (b.y - a.y) * k + Math.sin(k * Math.PI) * 0.075 * sc + Math.sin(w) * r * 0.4;
+      const y = a.y + (b.y - a.y) * k + Math.sin(k * Math.PI) * 0.02 * sc + Math.sin(w) * r * 0.4;
       const z = a.z + (b.z - a.z) * k + Math.sin(w) * r;
       this.pos.set([x, y, z], i * 3);
     }

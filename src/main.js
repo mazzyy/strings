@@ -175,8 +175,8 @@ const guests = { marlo };
 // taken away and everything merged into a few meshes, so it costs nothing per frame
 (function buildShowcase() {
   const holder = new THREE.Group();
-  scene.add(holder);
-  const SHELF = { x: 1.15, z: -1.3 }, FRONT = SHELF.z + 0.15;
+  room.add(holder); // (part of the room: on your real desk, where there's no room, it goes too)
+  const SHELF = { x: 1.15, z: -1.3 }, FRONT = SHELF.z + 0.165; // (at the shelf's front edge, clear of the books)
   const rows = [
     { y: 0.935, ids: ["pip", "marlo", "princess", "king", "twig"] },
     { y: 1.355, ids: ["wizard", "pirate", "troll", "clank"] },
@@ -185,11 +185,11 @@ const guests = { marlo };
   // each strikes their own pose, set the way a puppeteer would: the main bar tipped (pitch: a bow,
   // roll: a lean), raised or lowered, and the arm bar lifted, pushed out and rolled (one arm up)
   const POSE = {
-    pip: { hands: [0, 0.14, 0.03], hroll: 0.75 },                   // sword up in salute
+    pip: { hands: [0, 0.13, 0.08], hroll: 0.7 },                    // sword up in salute (arms forward, clear of the books)
     marlo: { hands: [0, 0.16, 0.03], yaw: -0.2 },                   // arms up, cheering
     princess: { pitch: 0.15, dy: -0.035, hands: [0, 0.01, 0.03] },  // a curtsy: a little dip, hands at her skirt
     king: { pitch: -0.12, hands: [0, 0.07, 0.04] },                 // arms open, chest out
-    twig: { yaw: 0.25, hands: [0, 0.12, 0.02], hroll: -0.95 },      // one hand waving
+    twig: { hands: [0, 0.11, 0.08], hroll: -0.9 },                  // one hand waving (forward, clear of the books)
     wizard: { hands: [0, 0.15, 0.02], hroll: 0.7 },                 // staff raised, casting
     pirate: { roll: 0.22, hands: [0.03, 0.06, 0.08], hroll: 0.45 }, // leaning into "en garde"
     troll: { pitch: 0.32, dy: -0.04, hands: [0, -0.03, 0.02] },     // hunched and grumpy
@@ -257,6 +257,14 @@ const hand = { on: false, under: false, guest: false, holes: [], meshes: [], idl
 function layoutRobot(xr) {
   if (xr) { robot.group.position.set(0.17, 0.17, -0.38); robot.group.scale.setScalar(1.0); }
   else { robot.group.position.set(0.17, 0.0, -0.6); robot.group.scale.setScalar(1.6); }
+  // his soft blue glow: a gentle haze on the desktop; in the headset it read as a grey disc, so
+  // smaller and fainter there, and none at all on your real desk (nothing dark behind him to glow on)
+  const glow = robot.group.getObjectByName("robotGlow"); // (found by name: this runs once before it's made)
+  if (glow) {
+    glow.scale.setScalar(xr ? 0.55 : 0.95);
+    glow.material.opacity = xr ? 0.1 : 0.22;
+    glow.visible = xr !== "ar";
+  }
   robot.baseY = robot.group.position.y;
   robot.crouchBy = xr ? 0.25 : 0.32; // (working a sock, he sinks behind the backdrop: head and neck above it, shoulders at its edge)
 }
@@ -264,6 +272,7 @@ layoutRobot(false);
 stageRoot.add(robot.group);
 // the storyteller's magic: a soft blue glow behind him, and motes of light drifting about
 const robotGlow = makeHalo(0x5f9cff, 0.95, 0.22);
+robotGlow.name = "robotGlow";
 robotGlow.position.set(0, 0.38, -0.16);
 robot.group.add(robotGlow);
 const dust = new Dust(robot.group);
@@ -2009,6 +2018,17 @@ function updateCam(dt) {
 }
 const _rh = new THREE.Vector3();
 const robotHeadLocal = () => stageRoot.worldToLocal(robot.head.getWorldPosition(_rh).clone());
+// the middle of his face (the head's own origin is down at the neck): the centre of the head's
+// box, kept in the head's own space so it follows him, whatever his size
+let faceInHead = null;
+function robotFaceLocal() {
+  if (!faceInHead) {
+    robot.group.updateMatrixWorld(true);
+    const c = new THREE.Box3().setFromObject(robot.head).getCenter(new THREE.Vector3());
+    faceInHead = robot.head.worldToLocal(c);
+  }
+  return stageRoot.worldToLocal(robot.head.localToWorld(faceInHead.clone()));
+}
 function storytellerIntro(first, next) {
   intro.on = true; intro.t = 0; intro.next = next; intro.leaving = false;
   narrator.pending.length = 0; marloLines.length = 0; // nothing left over to say before the story
@@ -2018,7 +2038,8 @@ function storytellerIntro(first, next) {
   robot.excite = 1;
   const sc = robot.group.scale.x;
   // sparkles drift up around his face as he speaks
-  sparkles.start(() => robotHeadLocal().add(new THREE.Vector3(0, -0.14 * sc, 0.1 * sc)), () => robotHeadLocal().add(new THREE.Vector3(0, 0.14 * sc, 0.16 * sc)), sc);
+  // sparkles spiral up around his face as he speaks, from his chin to just over his head
+  sparkles.start(() => robotFaceLocal().add(new THREE.Vector3(0, -0.075 * sc, 0.05 * sc)), () => robotFaceLocal().add(new THREE.Vector3(0, 0.085 * sc, 0.07 * sc)), sc);
   if (!xrMode) {
     // a close-up on his face (his hands stay on the puppet bars, out of shot)
     const hw = robot.head.getWorldPosition(new THREE.Vector3());
@@ -2636,6 +2657,7 @@ async function enterXR(mode) {
   if (mode === "immersive-ar") {
     scene.background = null;
     room.visible = false;
+    layoutRobot("ar");
     shadowCatcher.visible = true;
     try {
       const viewer = await session.requestReferenceSpace("viewer");
@@ -3119,4 +3141,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { chorus, xrCaption, xrHud, socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMovePip: (x, z) => movePipTo(x, z, true), placePip: (x, z) => { movePipTo(x, z); sim.mainPos.set(x - DESK_HOLD.main.x, sim.mainPos.y, z - DESK_HOLD.main.z); }, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { storyteller: (first = true) => storytellerIntro(first, () => {}), chorus, xrCaption, xrHud, socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMovePip: (x, z) => movePipTo(x, z, true), placePip: (x, z) => { movePipTo(x, z); sim.mainPos.set(x - DESK_HOLD.main.x, sim.mainPos.y, z - DESK_HOLD.main.z); }, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
