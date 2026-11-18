@@ -494,7 +494,7 @@ export const PROLOGUE = {
 // playable task (`task`, see tasks.js): a duel, a riddle, sneaking...
 export const CHAPTERS = [
   {
-    id: "courtyard", set: "courtyard", guest: "marlo", title: "The Castle Courtyard", map: [270, 770],
+    id: "courtyard", set: "courtyard", guest: "marlo", title: "The Castle Courtyard", map: [210, 800],
     intro: "Chapter one: The Castle Courtyard. Our story begins with a knight, a dragon, and a very small stage.",
     pages: [
       "Every hero needs a friend for the road, and Sir Pip's was waiting in the castle courtyard.",
@@ -510,7 +510,7 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: "forest", set: "forest", guest: "wizard", title: "The Whispering Forest", map: [570, 545],
+    id: "forest", set: "forest", guest: "wizard", title: "The Whispering Forest", map: [470, 680],
     intro: "Chapter two: The Whispering Forest.",
     pages: [
       "The road to Clank's tower led first into the Whispering Forest, where the trees tell secrets to the wind.",
@@ -525,7 +525,7 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: "ship", set: "ship", guest: "pirate", title: "The Pirate Ship", map: [960, 790],
+    id: "ship", set: "ship", guest: "pirate", title: "The Pirate Ship", map: [950, 846],
     intro: "Chapter three: The Pirate Ship.",
     pages: [
       "The tower stood across the sea, and only one ship would sail there.",
@@ -539,7 +539,7 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: "bridge", set: "bridge", guest: "troll", title: "The Troll Bridge", map: [1190, 450],
+    id: "bridge", set: "bridge", guest: "troll", title: "The Troll Bridge", map: [1290, 520],
     intro: "Chapter four: The Troll Bridge.",
     pages: [
       "Across the sea, the road climbed to an old stone bridge, silver in the moonlight.",
@@ -553,7 +553,7 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: "tower", set: "tower", guest: "clank", title: "The Clockwork Tower", map: [1330, 650], princess: true,
+    id: "tower", set: "tower", guest: "clank", title: "The Clockwork Tower", map: [1000, 430], princess: true,
     intro: "Chapter five: The Clockwork Tower.",
     pages: [
       "At last, the Clockwork Tower, ticking and whirring in the storm. No one ever came to visit. Clank had made quite sure of that.",
@@ -567,7 +567,7 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: "cave", set: "cave", guest: "marlo", title: "The Dragon's Cave", map: [1400, 225],
+    id: "cave", set: "cave", guest: "marlo", title: "The Dragon's Cave", map: [640, 330],
     intro: "Chapter six: The Dragon's Cave.",
     pages: [
       "With the princess free, one thing was still missing: the music box's three jewels.",
@@ -581,7 +581,7 @@ export const CHAPTERS = [
     ],
   },
   {
-    id: "sky", set: "sky", guest: "marlo", title: "The Night Sky", map: [820, 150], finale: true,
+    id: "sky", set: "sky", guest: "marlo", title: "The Night Sky", map: [370, 165], finale: true,
     intro: "Chapter seven: The Night Sky. The final adventure.",
     pages: [
       "Back at the castle, the jewels were set into the music box, and the whole kingdom gathered to hear it play.",
@@ -661,13 +661,13 @@ export const RIDDLES = [
 ];
 
 // the Grand Theatre: once the first chapter is done, a new show every night
-export const THEATRE = { id: "theatre", set: "courtyard", guest: "marlo", title: "The Grand Theatre", map: [330, 250] };
+export const THEATRE = { id: "theatre", set: "courtyard", guest: "marlo", title: "The Grand Theatre", map: [200, 470] };
 
 // Two tales along the way, between the numbered chapters (so the chapters keep their
 // numbers): the toymaker's workshop on the road to the sea, where Twig the wooden boy's nose
 // grows when he fibs; and the harbour laundry, where Noodle the sock puppet has lost its twin.
 export const WORKSHOP = {
-  id: "workshop", set: "workshop", guest: "twig", title: "The Toymaker's Workshop", map: [800, 628], side: true,
+  id: "workshop", set: "workshop", guest: "twig", title: "The Toymaker's Workshop", map: [705, 790], side: true,
   intro: "Along the way: The Toymaker's Workshop. Sir Pip meets a puppet who can't tell a fib without being caught.",
   pages: [
     "On the road to the sea stood a crooked little workshop, full of sawdust and ticking clocks, where an old toymaker once carved a puppet from a log of pine that hummed when you tapped it.",
@@ -692,7 +692,7 @@ export const WORKSHOP = {
   },
 };
 export const LAUNDRY = {
-  id: "laundry", set: "laundry", guest: "noodle", title: "The Harbour Laundry", map: [1058, 600], side: true, hand: true,
+  id: "laundry", set: "laundry", guest: "noodle", title: "The Harbour Laundry", map: [1130, 760], side: true, hand: true,
   intro: "Along the way: The Harbour Laundry. Tonight, the robot puppeteer has a hand in the show.",
   pages: [
     "The pirate ship landed in a harbour town where the washing never stops flapping. And from a laundry basket, somebody was sniffling.",

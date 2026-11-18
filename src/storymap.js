@@ -1,7 +1,10 @@
-// The storybook map: "The Tale of Sir Pip". A parchment map of the kingdom
-// with a road between the chapters. Pick an unlocked place and a little shield
-// token walks the road while the map pans to follow it; then the curtain falls,
-// the set changes and the next chapter begins.
+// The storybook map: "The Tale of Sir Pip". A parchment map of the kingdom, laid out
+// like a storybook board game: one winding road from the castle along the coast, up the
+// river, and back west over the mountains to the night sky, with every stop in its own
+// country (a forest round the forest, the sea under the ship, peaks round the cave, stars
+// round the sky). Sir Pip's footprints mark the road he has travelled. Pick an unlocked
+// place and a little shield token walks the road there while the map leans in to follow;
+// then the curtain falls, the set changes and the next chapter begins.
 //   Desktop: an overlay you click.  Headset: a parchment floating beside the
 //   stage that you poke with a fingertip.
 // The same canvas drawing serves both.
@@ -98,13 +101,21 @@ function icon(g, kind, x, y, locked) {
   }
 }
 
+// where each place's name hangs: below its picture, or above it where below is busy
+const LABEL_ABOVE = new Set(["forest"]);
+const ROAD_W = 13;
+
 export class StoryMap {
   constructor({ onChoose, isLocked }) {
     this.onChoose = onChoose;   // (place) => void, after the token arrives
     this.places = [...CHAPTERS, THEATRE];
+    // the road: one smooth curve through every stop, in story order
+    this.road = new THREE.CatmullRomCurve3(CHAPTERS.map((c) => new THREE.Vector3(c.map[0], c.map[1], 0)), false, "centripetal");
+    this.roadPts = this.road.getSpacedPoints(600);
     this.canvas = document.createElement("canvas");
     this.canvas.width = VIEW.w; this.canvas.height = VIEW.h;
     this.g = this.canvas.getContext("2d");
+    this.labels = this._layoutLabels();
     this.bg = this._paintParchment();
     this.open = false;
     this.cam = { x: 0, y: 0 };
@@ -198,7 +209,14 @@ export class StoryMap {
   }
   _placeAt(vx, vy) {
     const wx = vx / FIT, wy = vy / FIT;
-    return this.places.find((p) => Math.hypot(p.map[0] - wx, p.map[1] - wy) < 80) || null;
+    let best = null, bd = 80;
+    for (const p of this.places) {
+      const d = Math.hypot(p.map[0] - wx, p.map[1] - wy);
+      const L = this.labels.get(p.id), onLabel = L && wx > L.x - L.w / 2 - 20 && wx < L.x + L.w / 2 + 20 && Math.abs(wy - L.y) < 22;
+      if (onLabel) return p; // (the name is a button too)
+      if (d < bd) { bd = d; best = p; }
+    }
+    return best;
   }
 
   // a click / poke at view coordinates
@@ -212,10 +230,14 @@ export class StoryMap {
   travelTo(p) {
     const from = { x: this.token.x, y: this.token.y };
     const to = { x: p.map[0], y: p.map[1] };
-    // a gently curving road between the two places
+    // along the road when both ends are on it; otherwise (the theatre) a gentle curve
+    const a = CHAPTERS.findIndex((c) => c.map[0] === from.x && c.map[1] === from.y), b = CHAPTERS.indexOf(p);
+    const n = CHAPTERS.length - 1;
+    const road = a >= 0 && b >= 0 ? [a / n, b / n] : null;
     const mid = { x: (from.x + to.x) / 2 + (to.y - from.y) * 0.15, y: (from.y + to.y) / 2 - (to.x - from.x) * 0.15 };
-    const dur = from.x === to.x && from.y === to.y ? 0.6 : 2.4;
-    this.travel = { p, from, to, mid, t: 0, dur };
+    const steps = road ? Math.abs(b - a) : 1;
+    const dur = from.x === to.x && from.y === to.y ? 0.6 : Math.min(5, 1.6 + steps * 0.8);
+    this.travel = { p, from, to, mid, road, t: 0, dur };
     this.onDepart?.(p);
   }
 
@@ -237,8 +259,13 @@ export class StoryMap {
       const tr = this.travel;
       tr.t += dt;
       const k = Math.min(1, tr.t / tr.dur), e = k * k * (3 - 2 * k), u = 1 - e;
-      this.token.x = u * u * tr.from.x + 2 * u * e * tr.mid.x + e * e * tr.to.x;
-      this.token.y = u * u * tr.from.y + 2 * u * e * tr.mid.y + e * e * tr.to.y;
+      if (tr.road) {
+        const pt = this.road.getPoint(tr.road[0] + (tr.road[1] - tr.road[0]) * e);
+        this.token.x = pt.x; this.token.y = pt.y;
+      } else {
+        this.token.x = u * u * tr.from.x + 2 * u * e * tr.mid.x + e * e * tr.to.x;
+        this.token.y = u * u * tr.from.y + 2 * u * e * tr.mid.y + e * e * tr.to.y;
+      }
       this.zoom = 1 + 0.35 * Math.sin(k * Math.PI);
       if (k >= 1 && tr.t > tr.dur + 0.5) {
         this.travel = null;
@@ -254,15 +281,41 @@ export class StoryMap {
     if (this._acc > (this.travel ? 1 / 30 : 1 / 15)) { this._acc = 0; this.draw(); }
   }
 
-  // the kingdom, painted once: aged parchment, an ornate border, meadows, forests,
-  // shaded mountains, a winding river, the sea, little villages, the road
+  // where each name sits (and how wide it is), worked out once, so nothing overlaps and the
+  // scenery keeps clear of them
+  _layoutLabels() {
+    const g = this.g, out = new Map();
+    for (const p of this.places) {
+      const side = !!p.side;
+      g.font = side ? "italic 600 21px Georgia, serif" : "600 23px Georgia, serif";
+      const w = g.measureText(p.title).width + (side ? 34 : 64);
+      const above = LABEL_ABOVE.has(p.id);
+      out.set(p.id, { x: p.map[0] + (side ? 0 : 10), y: p.map[1] + (above ? -84 : 62), w, side, above });
+    }
+    return out;
+  }
+  _nearRoad(x, y, pad = 0) {
+    for (let i = 0; i < this.roadPts.length; i += 3) { const q = this.roadPts[i]; if (Math.abs(q.x - x) < 40 + pad && Math.hypot(q.x - x, q.y - y) < 34 + pad) return true; }
+    return false;
+  }
+  _clear(x, y, pad = 0) {
+    if (this._nearRoad(x, y, pad)) return false;
+    for (const p of this.places) if (Math.hypot(p.map[0] - x, p.map[1] - y) < 82 + pad) return false;
+    for (const L of this.labels.values()) if (Math.abs(x - L.x) < L.w / 2 + 34 + pad && Math.abs(y - L.y) < 30 + pad + (L.above ? 0 : 26)) return false;
+    return true;
+  }
+
+  // the kingdom, painted once: aged parchment and an ornate border; the sea along the
+  // south-east coast, the river from the northern peaks down to the harbour; a forest round
+  // the forest, mountains round the cave, stars round the night sky, a village by the castle;
+  // and the road, winding through all of it
   _paintParchment() {
     const c = document.createElement("canvas");
     c.width = WORLD.w; c.height = WORLD.h;
     const g = c.getContext("2d");
     const r = rnd(42);
     const W = WORLD.w, H = WORLD.h;
-    const near = (x, y, pad = 0) => this.places.some((p) => Math.hypot(p.map[0] - x, p.map[1] - y) < 95 + pad || (Math.abs(p.map[0] - x) < 170 && y > p.map[1] + 40 && y < p.map[1] + 115));
+    const clear = (x, y, pad) => this._clear(x, y, pad);
     // paper: warm, lighter in the middle, with fibres and stains
     const pg = g.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, W * 0.7);
     pg.addColorStop(0, "#f3e4bf"); pg.addColorStop(0.7, "#e6cf9c"); pg.addColorStop(1, "#c9a66a");
@@ -271,35 +324,45 @@ export class StoryMap {
     for (let i = 0; i < 900; i++) { const x = r() * W, y = r() * H, l = 6 + r() * 26, a = r() * Math.PI; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a) * l * 0.5 + r() * 4, y + Math.sin(a) * l * 0.5, x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
     for (let i = 0; i < 14; i++) { const x = r() * W, y = r() * H, rr = 30 + r() * 90; const sg = g.createRadialGradient(x, y, rr * 0.2, x, y, rr); sg.addColorStop(0, "rgba(150,100,40,0.07)"); sg.addColorStop(0.8, "rgba(150,100,40,0.04)"); sg.addColorStop(1, "rgba(150,100,40,0)"); g.fillStyle = sg; g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fill(); }
     const blob = (x, y, rx, ry, col) => { const bg = g.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry)); bg.addColorStop(0, col); bg.addColorStop(1, "rgba(0,0,0,0)"); g.save(); g.translate(x, y); g.scale(1, ry / rx); g.translate(-x, -y); g.fillStyle = bg; g.beginPath(); g.arc(x, y, rx, 0, Math.PI * 2); g.fill(); g.restore(); };
-    // meadows and woodland tints
-    blob(280, 800, 260, 170, "rgba(120,160,80,0.30)");
-    blob(340, 260, 200, 120, "rgba(130,165,90,0.22)");
-    blob(580, 540, 270, 170, "rgba(70,120,60,0.30)");
-    blob(820, 640, 200, 130, "rgba(140,165,90,0.18)");
-    blob(1080, 470, 160, 120, "rgba(120,150,80,0.18)");
-    // the sea in the south-east: deep water, a lighter shore, waves, a serpent, a little ship
+    // each country's own wash of colour: meadows by the castle, deep green in the forest,
+    // grey-blue round the peaks, indigo dusk round the night sky
+    blob(240, 780, 300, 190, "rgba(120,160,80,0.30)");
+    blob(470, 690, 230, 150, "rgba(60,110,55,0.30)");
+    blob(700, 520, 260, 140, "rgba(140,165,90,0.18)");
+    blob(1060, 520, 220, 140, "rgba(140,165,90,0.18)");
+    blob(680, 230, 300, 150, "rgba(120,110,140,0.20)");
+    blob(380, 150, 300, 160, "rgba(60,60,130,0.22)");
+
+    // the sea along the south-east coast: deep water, a pale shore, waves, a serpent
+    // (a bay comes up to meet the pirate ship's pier)
+    const shore = [[700, H], [770, 930], [840, 880], [905, 838], [1000, 834], [1075, 872], [1180, 858], [1300, 838], [1420, 786], [1520, 706], [W, 672]];
+    const seaPath = () => {
+      g.beginPath(); g.moveTo(shore[0][0], shore[0][1]);
+      for (let i = 1; i < shore.length; i++) { const [x0, y0] = shore[i - 1], [x1, y1] = shore[i]; g.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2); }
+      g.lineTo(W, 672); g.lineTo(W, H); g.closePath();
+    };
     g.save();
-    g.beginPath(); g.moveTo(690, H); g.bezierCurveTo(740, 880, 860, 860, 960, 880); g.bezierCurveTo(1080, 900, 1150, 860, 1230, 870); g.bezierCurveTo(1340, 885, 1430, 800, W, 810); g.lineTo(W, H); g.closePath();
-    const sea = g.createLinearGradient(0, 820, 0, H); sea.addColorStop(0, "rgba(90,150,180,0.55)"); sea.addColorStop(1, "rgba(40,95,140,0.7)");
+    seaPath();
+    const sea = g.createLinearGradient(0, 700, 0, H); sea.addColorStop(0, "rgba(90,150,180,0.55)"); sea.addColorStop(1, "rgba(40,95,140,0.75)");
     g.fillStyle = sea; g.fill();
-    g.strokeStyle = "rgba(240,235,210,0.7)"; g.lineWidth = 6; g.stroke();
+    g.strokeStyle = "rgba(240,235,210,0.75)"; g.lineWidth = 7; g.stroke();
     g.strokeStyle = "rgba(60,100,130,0.55)"; g.lineWidth = 2; g.stroke();
     g.clip();
     g.strokeStyle = "rgba(235,240,245,0.55)"; g.lineWidth = 2;
-    for (let i = 0; i < 60; i++) { const x = 720 + r() * 880, y = 880 + r() * 110; g.beginPath(); g.arc(x, y, 8, Math.PI * 1.15, Math.PI * 1.85); g.arc(x + 15, y, 8, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); }
-    // a friendly sea serpent
+    for (let i = 0; i < 70; i++) { const x = 760 + r() * 840, y = 700 + r() * 290; if (!clear(x, y, -20)) continue; g.beginPath(); g.arc(x, y, 8, Math.PI * 1.15, Math.PI * 1.85); g.arc(x + 15, y, 8, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); }
     g.strokeStyle = "#3d6e5a"; g.lineWidth = 9; g.lineCap = "round";
-    for (const dx of [0, 46, 92]) { g.beginPath(); g.arc(1300 + dx, 950, 16, Math.PI, 0); g.stroke(); }
-    g.fillStyle = "#3d6e5a"; g.beginPath(); g.ellipse(1418, 936, 14, 10, 0.4, 0, Math.PI * 2); g.fill();
-    g.fillStyle = "#f4ead0"; g.beginPath(); g.arc(1423, 932, 2.5, 0, Math.PI * 2); g.fill();
+    for (const dx of [0, 46, 92]) { g.beginPath(); g.arc(1290 + dx, 950, 16, Math.PI, 0); g.stroke(); }
+    g.fillStyle = "#3d6e5a"; g.beginPath(); g.ellipse(1408, 936, 14, 10, 0.4, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "#f4ead0"; g.beginPath(); g.arc(1413, 932, 2.5, 0, Math.PI * 2); g.fill();
     g.restore();
-    // the river, from the northern hills down past the bridge to the sea
-    const river = () => { g.beginPath(); g.moveTo(1050, 0); g.bezierCurveTo(1110, 160, 1260, 300, 1196, 450); g.bezierCurveTo(1140, 600, 1120, 740, 1160, 880); };
+    // the river: from the northern peaks, under the troll bridge, out into the harbour
+    const river = () => { g.beginPath(); g.moveTo(1420, 0); g.bezierCurveTo(1380, 140, 1300, 300, 1290, 520); g.bezierCurveTo(1282, 660, 1250, 760, 1250, 850); };
     g.lineCap = "round";
     river(); g.strokeStyle = "rgba(240,235,210,0.8)"; g.lineWidth = 22; g.stroke();
     river(); g.strokeStyle = "rgba(80,140,175,0.75)"; g.lineWidth = 13; g.stroke();
     river(); g.strokeStyle = "rgba(220,240,250,0.6)"; g.lineWidth = 3; g.setLineDash([14, 22]); g.stroke(); g.setLineDash([]);
-    // mountains in the north-east, shaded, with snow caps
+
+    // mountains round the dragon's cave, and the river's source in the north-east
     const mountain = (x, y, s) => {
       g.fillStyle = "#b39a76"; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x, y - s * 1.25); g.lineTo(x + s, y); g.closePath(); g.fill();
       g.fillStyle = "#8a7354"; g.beginPath(); g.moveTo(x, y - s * 1.25); g.lineTo(x + s, y); g.lineTo(x + s * 0.15, y); g.closePath(); g.fill();
@@ -307,12 +370,16 @@ export class StoryMap {
       g.strokeStyle = "rgba(70,50,30,0.6)"; g.lineWidth = 2; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x, y - s * 1.25); g.lineTo(x + s, y); g.stroke();
     };
     const peaks = [];
-    for (let i = 0; i < 60 && peaks.length < 22; i++) { const x = 1150 + r() * 420, y = 120 + r() * 300, sz = 34 + r() * 30; if (!near(x, y - sz * 0.6, 10) && x < W - 70 && y > 90) peaks.push([x, y, sz]); }
+    for (let i = 0; i < 400 && peaks.length < 26; i++) {
+      const inRange = r() < 0.7;
+      const x = inRange ? 560 + r() * 380 : 1340 + r() * 200, y = inRange ? 150 + r() * 180 : 120 + r() * 260, sz = 30 + r() * 30;
+      if (clear(x, y - sz * 0.6, 4) && clear(x, y, -10) && !peaks.some(([px, py]) => Math.hypot(px - x, py - y) < 38)) peaks.push([x, y, sz]);
+    }
     peaks.sort((a, b) => a[1] - b[1]).forEach(([x, y, sz]) => mountain(x, y, sz));
-    // rolling hills here and there
+    // rolling hills in the open country
     g.strokeStyle = "rgba(90,70,40,0.5)"; g.lineWidth = 2;
-    for (let i = 0; i < 26; i++) { const x = 120 + r() * 1350, y = 120 + r() * 760; if (near(x, y, 30) || (x > 1100 && y < 420) || (x > 700 && y > 840)) continue; g.fillStyle = "rgba(150,170,100,0.35)"; g.beginPath(); g.ellipse(x, y, 26, 12, 0, Math.PI, 0); g.fill(); g.beginPath(); g.ellipse(x, y, 26, 12, 0, Math.PI, 0); g.stroke(); }
-    // the forest: round-canopy trees and pines, with shadows
+    for (let i = 0; i < 44; i++) { const x = 120 + r() * 1350, y = 120 + r() * 760; if (!clear(x, y, 8) || (x > 1100 && y < 420) || y > 840) continue; g.fillStyle = "rgba(150,170,100,0.35)"; g.beginPath(); g.ellipse(x, y, 26, 12, 0, Math.PI, 0); g.fill(); g.beginPath(); g.ellipse(x, y, 26, 12, 0, Math.PI, 0); g.stroke(); }
+    // the forest: round-canopy trees and pines, thick round the forest and thinning out
     const tree = (x, y, s, pine) => {
       g.fillStyle = "rgba(60,40,20,0.22)"; g.beginPath(); g.ellipse(x + 5, y + 3, 12 * s, 4 * s, 0, 0, Math.PI * 2); g.fill();
       g.fillStyle = "#6a4a2a"; g.fillRect(x - 2 * s, y - 10 * s, 4 * s, 10 * s);
@@ -321,55 +388,61 @@ export class StoryMap {
       g.strokeStyle = "rgba(40,30,15,0.5)"; g.lineWidth = 1.2; g.stroke();
     };
     const trees = [];
-    for (let i = 0; i < 400 && trees.length < 95; i++) { const a = r() * Math.PI * 2, d = Math.sqrt(r()); const x = 580 + Math.cos(a) * 240 * d, y = 530 + Math.sin(a) * 150 * d; if (!near(x, y, 0)) trees.push([x, y, 0.8 + r() * 0.5, r() < 0.45]); }
-    for (let i = 0; i < 200 && trees.length < 130; i++) { const x = 100 + r() * 900, y = 150 + r() * 700; if (!near(x, y, 20) && !(x > 690 && y > 840) && r() < 0.5) trees.push([x, y, 0.7 + r() * 0.3, r() < 0.5]); }
+    for (let i = 0; i < 900 && trees.length < 70; i++) { const a = r() * Math.PI * 2, d = Math.sqrt(r()); const x = 470 + Math.cos(a) * 210 * d, y = 700 + Math.sin(a) * 120 * d; if (clear(x, y - 18, 2)) trees.push([x, y, 0.75 + r() * 0.45, r() < 0.5]); }
+    for (let i = 0; i < 300 && trees.length < 96; i++) { const x = 90 + r() * 1100, y = 300 + r() * 520; if (clear(x, y - 18, 16) && !(x > 760 && y > 820) && r() < 0.4) trees.push([x, y, 0.7 + r() * 0.3, r() < 0.5]); }
     trees.sort((a, b) => a[1] - b[1]).forEach(([x, y, sz, pine]) => tree(x, y, sz, pine));
-    // villages: cottages and a windmill near the castle, sheep in the meadow
+    // the village by the castle: cottages, a windmill, sheep in the meadow
     const cottage = (x, y) => { g.fillStyle = "#e8dcc0"; g.fillRect(x - 12, y - 14, 24, 14); g.fillStyle = "#a0402a"; g.beginPath(); g.moveTo(x - 15, y - 14); g.lineTo(x, y - 26); g.lineTo(x + 15, y - 14); g.closePath(); g.fill(); g.strokeStyle = "rgba(50,30,15,0.7)"; g.lineWidth = 1.5; g.strokeRect(x - 12, y - 14, 24, 14); g.fillStyle = "#5a3b22"; g.fillRect(x - 3, y - 8, 6, 8); };
-    for (const [x, y] of [[150, 880], [190, 905], [400, 905], [440, 880], [120, 700]]) if (!near(x, y)) cottage(x, y);
-    g.save(); g.translate(470, 700);
+    for (const [x, y] of [[80, 700], [110, 735], [390, 930], [430, 905], [70, 905], [355, 800]]) if (clear(x, y, -14)) cottage(x, y);
+    g.save(); g.translate(120, 640);
     g.fillStyle = "#d8c8a8"; g.beginPath(); g.moveTo(-10, 0); g.lineTo(-6, -36); g.lineTo(6, -36); g.lineTo(10, 0); g.closePath(); g.fill(); g.strokeStyle = "rgba(50,30,15,0.7)"; g.lineWidth = 1.5; g.stroke();
     g.strokeStyle = "#5a3b22"; g.lineWidth = 3; for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.4; g.beginPath(); g.moveTo(0, -34); g.lineTo(Math.cos(a) * 26, -34 + Math.sin(a) * 26); g.stroke(); }
     g.restore();
     g.fillStyle = "#f6f1e4";
-    for (let i = 0; i < 9; i++) { const x = 330 + r() * 160, y = 720 + r() * 60; if (!near(x, y)) { g.beginPath(); g.ellipse(x, y, 5, 3.5, 0, 0, Math.PI * 2); g.fill(); } }
-    // clouds and stars around the night sky (top middle)
-    for (let i = 0; i < 40; i++) { const x = 620 + r() * 420, y = 40 + r() * 140; g.fillStyle = "rgba(90,70,120,0.55)"; g.font = "16px Georgia"; g.fillText("✦", x, y); }
+    for (let i = 0; i < 9; i++) { const x = 300 + r() * 120, y = 600 + r() * 50; if (clear(x, y, -20)) { g.beginPath(); g.ellipse(x, y, 5, 3.5, 0, 0, Math.PI * 2); g.fill(); } }
+    // the night sky's country: stars, a crescent moon, and wisps of cloud
+    for (let i = 0; i < 70; i++) { const x = 140 + r() * 400, y = 50 + r() * 250; if (!clear(x, y, -24)) continue; g.fillStyle = `rgba(80,70,140,${0.45 + r() * 0.4})`; g.font = `${12 + r() * 10}px Georgia`; g.fillText("✦", x, y); }
+    g.fillStyle = "#f6f0d0"; g.beginPath(); g.arc(150, 120, 30, 0, Math.PI * 2); g.fill(); g.fillStyle = "rgba(232,214,176,1)"; g.beginPath(); g.arc(163, 112, 26, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = "rgba(90,70,40,0.6)"; g.lineWidth = 2; g.beginPath(); g.arc(150, 120, 30, 0, Math.PI * 2); g.stroke();
     const cloud = (x, y, s) => { g.fillStyle = "rgba(250,248,240,0.85)"; g.strokeStyle = "rgba(90,80,70,0.5)"; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 18 * s, Math.PI * 0.5, Math.PI * 1.5); g.arc(x + 22 * s, y - 12 * s, 20 * s, Math.PI, 0); g.arc(x + 46 * s, y - 4 * s, 16 * s, Math.PI * 1.2, Math.PI * 0.5); g.closePath(); g.fill(); g.stroke(); };
-    cloud(600, 210, 1.1); cloud(990, 190, 1.2); cloud(180, 110, 0.9); cloud(1500, 60, 0.8);
-    // the road: little stones along each leg of the journey, and a path to the theatre
-    const stones = (pts, gap, size) => {
-      for (let i = 1; i < pts.length; i++) {
-        const [px, py] = pts[i - 1], [x, y] = pts[i];
-        const cx = (px + x) / 2 + (y - py) * 0.15, cy = (py + y) / 2 - (x - px) * 0.15;
-        const len = Math.hypot(x - px, y - py), n = Math.floor(len / gap);
-        for (let k = 1; k < n; k++) {
-          const t = k / n, u = 1 - t;
-          const sx = u * u * px + 2 * u * t * cx + t * t * x, sy = u * u * py + 2 * u * t * cy + t * t * y;
-          if (this.places.some((p) => Math.hypot(p.map[0] - sx, p.map[1] - sy) < 62)) continue;
-          g.fillStyle = "rgba(110,80,45,0.75)"; g.beginPath(); g.ellipse(sx, sy, size, size * 0.7, (k % 3) * 0.6, 0, Math.PI * 2); g.fill();
-        }
-      }
-    };
-    stones(CHAPTERS.map((ch) => ch.map), 22, 5);
-    stones([CHAPTERS[0].map, THEATRE.map], 18, 3.5);
-    // an ornate compass rose and a scale bar
-    g.save(); g.translate(1475, 875);
-    g.fillStyle = "rgba(246,240,225,0.85)"; g.beginPath(); g.arc(0, 0, 58, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = "rgba(90,60,30,0.8)"; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 58, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(0, 0, 50, 0, Math.PI * 2); g.stroke();
-    for (let k = 0; k < 8; k++) { g.save(); g.rotate((k * Math.PI) / 4); const L = k % 2 ? 34 : 52; g.fillStyle = k % 2 ? "#c9a14a" : "#7a1d22"; g.beginPath(); g.moveTo(0, -L); g.lineTo(7, 0); g.lineTo(0, 6); g.closePath(); g.fill(); g.fillStyle = k % 2 ? "#e8cf8a" : "#a0303a"; g.beginPath(); g.moveTo(0, -L); g.lineTo(-7, 0); g.lineTo(0, 6); g.closePath(); g.fill(); g.restore(); }
-    g.fillStyle = "#3a2414"; g.font = "bold 20px Georgia, serif"; g.textAlign = "center"; g.fillText("N", 0, -64);
+    cloud(150, 300, 0.9); cloud(1040, 120, 1.1); cloud(820, 70, 0.8);
+    // a storm cloud over the clockwork tower, raining a little
+    cloud(1060, 350, 0.8); g.strokeStyle = "rgba(80,110,150,0.6)"; g.lineWidth = 2; for (let k = 0; k < 5; k++) { g.beginPath(); g.moveTo(1066 + k * 9, 362); g.lineTo(1060 + k * 9, 380); g.stroke(); }
+
+    // the road: a sandy track with a dark edge and worn stones, under everything that stands on it
+    const pts = this.roadPts;
+    const trace = () => { g.beginPath(); pts.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y))); };
+    g.lineCap = "round"; g.lineJoin = "round";
+    trace(); g.strokeStyle = "rgba(110,80,45,0.55)"; g.lineWidth = ROAD_W + 5; g.stroke();
+    trace(); g.strokeStyle = "#e9d3a2"; g.lineWidth = ROAD_W; g.stroke();
+    trace(); g.strokeStyle = "rgba(150,115,70,0.55)"; g.lineWidth = 2; g.setLineDash([3, 11]); g.stroke(); g.setLineDash([]);
+    // where the road runs out over the water it becomes a wooden pier, out to the pirate ship
+    g.save(); seaPath(); g.clip();
+    trace(); g.strokeStyle = "#5a3a22"; g.lineWidth = ROAD_W + 6; g.stroke();
+    trace(); g.strokeStyle = "#a8774a"; g.lineWidth = ROAD_W + 2; g.stroke();
+    trace(); g.strokeStyle = "rgba(60,35,15,0.8)"; g.lineWidth = ROAD_W + 2; g.setLineDash([2, 7]); g.stroke(); g.setLineDash([]);
     g.restore();
-    g.fillStyle = "rgba(58,36,20,0.8)"; g.fillRect(90, 948, 60, 6); g.fillStyle = "rgba(246,240,225,0.9)"; g.fillRect(150, 948, 60, 6); g.strokeStyle = "rgba(58,36,20,0.8)"; g.strokeRect(90, 948, 120, 6);
-    g.font = "italic 16px Georgia, serif"; g.fillStyle = "#3a2414"; g.textAlign = "left"; g.fillText("one puppet's stride", 90, 940);
+    // a little footpath from the castle to the Grand Theatre
+    const [tx, ty] = THEATRE.map, [cx, cy] = CHAPTERS[0].map;
+    g.strokeStyle = "rgba(110,80,45,0.6)"; g.lineWidth = 3; g.setLineDash([2, 9]);
+    g.beginPath(); g.moveTo(cx - 6, cy - 40); g.quadraticCurveTo(cx - 70, (cy + ty) / 2, tx, ty + 30); g.stroke(); g.setLineDash([]);
+    // an ornate compass rose in the sea, and a scale bar
+    g.save(); g.translate(1490, 890);
+    g.fillStyle = "rgba(246,240,225,0.85)"; g.beginPath(); g.arc(0, 0, 52, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = "rgba(90,60,30,0.8)"; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 52, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(0, 0, 45, 0, Math.PI * 2); g.stroke();
+    for (let k = 0; k < 8; k++) { g.save(); g.rotate((k * Math.PI) / 4); const L = k % 2 ? 30 : 46; g.fillStyle = k % 2 ? "#c9a14a" : "#7a1d22"; g.beginPath(); g.moveTo(0, -L); g.lineTo(6, 0); g.lineTo(0, 5); g.closePath(); g.fill(); g.fillStyle = k % 2 ? "#e8cf8a" : "#a0303a"; g.beginPath(); g.moveTo(0, -L); g.lineTo(-6, 0); g.lineTo(0, 5); g.closePath(); g.fill(); g.restore(); }
+    g.fillStyle = "#3a2414"; g.font = "bold 18px Georgia, serif"; g.textAlign = "center"; g.fillText("N", 0, -58);
+    g.restore();
+    g.fillStyle = "rgba(58,36,20,0.8)"; g.fillRect(90, 958, 60, 6); g.fillStyle = "rgba(246,240,225,0.9)"; g.fillRect(150, 958, 60, 6); g.strokeStyle = "rgba(58,36,20,0.8)"; g.strokeRect(90, 958, 120, 6);
+    g.font = "italic 16px Georgia, serif"; g.fillStyle = "#3a2414"; g.textAlign = "left"; g.fillText("one puppet's stride", 90, 950);
     // burnt edges and an ornate double border with corner flourishes
     const vg = g.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, W * 0.66);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(100,55,15,0.5)");
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
     g.strokeStyle = "#6a4422"; g.lineWidth = 5; g.strokeRect(26, 26, W - 52, H - 52);
     g.lineWidth = 1.5; g.strokeRect(38, 38, W - 76, H - 76);
-    for (const [cx, cy, sx, sy] of [[38, 38, 1, 1], [W - 38, 38, -1, 1], [38, H - 38, 1, -1], [W - 38, H - 38, -1, -1]]) {
-      g.save(); g.translate(cx, cy); g.scale(sx, sy);
+    for (const [cx2, cy2, sx, sy] of [[38, 38, 1, 1], [W - 38, 38, -1, 1], [38, H - 38, 1, -1], [W - 38, H - 38, -1, -1]]) {
+      g.save(); g.translate(cx2, cy2); g.scale(sx, sy);
       g.strokeStyle = "#6a4422"; g.lineWidth = 2.5;
       g.beginPath(); g.moveTo(0, 40); g.bezierCurveTo(0, 12, 12, 0, 40, 0); g.stroke();
       g.beginPath(); g.arc(18, 18, 9, 0, Math.PI * 2); g.stroke();
@@ -377,6 +450,18 @@ export class StoryMap {
       g.restore();
     }
     return c;
+  }
+
+  // Sir Pip's footprints along the stretch of road between two stops
+  _footprints(g, a, b) {
+    const n = CHAPTERS.length - 1, steps = 26;
+    for (let k = 1; k < steps; k++) {
+      const t = (a + (b - a) * (k / steps)) / n, p = this.road.getPoint(t), q = this.road.getTangent(t);
+      const ang = Math.atan2(q.y, q.x), side = k % 2 ? 1 : -1;
+      g.save(); g.translate(p.x - Math.sin(ang) * side * 3.2, p.y + Math.cos(ang) * side * 3.2); g.rotate(ang);
+      g.fillStyle = "rgba(122,29,34,0.75)"; g.beginPath(); g.ellipse(0, 0, 4.2, 2.3, 0, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
   }
 
   draw() {
@@ -387,38 +472,56 @@ export class StoryMap {
     g.save();
     g.setTransform(V.s, 0, 0, V.s, -V.cx * V.s, -V.cy * V.s);
     g.drawImage(this.bg, 0, 0);
+    // the road travelled so far, in footprints
+    for (let i = 0; i + 1 < CHAPTERS.length; i++) {
+      const a = CHAPTERS[i], b = CHAPTERS[i + 1];
+      if (this.state.done[a.id] && (this.state.done[b.id] || this.state.at === b.id)) this._footprints(g, i, i + 1);
+    }
     const next = CHAPTERS.find((c, i) => i < this.state.unlocked && !this.state.done[c.id]);
     for (const p of this.places) {
       const [x, y] = p.map;
       const locked = !this.unlocked(p);
+      const L = this.labels.get(p.id);
       if (p === next || (p.id === this.hover && !locked)) {
         const k = (this.t * 1.2) % 1;
         g.strokeStyle = `rgba(200,140,40,${0.8 * (1 - k)})`; g.lineWidth = 5;
-        g.beginPath(); g.arc(x, y, 50 + k * 26, 0, Math.PI * 2); g.stroke();
+        g.beginPath(); g.arc(x, y, 48 + k * 24, 0, Math.PI * 2); g.stroke();
       }
-      // a soft shadow, then the place's picture (a little larger)
-      g.fillStyle = "rgba(60,35,10,0.25)"; g.beginPath(); g.ellipse(x + 6, y + 26, 46, 12, 0, 0, Math.PI * 2); g.fill();
-      g.save(); g.translate(x, y); g.scale(1.18, 1.18); icon(g, p.id, 0, 0, locked); g.restore();
-      // its name on a ribbon banner, with a wax-seal number
-      const n = chapterNumber(p) - 1; // (the tales along the way have no number)
-      g.font = "600 26px Georgia, serif"; g.textAlign = "center";
-      const tw = g.measureText(p.title).width + 56, by = y + 58;
-      g.fillStyle = locked ? "rgba(150,130,100,0.8)" : "#8c2a2a";
-      for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(x + sx * (tw / 2 - 6), by - 14); g.lineTo(x + sx * (tw / 2 + 22), by - 14); g.lineTo(x + sx * (tw / 2 + 12), by); g.lineTo(x + sx * (tw / 2 + 22), by + 14); g.lineTo(x + sx * (tw / 2 - 6), by + 14); g.closePath(); g.fill(); }
-      g.fillStyle = locked ? "rgba(225,212,185,0.95)" : "#f3e6c4";
-      g.strokeStyle = locked ? "rgba(120,100,70,0.6)" : "#7a1d22"; g.lineWidth = 2;
-      g.beginPath(); g.roundRect(x - tw / 2, by - 18, tw, 36, 6); g.fill(); g.stroke();
-      g.fillStyle = locked ? "rgba(58,36,20,0.5)" : "#3a2414";
-      g.fillText(p.title, x + (n >= 0 ? 10 : 0), by + 9);
-      if (n >= 0) {
-        g.fillStyle = locked ? "#8a7a6a" : "#a0242a"; g.beginPath(); g.arc(x - tw / 2 + 10, by, 17, 0, Math.PI * 2); g.fill();
-        g.strokeStyle = "rgba(255,255,255,0.35)"; g.beginPath(); g.arc(x - tw / 2 + 10, by, 12, 0, Math.PI * 2); g.stroke();
-        g.fillStyle = "#f8e8c8"; g.font = "bold 18px Georgia, serif"; g.fillText(String(n + 1), x - tw / 2 + 10, by + 6);
+      // a soft shadow, then the place's picture (the tales along the way a little smaller)
+      const sc = p.side ? 0.92 : 1.08;
+      g.fillStyle = "rgba(60,35,10,0.25)"; g.beginPath(); g.ellipse(x + 6, y + 26 * sc, 44 * sc, 11 * sc, 0, 0, Math.PI * 2); g.fill();
+      g.save(); g.translate(x, y); g.scale(sc, sc); icon(g, p.id, 0, 0, locked); g.restore();
+      // its name: a red ribbon with a wax-seal number for a chapter; a cream signboard for a tale along the way
+      const n = chapterNumber(p) - 1;
+      const by = L.y, tw = L.w;
+      g.textAlign = "center";
+      if (L.side) {
+        g.fillStyle = locked ? "rgba(200,185,155,0.85)" : "#f6ecd2";
+        g.strokeStyle = locked ? "rgba(120,100,70,0.5)" : "#6a4426"; g.lineWidth = 2;
+        g.beginPath(); g.roundRect(L.x - tw / 2, by - 16, tw, 32, 14); g.fill(); g.stroke();
+        g.setLineDash([4, 4]); g.beginPath(); g.roundRect(L.x - tw / 2 + 4, by - 12, tw - 8, 24, 10); g.stroke(); g.setLineDash([]);
+        g.font = "italic 600 21px Georgia, serif"; g.fillStyle = locked ? "rgba(58,36,20,0.5)" : "#3a2414";
+        g.fillText(p.title, L.x, by + 7);
+        g.font = "italic 15px Georgia, serif"; g.fillStyle = locked ? "rgba(122,29,34,0.45)" : "#7a1d22";
+        g.fillText("along the way", L.x, by + 34);
+      } else {
+        g.font = "600 23px Georgia, serif";
+        g.fillStyle = locked ? "rgba(150,130,100,0.8)" : "#8c2a2a";
+        for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(L.x + sx * (tw / 2 - 6), by - 13); g.lineTo(L.x + sx * (tw / 2 + 18), by - 13); g.lineTo(L.x + sx * (tw / 2 + 9), by); g.lineTo(L.x + sx * (tw / 2 + 18), by + 13); g.lineTo(L.x + sx * (tw / 2 - 6), by + 13); g.closePath(); g.fill(); }
+        g.fillStyle = locked ? "rgba(225,212,185,0.95)" : "#f3e6c4";
+        g.strokeStyle = locked ? "rgba(120,100,70,0.6)" : "#7a1d22"; g.lineWidth = 2;
+        g.beginPath(); g.roundRect(L.x - tw / 2, by - 17, tw, 34, 6); g.fill(); g.stroke();
+        g.fillStyle = locked ? "rgba(58,36,20,0.5)" : "#3a2414";
+        g.fillText(p.title, L.x + (n >= 0 ? 12 : 0), by + 8);
+        if (n >= 0) {
+          g.fillStyle = locked ? "#8a7a6a" : "#a0242a"; g.beginPath(); g.arc(L.x - tw / 2 + 12, by, 16, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = "rgba(255,255,255,0.35)"; g.beginPath(); g.arc(L.x - tw / 2 + 12, by, 11, 0, Math.PI * 2); g.stroke();
+          g.fillStyle = "#f8e8c8"; g.font = "bold 17px Georgia, serif"; g.fillText(String(n + 1), L.x - tw / 2 + 12, by + 6);
+        }
+        if (p.id === "theatre" && !locked) { g.font = "italic 16px Georgia, serif"; g.fillStyle = "#7a1d22"; g.fillText("a new show every night", L.x, by + 36); }
       }
       const done = this.state.done[p.id];
-      if (done) { g.font = "24px Georgia, serif"; g.fillStyle = "#b8862a"; g.fillText("★".repeat(done.stars), x, by + 44); }
-      else if (p.id === "theatre" && !locked) { g.font = "italic 17px Georgia, serif"; g.fillStyle = "#7a1d22"; g.fillText("a new show every night", x, by + 40); }
-      else if (p.side) { g.font = "italic 17px Georgia, serif"; g.fillStyle = locked ? "rgba(122,29,34,0.5)" : "#7a1d22"; g.fillText("along the way", x, by + 40); }
+      if (done) { g.font = "22px Georgia, serif"; g.fillStyle = "#b8862a"; g.fillText("★".repeat(done.stars), L.x, L.above ? by - 24 : by + (L.side ? 56 : 40)); }
     }
     // the token: a little blue shield with Sir Pip's crest
     const bob = this.travel ? Math.abs(Math.sin(this.t * 10)) * 8 : Math.sin(this.t * 2) * 2;
@@ -426,17 +529,16 @@ export class StoryMap {
     g.fillStyle = "rgba(0,0,0,0.25)"; g.beginPath(); g.ellipse(this.token.x, this.token.y - 6, 18, 6, 0, 0, Math.PI * 2); g.fill();
     g.beginPath(); g.moveTo(tx - 18, ty - 20); g.lineTo(tx + 18, ty - 20); g.lineTo(tx + 18, ty + 2); g.quadraticCurveTo(tx + 14, ty + 18, tx, ty + 26); g.quadraticCurveTo(tx - 14, ty + 18, tx - 18, ty + 2); g.closePath();
     g.fillStyle = "#1f4fa0"; g.fill(); g.lineWidth = 4; g.strokeStyle = "#d8ac4f"; g.stroke();
-    g.fillStyle = "#d8ac4f"; g.font = "bold 22px Georgia, serif"; g.fillText("P", tx, ty + 8);
+    g.fillStyle = "#d8ac4f"; g.font = "bold 22px Georgia, serif"; g.textAlign = "center"; g.fillText("P", tx, ty + 8);
     g.restore();
-    // title cartouche
-    // (top-right, clear of the place names)
+    // title cartouche (top-right, clear of the places)
     const tx0 = VIEW.w - 350, tw0 = 320, ty0 = 30;
     g.fillStyle = "#5a1418";
     for (const sx of [-1, 1]) { const ex = sx < 0 ? tx0 : tx0 + tw0; g.beginPath(); g.moveTo(ex, ty0 + 8); g.lineTo(ex + sx * 30, ty0 + 8); g.lineTo(ex + sx * 18, ty0 + 26); g.lineTo(ex + sx * 30, ty0 + 44); g.lineTo(ex, ty0 + 44); g.closePath(); g.fill(); }
     g.fillStyle = "#8c1d24"; g.beginPath(); g.roundRect(tx0, ty0, tw0, 46, 6); g.fill();
     g.strokeStyle = "#d8ac4f"; g.lineWidth = 2; g.beginPath(); g.roundRect(tx0 + 5, ty0 + 5, tw0 - 10, 36, 4); g.stroke();
     g.fillStyle = "#f3dfb0"; g.font = "600 27px Georgia, serif"; g.textAlign = "center"; g.fillText("The Tale of Sir Pip", tx0 + tw0 / 2, ty0 + 32);
-    if (!this.travel) { g.font = "italic 20px Georgia, serif"; g.fillStyle = "#3a2414"; g.fillText(this.xr ? "Poke a place to travel there" : "Choose where the story goes next", VIEW.w / 2, VIEW.h - 24); }
+    if (!this.travel) { g.font = "italic 20px Georgia, serif"; g.fillStyle = "#3a2414"; g.fillText(this.xr ? "Poke a place to travel there" : "Choose where the story goes next", VIEW.w / 2, VIEW.h - 22); }
     this.tex && (this.tex.needsUpdate = true);
   }
 }
