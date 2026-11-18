@@ -475,23 +475,42 @@ function unlock(spec, c, done) {
 }
 
 // ---------------------------------------------------------------------------
+// Clank's zaps come at three heights, picked at random (never the same three times running):
+// low along the floor (jump it), at chest height (step aside), or at head height (duck it)
+const ZAPS = {
+  low:  { say: "Jump!", hint: "dodge", core: 0xff5040, halo: 0xffb060 },
+  mid:  { say: "Step aside!", hint: "dodgeMid", core: 0xc060ff, halo: 0xff80e0 },
+  high: { say: "Duck!", hint: "dodgeHigh", core: 0x40c8ff, halo: 0xa0f0ff },
+};
 function dodge(spec, c, done) {
-  let dodged = 0, t = -1.5, zap = null, lastAir = -9, warned = false, finished = false;
-  const dbg = () => ({ dodged, zap: !!zap });
+  let dodged = 0, t = -1.5, zap = null, lastAir = -9, lastLow = -9, warned = false, finished = false;
+  const kinds = [];
+  const pickKind = () => {
+    const all = Object.keys(ZAPS);
+    let k = all[Math.floor(Math.random() * all.length)];
+    if (kinds.length >= 2 && kinds.at(-1) === k && kinds.at(-2) === k) k = all[(all.indexOf(k) + 1) % all.length];
+    kinds.push(k);
+    return k;
+  };
+  const dbg = () => ({ dodged, zap: zap ? zap.kind : null, kinds: kinds.slice() });
   const fire = () => {
+    const kind = pickKind(), Z = ZAPS[kind];
     c.ai.react("zap", { force: true });
+    c.emote("pip", "!", () => c.pip.get("head"), Z.say, 1.8);
     setTimeout(() => {
       if (finished) return;
-      const g = c.guest();
-      const from = g.get("pelvis").clone().setY(0.012);
-      const to = c.pip.get("pelvis").clone().setY(0.012);
+      const g = c.guest(), b = body(c);
+      // the heights: just off the floor, Sir Pip's chest, and his head
+      const y = kind === "low" ? 0.016 : kind === "mid" ? b.pelvis.y + 0.045 : b.head - 0.005;
+      const from = g.get("pelvis").clone().setY(y);
+      const to = c.pip.get("pelvis").clone().setY(y);
       const dir = to.clone().sub(from).normalize();
       const m = new THREE.Group();
-      m.add(glow(0xff5040, 0.008), glow(0x60e8ff, 0.018, 0.35));
+      m.add(glow(Z.core, 0.016), glow(Z.halo, 0.036, 0.35), glow(0xffffff, 0.007));
       m.position.copy(from);
       c.root.add(m);
-      zap = { m, dir, dist: from.distanceTo(to), went: 0, judged: false };
-      c.sfx("zap", g.group, { volume: 0.6 });
+      zap = { m, dir, from, kind, dist: from.distanceTo(to), went: 0, judged: false };
+      c.sfx("zap", g.group, { volume: 0.7 });
       if (!warned) { warned = true; c.princessSay("lookOut"); }
     }, 650);
   };
@@ -500,7 +519,9 @@ function dodge(spec, c, done) {
     target() { return c.pip.main.worldPoint([0, 0.04, -0.03], new THREE.Vector3()); },
     update(dt) {
       t += dt;
-      if (body(c).feet > 0.016) lastAir = t;
+      const b = body(c);
+      if (b.feet > 0.016) lastAir = t;
+      if (b.head < 0.178) lastLow = t; // (ducked: tipped forward, or crouched)
       if (!zap && t > 0 && !finished) { fire(); t = -99; }
       if (zap) {
         // each zap comes a little faster than the last
@@ -510,7 +531,11 @@ function dodge(spec, c, done) {
         zap.m.scale.setScalar(1 + Math.sin(t * 30) * 0.2);
         if (!zap.judged && zap.went >= zap.dist) {
           zap.judged = true;
-          if (t - lastAir < 0.3) {
+          // how far Sir Pip is now from the zap's line (stepping aside)
+          const p = b.pelvis, rel = new THREE.Vector3(p.x - zap.from.x, 0, p.z - zap.from.z);
+          const off = Math.abs(rel.x * zap.dir.z - rel.z * zap.dir.x) / Math.max(1e-6, Math.hypot(zap.dir.x, zap.dir.z));
+          const ok = zap.kind === "low" ? t - lastAir < 0.3 : zap.kind === "high" ? t - lastLow < 0.35 : off > 0.05;
+          if (ok) {
             dodged++;
             c.coach(TASK_LINES.dodged);
             c.emote("pip", "✦", () => c.pip.get("head"), `${dodged} / ${spec.count}`, 1.3);
@@ -520,7 +545,7 @@ function dodge(spec, c, done) {
             c.sfx("snap", c.pip.group, { volume: 0.5 });
             c.coach(TASK_LINES.zapped);
             setTimeout(() => c.oops?.(), 1200); // the co-star turns the mistake into theatre
-            c.showHint("dodge");
+            c.showHint(ZAPS[zap.kind].hint);
           }
         }
         if (zap.went > zap.dist + 0.15) {
@@ -535,7 +560,7 @@ function dodge(spec, c, done) {
             c.confetti("smoke");
             setTimeout(() => c.guestSay("defeated"), 2500);
             setTimeout(done, 4200);
-          } else t = -Math.max(0.9, 1.6 - dodged * 0.12);
+          } else t = -Math.max(1.2, 1.9 - dodged * 0.12); // (a moment to read the next "Jump!" / "Duck!")
         }
       }
     },

@@ -224,37 +224,51 @@ const xrCaption = (() => {
       shown.forEach((l, i) => g.fillText(l, c.width / 2, c.height / 2 + (i - (shown.length - 1) / 2) * 60));
       tex.needsUpdate = true;
       this.fresh = true;
-      this.goalKey = null;
-    },
-    // tonight's stars (drawn, not typed) and the act's goal, with a gold edge to tell it from a line
-    goal(stars, total, text) {
-      const key = `${stars}/${total}|${text}`;
-      if (key === this.goalKey) return;
-      this.goalKey = key;
-      g.clearRect(0, 0, c.width, c.height);
-      g.fillStyle = "rgba(20,12,30,0.82)"; g.strokeStyle = "rgba(216,172,79,0.9)"; g.lineWidth = 5;
-      g.beginPath(); g.roundRect(5, 5, c.width - 10, c.height - 10, 40); g.fill(); g.stroke();
-      const star = (x, y, r, on) => {
-        g.beginPath();
-        for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
-        g.closePath(); g.fillStyle = on ? "#f0c24a" : "rgba(240,194,74,0.18)"; g.fill();
-        g.strokeStyle = "rgba(240,194,74,0.8)"; g.lineWidth = 2.5; g.stroke();
-      };
-      for (let i = 0; i < total; i++) star(60 + i * 44, c.height / 2, 19, i < stars);
-      const x0 = 60 + total * 44 + 10, w = c.width - x0 - 40;
-      g.fillStyle = "#fff6e4"; g.font = "44px Georgia, serif"; g.textAlign = "left"; g.textBaseline = "middle";
-      const words = text.split(" "), lines = [""];
-      for (const wd of words) { const t = lines[lines.length - 1] ? lines[lines.length - 1] + " " + wd : wd; if (g.measureText(t).width > w && lines[lines.length - 1]) lines.push(wd); else lines[lines.length - 1] = t; }
-      const shown = lines.slice(0, 2);
-      if (lines.length > 2) shown[1] += " …";
-      shown.forEach((l, i) => g.fillText(l, x0, c.height / 2 + (i - (shown.length - 1) / 2) * 54));
-      tex.needsUpdate = true;
-      this.fresh = true;
     },
   };
 })();
 stageRoot.add(xrCaption.mesh);
 xrCaption.mesh.position.set(0, -0.05, 0.27);
+// headset: tonight's stars and the act's goal (the page's top card), fixed at the top right of
+// your view wherever you look; drawn over everything, so nothing on the stage can hide it
+const xrHud = (() => {
+  const c = document.createElement("canvas"); c.width = 1000; c.height = 270;
+  const g = c.getContext("2d");
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.081), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
+  mesh.renderOrder = 30; mesh.visible = false; mesh.frustumCulled = false;
+  const star = (x, y, r, on) => {
+    g.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+    g.closePath(); g.fillStyle = on ? "#ffcf4a" : "rgba(255,207,74,0.22)"; g.fill();
+    g.strokeStyle = "#ffd970"; g.lineWidth = 3.5; g.stroke();
+  };
+  let key = null;
+  return {
+    mesh,
+    set(title, stars, total, goal) {
+      const k = `${title}|${stars}/${total}|${goal}`;
+      if (k === key) return;
+      key = k;
+      g.clearRect(0, 0, c.width, c.height);
+      g.fillStyle = "rgba(18,10,26,0.86)"; g.strokeStyle = "rgba(216,172,79,0.95)"; g.lineWidth = 6;
+      g.beginPath(); g.roundRect(5, 5, c.width - 10, c.height - 10, 36); g.fill(); g.stroke();
+      for (let i = 0; i < total; i++) star(56 + i * 56, 62, 24, i < stars);
+      g.fillStyle = "#d8c6a4"; g.font = "italic 34px Georgia, serif"; g.textAlign = "left"; g.textBaseline = "middle";
+      g.fillText(title, 56 + total * 56, 64, c.width - (56 + total * 56) - 30);
+      g.fillStyle = "#fff6e4"; g.font = "40px Georgia, serif";
+      const words = (goal || "").split(" "), lines = [""];
+      for (const w of words) { const t = lines[lines.length - 1] ? lines[lines.length - 1] + " " + w : w; if (g.measureText(t).width > c.width - 80 && lines[lines.length - 1]) lines.push(w); else lines[lines.length - 1] = t; }
+      const shown = lines.slice(0, 3);
+      if (lines.length > 3) shown[2] += " …";
+      shown.forEach((l, i) => g.fillText(l, 36, 128 + i * 48));
+      tex.needsUpdate = true;
+    },
+  };
+})();
+scene.add(xrHud.mesh);
+const HUD_AT = new THREE.Vector3(0.44, 0.28, -0.6), // (about 36° right and 25° up: the top right of the view)
+  _hudP = new THREE.Vector3(), _hudQ = new THREE.Quaternion(), _hudS = new THREE.Vector3();
 const toast = (text) => {
   const el = $("toast");
   el.textContent = text;
@@ -292,14 +306,41 @@ const audioLoader = new THREE.AudioLoader();
 const qwenVoices = new URLSearchParams(location.search).get("voices") !== "kokoro";
 let qwenFiles = {};
 if (qwenVoices) fetch("voice-qwen/manifest.json").then((r) => (r.ok ? r.json() : null)).then((m) => { if (m) { qwenFiles = m.files; console.info(`Qwen3-TTS voices: ${Object.keys(m.voices || {}).join(", ")} (${Object.keys(qwenFiles).length} lines)`); } }).catch(() => {});
+// Clank, the clockwork robot: his recorded lines go through a robot filter (a ring modulator for
+// the buzz, a short comb for the metal, a brighter top), so he sounds like a machine, not a man
+const clankLines = new Set(["says", "talk", "task"].flatMap((k) => Object.values(GUESTS.clank?.[k] || {})));
+let clankFiles = null;
+const robotFx = (() => {
+  const ctx = listener.context;
+  const pre = ctx.createGain(), dry = ctx.createGain(), out = ctx.createGain(), tone = ctx.createBiquadFilter();
+  dry.gain.value = 0.5;
+  const ring = ctx.createGain(); ring.gain.value = 0;
+  const osc = ctx.createOscillator(); osc.frequency.value = 62;
+  const depth = ctx.createGain(); depth.gain.value = 1;
+  osc.connect(depth).connect(ring.gain); osc.start();
+  const ringLevel = ctx.createGain(); ringLevel.gain.value = 0.75;
+  pre.connect(ring).connect(ringLevel).connect(out);
+  const delay = ctx.createDelay(0.05); delay.delayTime.value = 0.0065;
+  const fb = ctx.createGain(); fb.gain.value = 0.5;
+  const comb = ctx.createGain(); comb.gain.value = 0.4;
+  pre.connect(delay); delay.connect(fb).connect(delay); delay.connect(comb).connect(out);
+  tone.type = "peaking"; tone.frequency.value = 2200; tone.Q.value = 0.8; tone.gain.value = 5;
+  return [pre, dry, out, tone]; // (chained by three.js: pre -> dry -> out -> tone is the dry path)
+})();
 const voicePlayer = {
   async play(url, who = "narrator") {
+    let robot = false;
+    if (who === "marlo") {
+      if (!clankFiles && Object.keys(narrator.manifest).length) clankFiles = new Set([...clankLines].map((t) => narrator.manifest[t]).filter(Boolean));
+      robot = !!clankFiles?.has(String(url).split("/").pop());
+    }
     if (qwenVoices) { const q = qwenFiles[String(url).split("/").pop()]; if (q) url = `voice-qwen/${q}`; }
     if (listener.context.state !== "running") await listener.context.resume().catch(() => {});
     if (!clipCache.has(url)) clipCache.set(url, audioLoader.loadAsync(url));
     const buffer = await clipCache.get(url);
     const src = who === "marlo" ? marloVoice : voice;
     if (src.isPlaying) src.stop();
+    if (src === marloVoice && (robot ? src.filters[0] !== robotFx[0] : src.filters.length)) src.setFilters(robot ? robotFx : []);
     src.setBuffer(buffer);
     src.play();
     if (who !== "marlo") robot.talk = buffer.duration;
@@ -2110,7 +2151,7 @@ function refreshXrMenu() {
   if ($("go-vr")) $("go-vr").hidden = !xrSupport.vr;
   if ($("go-ar")) $("go-ar").hidden = !xrSupport.ar;
   const here = loadingEl.querySelector("#begin .here");
-  if (here) here.hidden = !any; // (the gold bar then plays on the flat screen, and says so)
+  if (here) { here.hidden = !any; here.textContent = xrSupport.vr ? " · in VR" : " · on this screen"; } // (says where the gold bar plays)
   fitTheatre();
 }
 let menuArt = null, menuShown = false; // (the start menu's pictures; whether it has made its entrance)
@@ -2245,7 +2286,7 @@ function renderStartMenu(midGame = false) {
       `<div class="msub">A marionette theatre with an AI co-performer</div>` +
       (midGame ? `<div><button id="backtoshow" class="mback">× Back to the show</button></div>` : "") +
       `<div class="xrrow" hidden>` +
-        `<button id="go-vr" class="xrgo" hidden><i>${I.vr}</i><span><b>Play in VR</b><small>The theatre appears in front of you</small></span></button>` +
+        `<button id="go-vr" class="xrgo" hidden><i>${I.pad}</i><span><b>Play on this screen</b><small>No headset: a mouse and keyboard</small></span></button>` +
         `<button id="go-ar" class="xrgo" hidden><i>${I.vr}</i><span><b>Play on Your Real Desk</b><small>Mixed reality · the stage sits in your room</small></span></button>` +
       `</div>` +
       `<button id="begin" class="cta"><i class="pl">${I.play}</i><span class="tx"><b>${resume ? "Continue the Story" : "Begin the Story"}<em class="here" hidden> · on this screen</em></b><small>${resume ? where : "The Tale of Sir Pip · nine chapters, about ten minutes each"}</small></span>${thumb ? `<span class="thumb" style="background-image:url(${thumb})"></span>` : ""}</button>` +
@@ -2280,10 +2321,13 @@ function renderStartMenu(midGame = false) {
     storyPending = true; // the story plays once the curtain is up
     startPreshow();
   };
-  $("begin").onclick = begin;
   // straight into the headset from the menu (the story starts by itself once you're in)
   const goXR = (mode) => { enter(); enterXR(mode).catch((e) => { toast(e.message); renderStartMenu(showStarted); }); };
-  $("go-vr").onclick = () => goXR("immersive-vr");
+  // a VR game first: where a headset is there, the story (and the map, and free play) open in
+  // VR; "Play on this screen" keeps the flat page
+  const vrFirst = () => xrSupport.vr;
+  $("begin").onclick = () => (vrFirst() ? goXR("immersive-vr") : begin());
+  $("go-vr").onclick = begin;
   $("go-ar").onclick = () => goXR("immersive-ar");
   refreshXrMenu();
   if ($("onehand")) { $("onehand").checked = oneHand; $("onehand").onchange = (e) => setOneHand(e.target.checked, true); }
@@ -2292,7 +2336,7 @@ function renderStartMenu(midGame = false) {
     if (!confirm("Start the tale of Sir Pip again from the beginning? Your playbills are kept.")) return;
     if (showStarted) { enter(); if (!leaveCurrentMode()) return; storyMap.resetStory(); changeScene(storyMap.current()); return; }
     newStory();
-    begin();
+    if (vrFirst()) goXR("immersive-vr"); else begin();
   };
   if ($("chapters")) $("chapters").onclick = () => {
     storyMap.unlockAll(); // every chapter (and the Grand Theatre) can be picked on the map
@@ -2303,9 +2347,9 @@ function renderStartMenu(midGame = false) {
     curtains.open();
     setNight(false);
     music.play();
-    openMap();
+    if (vrFirst()) { afterXR = openMap; goXR("immersive-vr"); } else openMap();
   };
-  if ($("freeplay")) $("freeplay").onclick = () => { enter(); if (!leaveCurrentMode()) return; startFreePlay(); };
+  if ($("freeplay")) $("freeplay").onclick = () => { enter(); if (!leaveCurrentMode()) return; startFreePlay(); if (vrFirst()) goXR("immersive-vr"); };
   if ($("mystory")) $("mystory").onclick = () => openStoryMaker();
   if ($("backtoshow")) $("backtoshow").onclick = () => enter();
   // the extras just press the (hidden) toolbar buttons, then get out of the way
@@ -2420,6 +2464,7 @@ function setXRQuality(xr) {
 // AR (passthrough): the stage is set down on YOUR real desk — a hit-test reticle
 // follows your gaze over real surfaces, and a pinch places it. VR: it appears in
 // front of you on the virtual desk.
+let afterXR = null; // something to open once the headset session has begun
 let placeStage = 0; // frames to wait before placing the stage in front of the head (0: placed)
 let placing = false;
 let hitSource = null;
@@ -2459,7 +2504,10 @@ async function enterXR(mode) {
     placeStage = 3; // (the head's pose is only real after the first frames: before that it's the desktop camera's)
     unlockAudio();
     // (the stage is placed on the first XR frame; open the book just after)
-    setTimeout(() => { if (freePlay) { playground.show(true); faceViewer(playground.group); } else if (!showStarted && !book.open && !intro.on && !preshow) { storyPending = true; startPreshow(); } }, 300);
+    setTimeout(() => {
+      if (afterXR) { const f = afterXR; afterXR = null; f(); } // (e.g. the chapter map, opened from the menu)
+      else if (freePlay) { playground.show(true); faceViewer(playground.group); } else if (!showStarted && !book.open && !intro.on && !preshow) { storyPending = true; startPreshow(); }
+    }, 300);
   }
   session.addEventListener("end", () => {
     xrMode = null;
@@ -2833,10 +2881,19 @@ renderer.setAnimationLoop((time, frame) => {
   robotBatch?.update();
 
   if (captionTimer > 0 && (captionTimer -= dt) <= 0) caption.classList.remove("on");
-  // headset: between lines, the strip shows tonight's stars and the act's goal (the page's top card)
-  const goalAct = xrMode && show.scene && show.state === "act" && !storyMap.mesh.visible ? show.scene.acts[show.act] : null;
-  if (captionTimer <= 0 && goalAct) xrCaption.goal(show.stars, show.scene.acts.length, goalAct.goal.replace(/^Act \w+\.\s*/, ""));
-  xrCaption.mesh.visible = !!xrMode && (captionTimer > 0 || !!goalAct) && !book.mesh.visible;
+  xrCaption.mesh.visible = !!xrMode && captionTimer > 0 && !book.mesh.visible;
+  // headset: the stars-and-goal panel, at the top right of the view (placed from this frame's head pose)
+  const hudOn = !!xrMode && !!show.scene && !book.mesh.visible && !storyMap.mesh.visible;
+  xrHud.mesh.visible = hudOn;
+  if (hudOn) {
+    const act = show.state === "act" ? show.scene.acts[show.act] : null;
+    xrHud.set(show.scene.title, show.stars, show.scene.acts.length, act ? act.goal.replace(/^Act \w+\.\s*/, "") : show.state === "done" || show.state === "finale" ? "Curtain call!" : "");
+    renderer.xr.updateCamera(camera);
+    camera.matrixWorld.decompose(_hudP, _hudQ, _hudS);
+    xrHud.mesh.position.copy(HUD_AT).applyQuaternion(_hudQ).add(_hudP);
+    xrHud.mesh.up.set(0, 1, 0).applyQuaternion(_hudQ);
+    xrHud.mesh.lookAt(_hudP); // (turned to face your eye, out at the side)
+  }
   // (Sir Pip's glowing bar rests just behind the book: it stays dark while the book is open)
   if (pip.skin.bars) pip.skin.bars.visible = !(xrMode && book.mesh.visible);
   if (xrMode && book.mesh.visible && hints.current) hints.hide(); // (no pointing arrows over the open book)
@@ -2912,4 +2969,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { xrCaption, socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMovePip: (x, z) => movePipTo(x, z, true), placePip: (x, z) => { movePipTo(x, z); sim.mainPos.set(x - DESK_HOLD.main.x, sim.mainPos.y, z - DESK_HOLD.main.z); }, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { xrCaption, xrHud, socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMovePip: (x, z) => movePipTo(x, z, true), placePip: (x, z) => { movePipTo(x, z); sim.mainPos.set(x - DESK_HOLD.main.x, sim.mainPos.y, z - DESK_HOLD.main.z); }, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };

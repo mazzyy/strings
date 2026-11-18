@@ -202,7 +202,7 @@ export class DesktopHands {
     dom.addEventListener("contextmenu", (e) => e.preventDefault());
     dom.addEventListener("wheel", (e) => {
       const which = this._otherActive() ? "other" : "main";
-      this.depth[which] = THREE.MathUtils.clamp(this.depth[which] + Math.sign(e.deltaY) * 0.015, -0.16, 0.16);
+      this.depth[which] = THREE.MathUtils.clamp(this.depth[which] + Math.sign(e.deltaY) * 0.015, -0.22, 0.3); // (as far as the stage's front edge)
       e.preventDefault();
     }, { passive: false });
     window.addEventListener("keydown", (e) => {
