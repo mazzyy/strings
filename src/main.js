@@ -151,6 +151,8 @@ console.info(`[perf] merged away ${saved} draw calls`);
 // hand puppets: the robot ducks under the stage (only his face peeks up through a trapdoor)
 // and works the socks with his arms up through the floor. Anything below the stage floor is
 // clipped away by this plane, so they all rise out of real holes.
+// (the headset mode: declared up here because the stage can be set up, robot and all, before the XR section below runs)
+let xrMode = null;
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 renderer.localClippingEnabled = true;
 const hand = { on: false, under: false, guest: false, rise: 1, head: new THREE.Vector3(0, 0, -0.128), holes: [], meshes: [], headHole: null, idle: 8, speaker: null };
@@ -2294,7 +2296,6 @@ function setXRQuality(xr) {
 // AR (passthrough): the stage is set down on YOUR real desk — a hit-test reticle
 // follows your gaze over real surfaces, and a pinch places it. VR: it appears in
 // front of you on the virtual desk.
-let xrMode = null;
 let placeStage = false;
 let placing = false;
 let hitSource = null;
