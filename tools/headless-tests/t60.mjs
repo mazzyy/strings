@@ -28,7 +28,8 @@ await page.waitForTimeout(2000);
 await page.screenshot({ path: `${out}/1-book.png` });
 await S(() => window.strings.book.finish());
 await waitFor(() => window.strings.chapter.id === "laundry" && window.strings.show.state === "intro");
-R.staged = await S(() => { const s = window.strings; return { guest: s.guestId, set: s.sets.current, under: s.hand.under, robotY: +s.robot.group.position.y.toFixed(3), holes: s.hand.holes.length, noodle: !!s.socks.noodle?.group.visible }; });
+await page.waitForTimeout(2500); // (he crouches down behind the stage)
+R.staged = await S(() => { const s = window.strings; return { guest: s.guestId, set: s.sets.current, under: s.hand.under, robotY: +s.robot.group.position.y.toFixed(3), robotScale: s.robot.group.scale.x, holes: s.hand.holes.length, noodle: !!s.socks.noodle?.group.visible }; });
 await S(() => { const s = window.strings; s.sim.sticky = true; s.sim._hasMouse = false; });
 R.act1 = await waitFor(() => window.strings.show.state === "act" && window.strings.currentTask?.debug?.().got !== undefined);
 // peekaboo: go to each hole Noodle pops out of
@@ -61,7 +62,8 @@ R.done = await S(() => !!window.strings.storyMap.state.done.laundry);
 // the curtain call: the night sky chapter, skipped to its end
 await S(() => { const s = window.strings; s.changeScene(s.storyMap.places.find((p) => p.id === "sky")); });
 await waitFor(() => window.strings.book.open, null, 30000);
-R.robotBack = await S(() => ({ under: window.strings.hand.under, scale: window.strings.robot.group.scale.x }));
+await page.waitForTimeout(2500); // (and stands up again)
+R.robotBack = await S(() => ({ under: window.strings.hand.under, scale: window.strings.robot.group.scale.x, y: +window.strings.robot.group.position.y.toFixed(3) }));
 await S(() => window.strings.book.finish());
 await waitFor(() => window.strings.chapter.id === "sky" && ["intro", "act"].includes(window.strings.show.state));
 for (let k = 0; k < 80 && !["ending", "finale"].includes(await S(() => window.strings.show.state)); k++) { await S(() => { const s = window.strings.show; if (s.state === "act") s.skip(); else if (s.state === "intro") s._nextAct(); }); await page.waitForTimeout(900); }
@@ -78,8 +80,8 @@ R.story = await S(async () => {
 });
 console.log(JSON.stringify(R, null, 1));
 console.log("errors:", errors.length ? errors.slice(0, 8) : "none");
-const ok = !errors.length && R.order.includes("forest2 workshop* ship3 laundry* bridge4") && R.book && R.staged.guest === "noodle" && R.staged.under && R.staged.robotY >= 0 && R.staged.holes === 3 && R.staged.noodle &&
-  R.act1 && R.act2 && R.found && R.act3 && R.finale && R.done && !R.robotBack.under && R.robotBack.scale > 1 && R.curtainCall.twig && R.curtainCall.noodle && R.curtainCall.doodle &&
+const ok = !errors.length && R.order.includes("forest2 workshop* ship3 laundry* bridge4") && R.book && R.staged.guest === "noodle" && R.staged.under && R.staged.robotY < -0.1 && R.staged.robotY > -0.4 && R.staged.robotScale > 1 && R.staged.holes === 3 && R.staged.noodle &&
+  R.act1 && R.act2 && R.found && R.act3 && R.finale && R.done && !R.robotBack.under && R.robotBack.scale > 1 && Math.abs(R.robotBack.y) < 0.01 && R.curtainCall.twig && R.curtainCall.noodle && R.curtainCall.doodle &&
   R.story.guest === "noodle" && R.story.under;
 console.log(ok ? "PASS" : "FAIL");
 await browser.close();
