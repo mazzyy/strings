@@ -6,7 +6,7 @@
 //   stage that you poke with a fingertip.
 // The same canvas drawing serves both.
 import * as THREE from "three";
-import { CHAPTERS, THEATRE } from "./lines.js";
+import { CHAPTERS, THEATRE, chapterNumber } from "./lines.js";
 
 const WORLD = { w: 1600, h: 1000 };
 const VIEW = { w: 1200, h: 750 };
@@ -60,6 +60,28 @@ function icon(g, kind, x, y, locked) {
     g.fillStyle = "#3d6e3a"; g.beginPath(); g.ellipse(-6, -10, 18, 7, -0.2, 0, Math.PI * 2); g.fill(); g.stroke();
     g.beginPath(); g.moveTo(-8, -14); g.lineTo(-24, -40); g.lineTo(4, -16); g.closePath(); g.fillStyle = "#c8743a"; g.fill(); g.stroke();
     g.beginPath(); g.arc(14, -16, 6, 0, Math.PI * 2); g.fillStyle = "#3d6e3a"; g.fill(); g.stroke();
+  } else if (kind === "workshop") {
+    // a crooked timber workshop, a smoking chimney, and a sign with a long-nosed puppet
+    g.beginPath(); g.rect(-34, -26, 60, 46); fill("#c9a06a");
+    g.strokeStyle = "rgba(90,55,25,0.55)"; g.lineWidth = 1.5; for (let yy = -18; yy < 20; yy += 8) { g.beginPath(); g.moveTo(-34, yy); g.lineTo(26, yy); g.stroke(); }
+    g.strokeStyle = "#3a2414"; g.lineWidth = 3;
+    g.beginPath(); g.rect(10, -60, 10, 22); fill("#8a5a3a");
+    g.fillStyle = "rgba(120,110,100,0.55)"; for (const [dx, dy, r] of [[18, -70, 6], [24, -82, 8], [32, -96, 10]]) { g.beginPath(); g.arc(dx, dy, r, 0, Math.PI * 2); g.fill(); }
+    g.beginPath(); g.moveTo(-42, -24); g.lineTo(-6, -56); g.lineTo(34, -24); g.closePath(); fill("#7a3a26");
+    g.beginPath(); g.arc(-8, -36, 7, 0, Math.PI * 2); fill("#ffd77a");
+    g.beginPath(); g.rect(-24, 0, 14, 20); fill("#5a3b22");
+    g.beginPath(); g.moveTo(26, -8); g.lineTo(46, -8); g.stroke();
+    g.beginPath(); g.rect(30, -6, 24, 20); fill("#f0dcae");
+    g.beginPath(); g.arc(40, 4, 4.5, 0, Math.PI * 2); fill("#e2ab6c");
+    g.beginPath(); g.moveTo(44, 3); g.lineTo(53, 2); g.stroke();
+  } else if (kind === "laundry") {
+    // two houses with a washing line between them, and a sock on it
+    g.beginPath(); g.rect(-46, -30, 30, 50); fill("#f6f0e2"); g.beginPath(); g.moveTo(-50, -30); g.lineTo(-31, -48); g.lineTo(-12, -30); g.closePath(); fill("#c25a34");
+    g.beginPath(); g.rect(16, -38, 30, 58); fill("#f2e2c4"); g.beginPath(); g.moveTo(12, -38); g.lineTo(31, -56); g.lineTo(50, -38); g.closePath(); fill("#c25a34");
+    for (const wx of [-36, 26]) { g.beginPath(); g.rect(wx, -18, 10, 10); fill("#2f6ac8"); }
+    g.beginPath(); g.moveTo(-16, -22); g.quadraticCurveTo(0, -12, 16, -24); g.stroke();
+    g.beginPath(); g.moveTo(-6, -17); g.lineTo(-6, -4); g.quadraticCurveTo(-6, 2, 2, 2); g.lineTo(4, -4); g.lineTo(0, -4); g.lineTo(0, -17); g.closePath(); fill("#cbbd9c");
+    g.fillStyle = "#d8322a"; g.fillRect(-6, -15, 6, 2); g.fillStyle = "#f0c030"; g.fillRect(-6, -12, 6, 2);
   } else if (kind === "theatre") {
     g.beginPath(); g.rect(-40, -30, 80, 52); fill("#7a1d22");
     g.beginPath(); g.moveTo(-40, -30); g.quadraticCurveTo(0, -50, 40, -30); g.closePath(); fill("#c9a14a");
@@ -150,7 +172,7 @@ export class StoryMap {
     if (i >= 0) this.state.unlocked = Math.max(this.state.unlocked, Math.min(CHAPTERS.length, i + 2));
     story.save(this.state);
     this.draw();
-    return { newChapter: this.state.unlocked > before, finished: Object.keys(this.state.done).filter((k) => k !== "theatre").length >= CHAPTERS.length };
+    return { newChapter: this.state.unlocked > before, finished: CHAPTERS.every((c) => this.state.done[c.id]) };
   }
 
   show(xr = false) {
@@ -378,7 +400,7 @@ export class StoryMap {
       g.fillStyle = "rgba(60,35,10,0.25)"; g.beginPath(); g.ellipse(x + 6, y + 26, 46, 12, 0, 0, Math.PI * 2); g.fill();
       g.save(); g.translate(x, y); g.scale(1.18, 1.18); icon(g, p.id, 0, 0, locked); g.restore();
       // its name on a ribbon banner, with a wax-seal number
-      const n = CHAPTERS.indexOf(p);
+      const n = chapterNumber(p) - 1; // (the tales along the way have no number)
       g.font = "600 26px Georgia, serif"; g.textAlign = "center";
       const tw = g.measureText(p.title).width + 56, by = y + 58;
       g.fillStyle = locked ? "rgba(150,130,100,0.8)" : "#8c2a2a";
@@ -396,6 +418,7 @@ export class StoryMap {
       const done = this.state.done[p.id];
       if (done) { g.font = "24px Georgia, serif"; g.fillStyle = "#b8862a"; g.fillText("★".repeat(done.stars), x, by + 44); }
       else if (p.id === "theatre" && !locked) { g.font = "italic 17px Georgia, serif"; g.fillStyle = "#7a1d22"; g.fillText("a new show every night", x, by + 40); }
+      else if (p.side) { g.font = "italic 17px Georgia, serif"; g.fillStyle = locked ? "rgba(122,29,34,0.5)" : "#7a1d22"; g.fillText("along the way", x, by + 40); }
     }
     // the token: a little blue shield with Sir Pip's crest
     const bob = this.travel ? Math.abs(Math.sin(this.t * 10)) * 8 : Math.sin(this.t * 2) * 2;

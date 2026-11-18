@@ -30,6 +30,9 @@ def main():
         "clank": ("am_echo", 0.92),      # a clipped, menacing robot (still a human voice)
         "princess": ("af_bella", 1.0),   # Princess Juniper
         "king": ("bm_lewis", 0.9),       # the King, warm and stately
+        "twig": ("bf_emma", 1.06),       # Twig the wooden boy: bright, quick, cheeky
+        "noodle": ("am_michael", 1.1),   # Noodle the sock puppet: a goofy, bouncy fellow
+        "doodle": ("af_sarah", 1.08),    # Doodle, its twin
     }
     manifest = {}
     for i, item in enumerate(lines):

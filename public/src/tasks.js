@@ -11,6 +11,8 @@
 // and calls done() when it's won.
 import * as THREE from "three";
 import { TASK_LINES, RIDDLES } from "./lines.js";
+import { endGrainTexture } from "./wood.js";
+import { hangingSock, SOCK_STRIPES } from "./handpuppet.js";
 
 const v = new THREE.Vector3();
 // free a task's meshes (geometry, materials, label textures) when it ends
@@ -942,7 +944,251 @@ function owls(spec, c, done) {
   };
 }
 
-const TASKS = { shy, highfive, together, owls, collect, simon, duel, riddle, sneak, unlock, dodge, mount, rings, gears, chase, kindness, knight };
+// ---------------------------------------------------------------------------
+// The workshop. Twig boasts; is it true, or a fib? His nose gives him away.
+// Walk Sir Pip onto the log slice that says True, or the one that says Fib.
+function logSlice() {
+  const bark = new THREE.MeshStandardMaterial({ color: 0x4a2f1c, roughness: 0.95 });
+  const top = new THREE.MeshStandardMaterial({ map: endGrainTexture(), roughness: 0.75 });
+  return new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.059, 0.012, 32), [bark, top, top]);
+}
+function fib(spec, c, done) {
+  const B = c.twigBoasts, pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const firstTrue = Math.random() < 0.5;
+  const rounds = [[pick(firstTrue ? B.truths : B.fibs), firstTrue], [pick(firstTrue ? B.fibs : B.truths), !firstTrue], [B.last, false]];
+  const g = c.guest(), gHead = () => g.get("head");
+  const group = new THREE.Group();
+  c.root.add(group);
+  const stones = [["True", true, -0.3], ["Fib", false, -0.06]].map(([text, val, x]) => {
+    const s = new THREE.Group();
+    const slab = logSlice(); slab.position.y = 0.006;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.003, 6, 36), new THREE.MeshBasicMaterial({ color: val ? 0x9fffa0 : 0xffb07a, transparent: true, opacity: 0.4, toneMapped: false }));
+    ring.rotation.x = Math.PI / 2; ring.position.y = 0.013;
+    const tag = label(text, val ? "#2a6a2a" : "#9a3a12");
+    tag.position.set(0, 0.052, 0.07);
+    s.add(slab, ring, tag);
+    s.position.set(x, 0, 0.012);
+    group.add(s);
+    return { s, ring, val, on: 0, armed: false };
+  });
+  // an answer counts once Twig has said his piece: stand on a slice for half a second. Only the
+  // slice you answered on last time needs a step off first (so an old answer can't repeat itself)
+  const R = 0.078, HOLD = 0.5;
+  let i = 0, phase = "say", t = 0, cool = 0, last = -1;
+  const say = () => { phase = "say"; t = 0; c.guestSay(rounds[i][0]); };
+  say();
+  return {
+    debug: () => ({ round: i, phase, truth: rounds[i]?.[1], nose: c.twigNose?.(), stones: stones.map((st) => +st.on.toFixed(2)), last, cool: +cool.toFixed(2) }),
+    target() { return phase === "answer" ? new THREE.Vector3(-0.18, 0.05, 0.012) : gHead().clone(); },
+    hint() { return "fib"; },
+    update(dt) {
+      t += dt; cool -= dt;
+      const b = body(c);
+      const on = stones.map((st) => flat(st.s.position, b.pelvis) < R);
+      if (last >= 0 && !on[last]) last = -1; // stepped off last time's answer: it's free again
+      if (phase === "say") {
+        // his line has started (it's no longer waiting its turn), and the nose has had its moment
+        if ((!c.guestQueued() && t > 2.6) || t > 9) {
+          phase = "answer"; t = 0;
+          if (rounds[i][1]) c.emote("marlo", "…", gHead, "His nose stayed put...", 2.2);
+          if (last >= 0) setTimeout(() => c.emote("pip", "↔", () => c.pip.get("head"), "Step off, then choose!", 2.4), 900);
+          c.showHint("fib");
+        }
+      }
+      stones.forEach((st, k) => {
+        const counts = phase === "answer" && on[k] && k !== last && cool <= 0;
+        if (counts && st.on === 0) c.sfx("clack", null, { volume: 0.4, rate: 1.4 }); // a knock as he steps onto the wood
+        st.on = counts ? st.on + dt : 0;
+        const p = Math.min(1, st.on / HOLD);
+        st.ring.material.opacity = on[k] ? 0.6 + 0.4 * p : phase === "answer" ? 0.35 + 0.2 * Math.sin(t * 3 + k) : 0.2;
+        st.ring.scale.setScalar(1 + 0.12 * p);
+      });
+      if (phase !== "answer") return;
+      stones.forEach((st, k) => {
+        if (phase !== "answer" || st.on < HOLD) return;
+        st.on = 0; last = k;
+        const truth = rounds[i][1];
+        if (st.val === truth) {
+          phase = "next";
+          c.hideHint();
+          st.ring.material.color.set(0x8cff7a);
+          c.sfx("chime", null, { volume: 0.5, rate: 1.1 + i * 0.12 });
+          c.emote("pip", "✦", () => c.pip.get("head"), `Right! ${i + 1} / 3`, 1.8);
+          c.guestSay(truth ? "trueRight" : "caught");
+          c.ai.react(truth ? "bow" : "hide", { force: true });
+          const final = i === rounds.length - 1;
+          setTimeout(() => {
+            st.ring.material.color.set(st.val ? 0x9fffa0 : 0xffb07a);
+            if (!final) { i++; say(); return; }
+            // caught on the big one: at last, the truth
+            c.guestSay("confess");
+            c.ai.react("slump", { force: true });
+            c.emote("marlo", "♥", gHead, "The truth!", 2.6);
+            setTimeout(done, 5200);
+          }, 3400);
+        } else {
+          cool = 2.4;
+          c.sfx("pop", null, { volume: 0.4, rate: 0.6 });
+          c.ai.react("laugh", { force: true });
+          c.guestSay(truth ? "trueWrong" : "fooled");
+          c.emote("marlo", "!", gHead, truth ? "That was true!" : "Fooled you!", 1.8);
+          setTimeout(() => c.oops?.(), 1400);
+        }
+      });
+    },
+    end() { dispose(group); c.hideHint(); },
+  };
+}
+
+// Twig can't dance: show him moves (jump, bow, wave, spin) and he copies each one.
+function mirror(spec, c, done) {
+  const need = spec.count || 3, learned = new Set(), g = c.guest(), gHead = () => g.get("head");
+  let busy = 0, phase = "learn";
+  c.guestSay("teach");
+  c.emote("marlo", "?", gHead, "Show me a move!", 2.6);
+  return {
+    debug: () => ({ phase, learned: [...learned] }),
+    target() { return gHead().clone(); },
+    hint() { return "teach"; },
+    update(dt) { busy -= dt; },
+    hear(ev) {
+      if (phase !== "learn" || !MOVE_NAMES[ev.type] || busy > 0) return;
+      busy = 1.5;
+      const move = ev.type, fresh = !learned.has(move);
+      setTimeout(() => c.ai.react(move, { force: true }), 650); // he copies you, a beat behind
+      if (!fresh) { c.emote("marlo", "♪", gHead, `${MOVE_NAMES[move]} again!`, 1.4); return; }
+      learned.add(move);
+      const n = learned.size;
+      c.sfx("chime", null, { volume: 0.35, rate: 1.1 + n * 0.12 });
+      c.emote("pip", "✦", () => c.pip.get("head"), `Twig learned: ${MOVE_NAMES[move]}  ${n} / ${need}`, 2);
+      setTimeout(() => c.guestSay(n >= need ? "learned3" : n === 1 ? "learned1" : "learned2"), 1700);
+      if (n >= need) {
+        phase = "won"; c.hideHint();
+        setTimeout(() => { c.ai.react("dance", { force: true }); c.confetti("grace"); c.sfx("applause", null, { volume: 0.4 }); }, 2700);
+        setTimeout(done, 5600);
+      }
+    },
+    end() {},
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The harbour laundry: Noodle, a sock puppet on the robot's hand, pops up through
+// trapdoors. Peekaboo: walk Sir Pip to whichever hole Noodle pops out of, and boop its nose.
+function peekaboo(spec, c, done) {
+  const N = c.sock("noodle"), holes = c.holes(), need = spec.count || 3, pipHead = () => c.pip.get("head");
+  let got = 0, phase = "wait", t = 0, at = 2, pops = 0;
+  N.duck();
+  const pop = () => {
+    // a different hole each time, never the one Sir Pip is standing by
+    const p = c.pip.get("pelvis");
+    const free = holes.map((h, k) => k).filter((k) => k !== at && Math.hypot(holes[k][0] - p.x, holes[k][1] - p.z) > 0.1);
+    at = free.length ? free[Math.floor(Math.random() * free.length)] : (at + 1) % holes.length;
+    N.at(...holes[at]).popUp();
+    c.sfx("pop", null, { volume: 0.45, rate: 1.6 });
+    c.guestSay(["peek", "peek2", "peek3"][pops++ % 3]);
+    c.emote("marlo", "!", () => N.headPos(), "Peekaboo!", 1.4);
+    phase = "up"; t = 0;
+  };
+  return {
+    debug: () => ({ phase, got, at, up: N.isUp }),
+    target() { return phase === "up" ? new THREE.Vector3(holes[at][0], 0.07, holes[at][1]) : null; },
+    hint() { return "peek"; },
+    update(dt) {
+      t += dt;
+      if (phase === "wait") { if (N.hidden && t > 1.1) pop(); return; }
+      if (phase === "up") {
+        const p = c.pip.get("pelvis"), d = Math.hypot(holes[at][0] - p.x, holes[at][1] - p.z);
+        if (t > 0.35 && d < 0.09) {
+          got++; phase = got >= need ? "won" : "booped"; t = 0;
+          c.sfx("pop", null, { volume: 0.7, rate: 1.9 });
+          c.sfx("chime", null, { volume: 0.4, rate: 1.1 + got * 0.15 });
+          c.emote("pip", "✦", pipHead, `Boop! ${got} / ${need}`, 1.6);
+          N.wiggleFor(1.4);
+          c.knockSock?.();
+          if (got >= need) { c.hideHint(); c.guestSay("booped"); c.confetti("grace"); setTimeout(done, 3400); }
+          else c.guestSay(got === 1 ? "boop" : "boop2");
+        } else if (t > (pops === 1 ? 6 : 4.6)) { N.duck(); phase = "wait"; t = 0; if (Math.random() < 0.5) c.guestSay("miss"); }
+      } else if (phase === "booped" && t > 1.7) { N.duck(); phase = "wait"; t = 0; }
+    },
+    end() {},
+  };
+}
+
+// Find the twin: four socks on the washing line; walk Sir Pip under the one with Noodle's
+// stripes. It drops off the line, and up through the floor comes Doodle (the robot's other hand).
+function matchsock(spec, c, done) {
+  const N = c.sock("noodle"), holes = c.holes(), L = c.washingLine(), pipHead = () => c.pip.get("head");
+  const group = new THREE.Group();
+  c.root.add(group);
+  const decoys = [...SOCK_STRIPES.decoys].sort(() => Math.random() - 0.5).slice(0, 3);
+  const right = Math.floor(Math.random() * 4);
+  const xs = [-0.27, -0.09, 0.09, 0.27];
+  const socks = xs.map((x, k) => {
+    const s = hangingSock(k === right ? SOCK_STRIPES.noodle : decoys.pop());
+    s.position.set(x, L.y, L.z + 0.004);
+    s.scale.setScalar(1.5); // (big enough to compare stripes from the audience)
+    s.rotation.y = (Math.random() - 0.5) * 0.3;
+    group.add(s);
+    return { s, x, on: 0, swing: 0, ph: Math.random() * 6 };
+  });
+  // Noodle stands up tall at its own hole, to show off its stripes
+  const home = () => { N.at(...holes[2]).popUp(true); N.wiggleFor(1.2); };
+  if (N.hidden) home(); else { N.duck(); setTimeout(home, 700); }
+  c.guestSay("stripes");
+  setTimeout(() => c.emote("marlo", "★", () => N.headPos(), "Match my stripes!", 2.6), 1200);
+  let phase = "choose", t = 0, last = -1, wrongs = 0, fall = null;
+  return {
+    debug: () => ({ phase, right, at: socks.map((s) => s.x) }),
+    target() { return phase === "choose" ? new THREE.Vector3(0, L.y - 0.03, L.z) : null; },
+    hint() { return "sock"; },
+    update(dt) {
+      t += dt;
+      const p = c.pip.get("pelvis");
+      socks.forEach((S, k) => {
+        S.swing *= Math.exp(-2.5 * dt);
+        S.s.rotation.z = Math.sin(t * 1.3 + S.ph) * 0.05 + Math.sin(t * 9) * S.swing;
+        if (phase !== "choose") return;
+        const under = Math.abs(p.x - S.x) < 0.05;
+        if (last === k && !under) last = -1;
+        const counts = under && k !== last && t > 1.5;
+        S.on = counts ? S.on + dt : 0;
+        if (S.on < 0.6) return;
+        S.on = 0; last = k;
+        if (k === right) {
+          phase = "found"; c.hideHint();
+          c.sfx("chime", null, { volume: 0.55 });
+          c.emote("pip", "✦", pipHead, "That's the one!", 2);
+          fall = { S, v: 0, spin: (Math.random() - 0.5) * 6 };
+          c.guestSay("found");
+          N.wiggleFor(2.5);
+          // the robot's other hand: Doodle pops up out of the middle hole
+          setTimeout(() => { const D = c.sock("doodle"); D.at(...holes[1]).popUp(); D.wiggleFor(1.5); c.sfx("pop", null, { volume: 0.6, rate: 1.3 }); }, 2200);
+          setTimeout(() => c.sayAs("doodle", "hello"), 2900);
+          setTimeout(() => { c.guestSay("thanks"); c.confetti("grace"); }, 6400);
+          setTimeout(done, 9000);
+        } else {
+          wrongs++;
+          S.swing = 0.6;
+          c.sfx("swish", null, { volume: 0.4, rate: 1.3 });
+          c.guestSay(wrongs % 2 ? "wrongSock" : "wrongSock2");
+          c.emote("marlo", "✗", () => N.headPos(), "Not that one!", 1.6);
+          N.wiggleFor(0.8);
+        }
+      });
+      // the twin drops off the line, tumbling down to the boards
+      if (fall) {
+        fall.v += 9.8 * dt * 0.35;
+        fall.S.s.position.y = Math.max(0.018, fall.S.s.position.y - fall.v * dt);
+        fall.S.s.rotation.x += fall.spin * dt * (fall.S.s.position.y > 0.019 ? 1 : 0);
+        if (fall.S.s.position.y <= 0.018 && !fall.landed) { fall.landed = true; c.sfx("thud", null, { volume: 0.3, rate: 1.6 }); setTimeout(() => (fall.S.s.visible = false), 1600); }
+      }
+    },
+    end() { dispose(group); },
+  };
+}
+
+const TASKS = { shy, highfive, together, owls, collect, simon, duel, riddle, sneak, unlock, dodge, mount, rings, gears, chase, kindness, knight, fib, mirror, peekaboo, matchsock };
 export function createTask(spec, c, done) {
   const make = TASKS[spec.type];
   if (!make) { setTimeout(done, 100); return { update() {}, end() {} }; }

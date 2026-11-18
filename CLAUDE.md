@@ -17,7 +17,7 @@ Captain Pegg, Grumble the troll, Clank the robot, Princess Juniper, the King).
 ## Current state (as of 17 Nov 2026)
 Everything is merged into `main` and published. The live site is the intended submission build.
 - **Ways to play (start menu, a gold-framed theatre):**
-  - Begin/Continue the story: 7 chapters plus a prologue, the night-sky finale, a knighting and the curtain call;
+  - Begin/Continue the story: 7 chapters plus a prologue, two unnumbered tales along the way (the Toymaker's Workshop with Twig, between 2 and 3; the Harbour Laundry with Noodle the sock puppet, between 3 and 4), the night-sky finale, a knighting and the curtain call;
   - Play Any Chapter (all unlocked);
   - Make Your Own Story (an illustrated picker with a "Tonight's Show" preview, or typed);
   - Free Play (play as any of 8 characters);
@@ -92,6 +92,8 @@ Everything runs from `public/` (a static site; three.js 0.170 via importmap). Th
 | `storybook.js` / `storymap.js` | the book and the map |
 | `backdrops.js` / `figures.js` | the painted backdrops (layered: sky, drift, foreground) and the storybook characters; shared by the stage sets, the book and the story cards |
 | `sets.js` | the stage sets: backdrop layers, 3D pieces, and what moves (clouds, waves, lightning, gears, crystals) |
+| `wood.js` | real-grain wood materials (tinted from the walnut photo), grain-aligned UVs, log ends; Twig the wooden boy |
+| `handpuppet.js` | sock puppets (Noodle, Doodle) worked by the robot from under the stage; trapdoor holes; socks for the washing line |
 
 `public/index.html` holds the start-menu, picker and panel styles. The full table is in `DEVELOPMENT_JOURNAL.md` §5.
 

@@ -16,6 +16,8 @@ export const VILLAINS = {
   pirate: { np: "a pirate captain", the: "the pirate captain", lair: "ship", title: "the Pirate", kw: /\b(pirate|captain|pegg|buccaneer)s?\b/ },
   wizard: { np: "a sneaky wizard", the: "the wizard", lair: "forest", title: "the Wizard", kw: /\b(wizard|witch|sorcer\w*|mage|warlock|bramble)s?\b/ },
   clank: { np: "a clockwork robot", the: "the clockwork robot", lair: "tower", title: "the Robot", kw: /\b(robot|clank|clockwork|machine|android)s?\b/ },
+  twig: { np: "a cheeky wooden puppet", the: "the wooden puppet", lair: "workshop", title: "the Wooden Puppet", kw: /\b(twig|wooden|pinocchio|carved|liar)s?\b/ },
+  noodle: { np: "a mischievous sock puppet", the: "the sock puppet", lair: "laundry", title: "the Sock Puppet", kw: /\b(noodle|sock|socks|sock puppet)\b/ },
 };
 
 export const PLACES = {
@@ -26,6 +28,8 @@ export const PLACES = {
   tower: { phrase: "at the top of a clockwork tower", kw: /\b(tower|clock)\b/ },
   cave: { phrase: "in a deep, dark cave", kw: /\b(cave|cavern|mountain|lair|dungeon|mine)\b/ },
   sky: { phrase: "high above the clouds", kw: /\b(sky|cloud|clouds|moon|stars?|fly|flying|air)\b/ },
+  workshop: { phrase: "in a toymaker's workshop", kw: /\b(workshop|toymaker|toyshop|toys|carpenter)\b/ },
+  laundry: { phrase: "in a harbour laundry", kw: /\b(laundry|washing|wash|washed|clothes)\b/ },
 };
 
 // who can be captured (anyone but the villain), as named in the story
@@ -37,6 +41,7 @@ export const CAPTIVES = {
   pirate: { name: "Captain Pegg", title: "Captain Pegg", pron: "him" },
   troll: { name: "Grumble the troll", title: "Grumble the Troll", pron: "him" },
   clank: { name: "Clank the clockwork robot", title: "Clank", pron: "him" },
+  twig: { name: "Twig the wooden boy", title: "Twig", pron: "him" },
 };
 
 // what happened (page two)
@@ -73,6 +78,11 @@ const ACT = {
   lantern: () => ({ goal: "It's dark in here. Give Sir Pip the lantern.", check: "hold:lantern", hint: "takeLantern" }),
   fireflies: () => ({ goal: "Next, catch five fireflies with the lantern.", task: { type: "collect", count: 5, look: "firefly", needs: "lantern" }, hint: "collect" }),
   saved: () => ({ goal: "Last of all, take a bow. The kingdom is saved!", check: "bow", hint: "bow" }),
+  // the wooden puppet's games, and the sock puppet's (worked by the robot, from under the stage)
+  fib: (V) => ({ goal: `Next, ${V.the} tells three tall tales. Watch the nose, then walk Sir Pip onto True, or Fib.`, task: { type: "fib" }, hint: "fib" }),
+  teach: (V) => ({ goal: `Next, teach ${V.the} to dance. Show a jump, a bow or a spin, and it copies you.`, task: { type: "mirror", count: 3 }, hint: "teach" }),
+  peekaboo: (V) => ({ goal: `Next, ${V.the} plays peekaboo. Walk Sir Pip to each hole it pops out of, and boop!`, task: { type: "peekaboo", count: 3 }, hint: "peek" }),
+  matchsock: () => ({ goal: "Next, find the missing twin. Walk Sir Pip under the sock with the very same stripes.", task: { type: "matchsock" }, hint: "sock" }),
   friends: () => ({ goal: "Last of all, take a bow together. A brand new friendship!", check: "bow", hint: "bow" }),
 };
 const CHALLENGE_KW = [
@@ -81,6 +91,9 @@ const CHALLENGE_KW = [
   ["spell", /\b(spell|magic|learn|enchant\w*|curse)\b/],
   ["dodge", /\b(escape|dodge|run|fire|fireballs?|zaps?|chase|lightning|cannon\w*)\b/],
   ["dance", /\b(dance|dancing|party|show|sing)\b/],
+  ["fib", /\b(lie|lies|lied|lying|liar|fib|fibs|fibbing|truth|nose)\b/],
+  ["peekaboo", /\b(peekaboo|peek|boop|seek)\b/],
+  ["matchsock", /\b(twin|pair|match|matching|missing sock)\b/],
 ];
 // story words that add an act of their own
 const EXTRA_KW = {
@@ -91,8 +104,17 @@ const EXTRA_KW = {
   dark: /\b(dark|darkness|night|lantern|fireflies|firefly|light)\b/,
 };
 const FRIEND_END = /\b(friend|friends|forgive\w*|kind|kindness|hug|peace|make up|made up|sorry|befriend)\b/;
-export const DEFAULT_CHALLENGE = { marlo: "dodge", troll: "riddle", pirate: "duel", wizard: "spell", clank: "dodge" };
-export const DEFAULT_PLACE = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower" };
+export const DEFAULT_CHALLENGE = { marlo: "dodge", troll: "riddle", pirate: "duel", wizard: "spell", clank: "dodge", twig: "fib", noodle: "peekaboo" };
+export const DEFAULT_PLACE = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower", twig: "workshop", noodle: "laundry" };
+// each challenge as this villain can really stage it: the fibs need Twig's nose; a sock
+// puppet has no strings, so it plays its own games (and the twin hunt needs the washing line)
+export function fitChallenge(c, villain, place) {
+  if (c === "riddle" && villain !== "troll") c = "spell";
+  if (c === "fib" && villain !== "twig") c = "spell";
+  if (villain === "noodle") return c === "matchsock" && place === "laundry" ? "matchsock" : "peekaboo";
+  if (c === "peekaboo" || c === "matchsock") c = DEFAULT_CHALLENGE[villain];
+  return c;
+}
 const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // typos are fine: a word one or two letters off a story word is read as that word
@@ -105,7 +127,9 @@ const VOCAB = ("dragon marlo troll ogre giant pirate pirates captain wizard witc
   // (real verb forms, so they're never "corrected" into something else)
   "cursed curses chased chases attacked attacks captures kidnaps kidnapping steals stealing rescued rescues saved saves " +
   "frees freed helps helped found finds dances danced dancing jumped jumps fought fights fighting battles hides hidden " +
-  "takes taken locks trapping carries carried dragons trolls robots wizards witches kings friendly").split(" ");
+  "takes taken locks trapping carries carried dragons trolls robots wizards witches kings friendly " +
+  "twig wooden puppet carved workshop toymaker noodle sock socks laundry washing liar fibs truth peekaboo twin " +
+  "telling tells told keeps wants lost play plays playing lies lying").split(" ");
 function editDistance(a, b) {
   // (Damerau: a swap of neighbouring letters, "lonley", counts as one slip)
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
@@ -176,7 +200,7 @@ export function parseStory(text) {
   const places = find(PLACES);
   // no villain named? the first villain-type character who isn't the captive, or whoever lives there
   if (!villain) villain = mentionsIn(t).map((x) => x.id).find((id) => VILLAINS[id] && id !== captive) || null;
-  if (!villain) villain = Object.entries({ cave: "marlo", bridge: "troll", ship: "pirate", forest: "wizard", tower: "clank" }).find(([pl]) => pl === places[0])?.[1] || (captive === "marlo" ? "pirate" : "marlo");
+  if (!villain) villain = Object.entries({ cave: "marlo", bridge: "troll", ship: "pirate", forest: "wizard", tower: "clank", workshop: "twig", laundry: "noodle" }).find(([pl]) => pl === places[0])?.[1] || (captive === "marlo" ? "pirate" : "marlo");
   if (captive === villain) captive = null;
   const place = places[0] || DEFAULT_PLACE[villain];
   let plot;
@@ -186,9 +210,9 @@ export function parseStory(text) {
   else plot = "trouble";
   // the challenges, in the order you wrote them (up to two)
   const asked = CHALLENGE_KW.map(([k, re]) => [k, t.search(re)]).filter(([, i]) => i >= 0).sort((a, b) => a[1] - b[1]).map(([k]) => k);
-  let challenges = asked.filter((c) => c !== "dance").slice(0, 2).map((c) => (c === "riddle" && villain !== "troll" ? "spell" : c));
+  let challenges = asked.filter((c) => c !== "dance").slice(0, 2).map((c) => fitChallenge(c, villain, place));
   challenges = [...new Set(challenges)];
-  if (!challenges.length) challenges = [DEFAULT_CHALLENGE[villain]];
+  if (!challenges.length) challenges = [fitChallenge(DEFAULT_CHALLENGE[villain], villain, place)];
   const extras = Object.entries(EXTRA_KW).filter(([, re]) => re.test(t)).map(([k]) => k);
   const twist = /\b(night|midnight|dark)\b/.test(t) ? "night" : null;
   const friendly = FRIEND_END.test(t);
@@ -237,6 +261,18 @@ export function buildStory(p) {
     } else if (ex.has("dance") && acts.length < 5) acts.push(ACT.dance());
     acts.push(p.friendly ? ACT.friends() : ACT.saved());
   }
+  // Twig, once he's owned up, wants dancing lessons; a sock puppet can't do a marionette's
+  // tricks (a gentle approach, high fives, dancing on strings), so it plays its own games
+  if (p.villain === "twig" && acts.some((a) => a.task?.type === "fib") && (p.friendly || p.plot === "lonely")) acts.splice(acts.length - 1, 0, ACT.teach(V));
+  if (p.villain === "noodle") {
+    const own = p.place === "laundry" ? ["peekaboo", "matchsock"] : ["peekaboo"];
+    for (let i = 0; i < acts.length; i++) {
+      const tt = acts[i].task?.type, ck = acts[i].check;
+      if (tt === "shy") acts[i] = ACT.meet(V);
+      else if (["highfive", "together", "duel", "dodge", "simon", "riddle", "mirror"].includes(tt) || ck === "give:flower" || ck === "hold:sword") acts[i] = ACT[own[i % own.length]](V);
+    }
+    for (let i = acts.length - 1; i > 0; i--) if (acts[i].task && acts[i].task.type === acts[i - 1].task?.type) acts.splice(i, 1);
+  }
   while (acts.length > 6) acts.splice(acts.length - 2, 1); // (a show is never too long)
   return {
     id: "custom", custom: p, set: p.place, guest: p.villain, title,
@@ -268,10 +304,10 @@ export function allStoryLines() {
 // The story cards (in the headset, where there's no keyboard): the same story, picked
 // from cards instead of written.
 export const CARD_SECTIONS = [
-  { id: "villain", title: "Villain", items: [["marlo", "Marlo"], ["clank", "Clank"], ["troll", "Grumble"], ["pirate", "Pegg"], ["wizard", "Bramble"]] },
-  { id: "captive", title: "Who needs help", items: [["princess", "The princess"], ["king", "The King"], ["marlo", "Marlo"], ["wizard", "Bramble"], ["troll", "Grumble"], ["treasure", "The treasure"], ["none", "Nobody"]] },
-  { id: "place", title: "Setting", items: [["cave", "Dragon cave"], ["ship", "Pirate ship"], ["tower", "Clock tower"], ["forest", "Forest"], ["bridge", "Troll bridge"], ["courtyard", "Castle"], ["sky", "Night sky"]] },
-  { id: "challenge", title: "Challenge", items: [["dodge", "Dodge attacks"], ["duel", "Sword duel"], ["riddle", "Riddle"], ["spell", "Magic spell"], ["dance", "Dance-off"], ["befriend", "Make friends"]] },
+  { id: "villain", title: "Villain", items: [["marlo", "Marlo"], ["clank", "Clank"], ["troll", "Grumble"], ["pirate", "Pegg"], ["wizard", "Bramble"], ["twig", "Twig"], ["noodle", "Noodle"]] },
+  { id: "captive", title: "Who needs help", items: [["princess", "The princess"], ["king", "The King"], ["marlo", "Marlo"], ["wizard", "Bramble"], ["troll", "Grumble"], ["twig", "Twig"], ["treasure", "The treasure"], ["none", "Nobody"]] },
+  { id: "place", title: "Setting", items: [["cave", "Dragon cave"], ["ship", "Pirate ship"], ["tower", "Clock tower"], ["forest", "Forest"], ["bridge", "Troll bridge"], ["courtyard", "Castle"], ["sky", "Night sky"], ["workshop", "Workshop"], ["laundry", "Laundry"]] },
+  { id: "challenge", title: "Challenge", items: [["dodge", "Dodge attacks"], ["duel", "Sword duel"], ["riddle", "Riddle"], ["spell", "Magic spell"], ["dance", "Dance-off"], ["befriend", "Make friends"], ["fib", "True or fib"], ["peekaboo", "Peekaboo"]] },
   { id: "twist", title: "Twist", items: [["none", "No twist"], ["moon", "Moon gravity"], ["fragile", "Fragile strings"], ["night", "At night"]] },
   { id: "go", title: "Stage it!", action: true, items: [] },
 ];
@@ -280,7 +316,7 @@ export function storyFromCards(c) {
   let plot = CAPTIVES[c.captive] && c.captive !== villain ? "kidnap" : c.captive === "treasure" ? "steal" : "trouble";
   let challenge = c.challenge || DEFAULT_CHALLENGE[villain];
   if (challenge === "befriend") { plot = "lonely"; challenge = DEFAULT_CHALLENGE[villain]; }
-  if (challenge === "riddle" && villain !== "troll") challenge = "spell"; // (the riddles are the troll's)
+  challenge = fitChallenge(challenge, villain, c.place || DEFAULT_PLACE[villain]); // (the riddles are the troll's, the fibs Twig's...)
   return { villain, place: c.place || DEFAULT_PLACE[villain], captive: plot === "kidnap" ? c.captive : null, plot, challenge, challenges: [challenge], extras: [], friendly: plot === "lonely", twist: c.twist && c.twist !== "none" ? c.twist : null, text: "" };
 }
 
@@ -290,5 +326,7 @@ export const STORY_EXAMPLES = [
   "The clockwork robot locked the princess in his tower.",
   "A lonely wizard in the forest just wants a friend.",
   "Pirates captured the King! Sir Pip must fight the captain.",
+  "A wooden puppet in the toymaker's workshop keeps telling fibs.",
+  "A sock puppet lost its twin in the laundry, and wants to play peekaboo.",
 ];
 export const titleCase = cap1;

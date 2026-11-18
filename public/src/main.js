@@ -25,7 +25,9 @@ import { ActionDetector, AIPerformer, describe } from "./director.js";
 import { MarloMind } from "./mind.js";
 import { Emotes } from "./emote.js";
 import { Confetti, Sparkles, makeHalo, Dust } from "./fx.js";
-import { GUESTS, STORY_LINES, PROLOGUE, EPILOGUE, TASK_LINES, CHAPTERS as CHAPTER_LIST } from "./lines.js";
+import { GUESTS, STORY_LINES, PROLOGUE, EPILOGUE, TASK_LINES, chapterNumber, TWIG_FIBS, TWIG_TRUTHS, TWIG_BOASTS, TWIG_LINES } from "./lines.js";
+import { twigSkin } from "./wood.js";
+import { SockPuppet, makeHole } from "./handpuppet.js";
 import { wizardSkin, pirateSkin, trollSkin, clankSkin, princessSkin, kingSkin } from "./cast.js";
 import { createTask } from "./tasks.js";
 import { StoryBook } from "./storybook.js";
@@ -122,7 +124,9 @@ const GUEST_ROOT = [0.17, 0, -0.02];
 let marlo = new Marionette({ root: GUEST_ROOT, yaw: -0.45, skin: dragonSkin(assets) });
 const guests = { marlo };
 let guestId = "marlo";
-const GUEST_SKINS = { wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin, clank: clankSkin };
+// (a hand puppet's "marionette" is an empty stand-in: the sock itself lives in handpuppet.js)
+const noStrings = () => () => ({ group: new THREE.Group(), bars: new THREE.Group(), update() {} });
+const GUEST_SKINS = { wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin, clank: clankSkin, twig: twigSkin, noodle: noStrings };
 const GUEST_ROOTS = { clank: [0.05, 0, -0.07] }; // Clank guards the middle of the tower
 // your recorded "shadow" performs beside Sir Pip (a little upstage), so you can duet with it
 const GHOST_OFF = new THREE.Vector3(-0.09, 0, -0.07);
@@ -144,7 +148,19 @@ saved += robotBatch?.drawCallsSaved || 0;
 saved += (pip.batch?.drawCallsSaved || 0) + (marlo.batch?.drawCallsSaved || 0) + (ghost.batch?.drawCallsSaved || 0);
 console.info(`[perf] merged away ${saved} draw calls`);
 
+// hand puppets: the robot ducks under the stage (only his face peeks up through a trapdoor)
+// and works the socks with his arms up through the floor. Anything below the stage floor is
+// clipped away by this plane, so they all rise out of real holes.
+const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+renderer.localClippingEnabled = true;
+const hand = { on: false, under: false, guest: false, rise: 1, head: new THREE.Vector3(0, 0, -0.128), holes: [], meshes: [], headHole: null, idle: 8, speaker: null };
 function layoutRobot(xr) {
+  if (hand.under) {
+    const s = 0.7, k = 1 - Math.pow(1 - hand.rise, 3);
+    robot.group.scale.setScalar(s);
+    robot.group.position.set(hand.head.x, -0.468 * s - (1 - k) * 0.17, hand.head.z);
+    return;
+  }
   if (xr) { robot.group.position.set(0.17, 0.17, -0.38); robot.group.scale.setScalar(1.0); }
   else { robot.group.position.set(0.17, 0.0, -0.6); robot.group.scale.setScalar(1.6); }
 }
@@ -288,6 +304,8 @@ const GUEST_SFX = {
   pirate: (big) => (big ? ["clink", 0.5, 0.8] : ["clink", 0.3, 1.2]),
   troll: (big) => ["roar", big ? 0.6 : 0.35, big ? 0.6 : 0.75],
   clank: (big) => ["clink", big ? 0.5 : 0.3, big ? 0.6 : 0.9],
+  twig: (big) => ["clack", big ? 0.7 : 0.45, big ? 1.25 : 1.6], // wooden knocks and clatters
+  noodle: (big) => ["pop", big ? 0.55 : 0.35, big ? 1.5 : 1.9],  // soft, squishy pops
 };
 // what each performance says about how the guest feels
 const EMOTION_OF = {
@@ -333,6 +351,7 @@ const hints = new Hints(stageRoot, (target) => {
 
 // stage sets (one per chapter): the set decides the base light; a scene can still ask for full night
 const sets = new Sets(stageRoot);
+sets.assets = assets; // (the workshop is carved from the real-grain wood)
 let setLight = SET_LIGHT.courtyard;
 let night = 0, nightTarget = 0;
 let flowers = null; // Bramble's blooming spell (see bloomForest)
@@ -380,11 +399,29 @@ function updateMarloVoice() {
   const { text, t, name, priority } = marloLines.shift();
   if (!priority && elapsed - t > 6) return;
   showCaption(`${name || GUESTS[guestId].name}: “${text}”`);
+  twigVoice(text);
+  const est = 0.9 + text.split(/\s+/).length * 0.32;
+  handVoice(name, est);
   narrator.speakingUntil = narrator.t + 0.9 + text.split(/\s+/).length * 0.32;
   const file = narrator.manifest[text];
   if (file && !narrator.muted) {
-    voicePlayer.play(`voice/${file}`, "marlo").then((secs) => { if (secs) narrator.speakingUntil = narrator.t + secs + 0.35; }).catch(() => {});
+    voicePlayer.play(`voice/${file}`, "marlo").then((secs) => { if (secs) { narrator.speakingUntil = narrator.t + secs + 0.35; handVoice(name, secs); } }).catch(() => {});
   }
+}
+// Twig's nose: it grows as he tells a fib, and springs back when he owns up
+let twigNoseTold = false;
+function twigSkins() { return [guests.twig, players.twig].filter((p) => p?.group.visible).map((p) => p.skin.extra); }
+function twigVoice(text) {
+  const fibbing = TWIG_FIBS.has(text), owning = TWIG_TRUTHS.has(text);
+  if (!fibbing && !owning) return;
+  const skins = twigSkins();
+  if (!skins.length) return;
+  setTimeout(() => {
+    for (const x of skins) fibbing ? x.fib() : x.truth();
+    sfx.play("creak", null, { volume: 0.5, rate: fibbing ? 1.5 : 1.9 });
+    sfx.play("pop", null, { volume: 0.3, rate: fibbing ? 0.7 : 1.3 });
+    if (fibbing && !twigNoseTold) { twigNoseTold = true; narrator.coach(TWIG_LINES.nose); }
+  }, fibbing ? 900 : 500);
 }
 // the narrator holds its next line while a guest is waiting to speak
 narrator.holdFor = () => marloLines.length > 0;
@@ -496,9 +533,13 @@ const talk = new Talk({
     const clip = audio || (narrator.manifest[line] ? `voice/${narrator.manifest[line]}` : null);
     setTimeout(() => showCaption(`${GUESTS[guestId].name}: “${line}”`), 200);
     if (reaction) ai.react(reaction);
+    twigVoice(line);
+    handReact(reaction);
+    handVoice(null, 0.9 + line.split(/\s+/).length * 0.32);
     if (clip && !narrator.muted) {
       const secs = await voicePlayer.play(clip, "marlo").catch(() => 0);
       narrator.speakingUntil = narrator.t + (secs || 2) + 0.4;
+      if (secs) handVoice(null, secs);
     }
     show.hear({ type: "talk" });
     const r = mind.hear({ type: "talk" }, { t: elapsed });
@@ -1006,6 +1047,77 @@ function resetAll(quiet = false) {
   if (!quiet) toast("Puppets reset");
 }
 
+// ---- hand puppets: socks on the robot's hands, up through trapdoors ----------------------
+const socks = {};
+const HAND_HOLES = [[-0.24, 0.03], [0.02, 0.03], [0.24, 0.03]];
+function sock(id) {
+  if (!socks[id]) { socks[id] = new SockPuppet(id, floorPlane); stageRoot.add(socks[id].group); }
+  return socks[id];
+}
+function setHoles(list) {
+  for (const m of hand.meshes) m.removeFromParent();
+  hand.meshes = list.map(([x, z]) => { const h = makeHole(0.03); h.position.set(x, 0, z); stageRoot.add(h); return h; });
+  hand.holes = list;
+}
+// the robot's own materials are clipped at the floor while he's under it
+function robotClip(on) {
+  robot.group.traverse((o) => { if (o.material) for (const m of [].concat(o.material)) { m.clippingPlanes = on ? [floorPlane] : null; m.needsUpdate = true; } });
+}
+function robotUnder(on) {
+  if (hand.under === on) return;
+  hand.under = on; hand.rise = on ? 0 : 1;
+  robotClip(on);
+  robotGlow.visible = !on;
+  if (on) { hand.headHole = makeHole(0.062); hand.headHole.position.set(hand.head.x, 0, hand.head.z + 0.004); hand.headHole.children[2].visible = false; stageRoot.add(hand.headHole); }
+  else { hand.headHole?.removeFromParent(); hand.headHole = null; }
+  layoutRobot(!!xrMode);
+}
+function handMode(on, { under = true, holes = HAND_HOLES } = {}) {
+  hand.on = on;
+  setHoles(on ? holes : []);
+  if (!on) for (const s of Object.values(socks)) { s.duck(); s.up = 0; s.upTo = 0; s.group.visible = false; }
+  robotUnder(on && under);
+}
+// the sock that just spoke flaps its mouth (and, under the stage, so does the robot's: he's no ventriloquist)
+function handVoice(name, secs) {
+  const who = name === "Doodle" ? "doodle" : name === "Noodle" || (!name && guestId === "noodle") ? "noodle" : null;
+  const S = who ? socks[who] : null;
+  if (!S || !S.group.visible) return;
+  S.talk(secs);
+  hand.speaker = who; hand.speakT = secs;
+  if (hand.under) robot.talk = Math.max(robot.talk, secs);
+}
+// a talk-bubble reaction, done the way a sock can
+function handReact(reaction) {
+  const S = guestId === "noodle" ? socks.noodle : null;
+  if (!S || !S.group.visible) return;
+  if (reaction === "dance" || reaction === "cheer" || reaction === "jump") S.wiggleFor(1.6);
+  else if (reaction === "bow" || reaction === "grandbow") S.bowFor(1.2);
+  if (reaction === "jump") { S.popUp(true); setTimeout(() => S.upTo > 0 && S.popUp(false), 1400); }
+}
+function handGrips() {
+  const g = (id, k) => { const S = socks[id]; const [x, z] = S?.group.visible ? [S.group.position.x, S.group.position.z] : hand.holes[k] || [0, 0]; return new THREE.Vector3(x, -0.13, z); };
+  return [g("doodle", 1), g("noodle", 2)];
+}
+function handLook() {
+  const S = hand.speakT > 0 ? socks[hand.speaker] : null;
+  if (S && S.group.visible) return S.headPos();
+  const N = socks.noodle;
+  return N?.isUp && Math.sin(elapsed * 0.4) > -0.3 ? N.headPos() : pip.get("head").clone();
+}
+function updateHands(dt) {
+  floorPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0).transformDirection(stageRoot.matrixWorld), stageRoot.localToWorld(new THREE.Vector3(0, 0.0004, 0)));
+  if (hand.under && hand.rise < 1) { hand.rise = Math.min(1, hand.rise + dt / 1.2); layoutRobot(!!xrMode); }
+  hand.speakT = Math.max(0, (hand.speakT || 0) - dt);
+  for (const S of Object.values(socks)) { if (S.group.visible) S.lookAt = pip.get("head"); S.update(dt); }
+  // free play: Noodle can't sit still, and now and then pops up somewhere else
+  if (hand.guest && freePlay && !currentTask && socks.noodle) {
+    hand.idle -= dt;
+    const N = socks.noodle;
+    if (hand.idle < 0 && N.isUp && !narrator.speaking) { hand.idle = 14 + Math.random() * 10; N.duck(); setTimeout(() => { const h = HAND_HOLES[Math.floor(Math.random() * 3)]; if (hand.guest) { N.at(...h).popUp(); marloSay(GUESTS.noodle.task.peek, "Noodle"); } }, 900); }
+  }
+}
+
 // ---- the story: chapters, guests and the storybook map --------------------------------
 function guestPuppet(id) {
   if (!guests[id]) {
@@ -1025,6 +1137,8 @@ function setGuest(id) {
   marlo.reset();
   marlo.setVisible(true);
   const g = GUESTS[id];
+  if (g.hand) { marlo.setVisible(false); ai.suspended = true; hand.guest = true; handMode(true); sock("noodle").at(...HAND_HOLES[2]).popUp(); }
+  else if (hand.guest) { hand.guest = false; ai.suspended = false; handMode(false); }
   ai.setPuppet(marlo);
   for (const d of [detector, ghostDetector]) { d.other = marlo; d.otherName = g.name; }
   props.marlo = marlo;
@@ -1042,7 +1156,7 @@ function stagePlace(place) {
   applySet(place.set);
   setGuest(place.guest);
   // the finale: build everyone who'll appear now, while the storybook is open (no hitch later)
-  if (place.finale) { for (const id of ["clank", "king", "wizard", "pirate", "troll"]) extra(id); extra("clank").pup.skin.extra?.reset?.(); }
+  if (place.finale) { for (const id of ["clank", "king", "wizard", "pirate", "troll", "twig"]) extra(id); sock("noodle"); sock("doodle"); extra("clank").pup.skin.extra?.reset?.(); }
   // the Clockwork Tower: a princess in a cage, and a key on Clank's pedestal
   const T = place.princess ? sets.refs("tower") : null;
   princessOn(!!T);
@@ -1126,7 +1240,7 @@ function extra(id) {
   }
   return e;
 }
-function hideExtras() { for (const e of extras.values()) if (e.on && e.pup !== marlo) e.show(false); }
+function hideExtras() { for (const e of extras.values()) if (e.on && e.pup !== marlo) e.show(false); if (hand.on && !hand.guest) handMode(false); }
 const easeX = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 function updateExtras(dt) {
   for (const e of extras.values()) {
@@ -1228,11 +1342,15 @@ function grandFinale() {
   cast.forEach(([id, x, z], i) => { const e = extra(id); if (!e.on) e.show(true); e.mode = "dance"; e.phase = i * 0.9; e.target.set(x, 0.5, z); e.yaw = 0; });
   princessOn(true); princessDrv.state = "happy"; princessDrv.pos.set(0.2, 0.5, 0.08);
   ai.base.set(0.34, ai.home.y, 0.07);
-  const dance = () => { if (show.state === "ending" || show.state === "finale") { ai.react("dance", { force: true }); setTimeout(dance, 3400); } };
+  // the friends from the tales along the way: Twig on his strings, and the two socks popping up through the floor
+  const tw = extra("twig"); if (!tw.on) tw.show(true); tw.mode = "dance"; tw.phase = 2.2; tw.target.set(-0.3, 0.5, 0.075); tw.yaw = 0.35;
+  handMode(true, { under: false, holes: [[-0.1, -0.04], [0.1, -0.04]] });
+  sock("noodle").at(-0.1, -0.04).popUp(); sock("doodle").at(0.1, -0.04).popUp();
+  const dance = () => { if (show.state === "ending" || show.state === "finale") { ai.react("dance", { force: true }); for (const S of Object.values(socks)) S.wiggleFor(1.4); setTimeout(dance, 3400); } };
   dance();
   narrator.coach(TASK_LINES.finale);
-  [["princess", "finale"], ["pirate", "finale"], ["wizard", "finale"], ["troll", "finale"], ["clank", "finale"], ["marlo", "finale"]]
-    .forEach(([who, k], i) => setTimeout(() => sayAs(who, k), 1800 + i * 2200));
+  [["princess", "finale"], ["pirate", "finale"], ["wizard", "finale"], ["troll", "finale"], ["clank", "finale"], ["twig", "finale"], ["noodle", "finale"], ["marlo", "finale"]]
+    .forEach(([who, k], i) => setTimeout(() => sayAs(who, k), 1800 + i * 1850));
   for (let i = 0; i < 8; i++) setTimeout(() => { confetti.burst(["grace", "slapstick", "grace", "drama"][i % 4]); sfx.play("pop", null, { volume: 0.5, rate: 0.6 + (i % 3) * 0.3 }); }, i * 1900);
   sfx.play("applause", null, { volume: 0.9 });
   setTimeout(() => sfx.play("cheer", null, { volume: 0.6 }), 2500);
@@ -1355,6 +1473,15 @@ const taskCtx = {
   stageKnighting,
   bloom: bloomForest,
   oops: () => saveTheScene("task"), // a task went wrong: the co-star rescues the moment
+  // the workshop: Twig's boasts, and whether everyone has finished speaking
+  twigBoasts: TWIG_BOASTS,
+  twigNose: () => guests.twig?.skin.extra.nose(),
+  voiceIdle: () => !marloLines.length && !narrator.speaking,
+  guestQueued: () => marloLines.length > 0,
+  // the harbour laundry: the socks, their trapdoors, and the washing line
+  sock: (id) => sock(id),
+  holes: () => hand.holes.length ? hand.holes : HAND_HOLES,
+  washingLine: () => sets.refs("laundry")?.line || { y: 0.245, z: -0.115 },
 };
 show.makeTask = (spec, done) => {
   mind.taskBusy = true;
@@ -1391,7 +1518,7 @@ function playBook(place, then) {
   hints.hide();
   book.play(place, !!xrMode, then);
 }
-const sceneFor = (place) => (place.acts ? { id: place.id, title: place.title, intro: place.intro, acts: place.acts, finale: !!place.finale, night: !!place.night } : null);
+const sceneFor = (place) => (place.acts ? { id: place.id, title: place.title, intro: place.intro, acts: place.acts, finale: !!place.finale, night: !!place.night, endings: place.endings } : null);
 function startChapterShow() {
   if (chapter.id === "theatre") narrator.coach(STORY_LINES.theatre);
   show.start(sceneFor(chapter)); // the Grand Theatre (no acts) picks tonight's daily show
@@ -1689,7 +1816,7 @@ const storyCards = new Playground(stageRoot, (section, id) => {
 }, CARD_TABS, null, { conflict: "rescue", who: "princess", villain: "marlo", place: "cave", twist: "none" });
 storyCards.group.position.set(0, 0.56, 0.18);
 storyCards.group.scale.setScalar(1.05);
-const LAIR = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower" };
+const LAIR = { marlo: "cave", troll: "bridge", pirate: "ship", wizard: "forest", clank: "tower", twig: "workshop", noodle: "laundry" };
 // the poster: "Tonight's Show", the scene and the three acts, then Start or Edit
 const poster = { mesh: new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.3), new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false })), story: null };
 poster.mesh.visible = false;
@@ -1735,9 +1862,9 @@ function storyHappyEnding() {
 }
 // the "make your own story" dialog (on the flat page: the headset has no keyboard, so
 // write it here before entering VR, or pick from the example ideas)
-const NAMES = { marlo: "the dragon", troll: "the troll", pirate: "the pirate captain", wizard: "the wizard", clank: "the clockwork robot" };
-const PLACE_NAMES = { courtyard: "the castle", forest: "the forest", ship: "a pirate ship", bridge: "the troll bridge", tower: "the clockwork tower", cave: "a dark cave", sky: "the sky" };
-const CHALLENGE_NAMES = { duel: "a sword fight", riddle: "a riddle", spell: "copying a magic spell", dodge: "dodging attacks", dance: "dancing together" };
+const NAMES = { marlo: "the dragon", troll: "the troll", pirate: "the pirate captain", wizard: "the wizard", clank: "the clockwork robot", twig: "the wooden puppet", noodle: "the sock puppet" };
+const PLACE_NAMES = { courtyard: "the castle", forest: "the forest", ship: "a pirate ship", bridge: "the troll bridge", tower: "the clockwork tower", cave: "a dark cave", sky: "the sky", workshop: "the toymaker's workshop", laundry: "the harbour laundry" };
+const CHALLENGE_NAMES = { duel: "a sword fight", riddle: "a riddle", spell: "copying a magic spell", dodge: "dodging attacks", dance: "dancing together", fib: "spotting the fibs", peekaboo: "a game of peekaboo", matchsock: "finding the missing twin" };
 function storySummary(p) {
   const what = p.plot === "kidnap" ? `rescue ${p.captive === "king" ? "the King" : "the princess"}` : p.plot === "steal" ? "win back the treasure" : p.plot === "lonely" ? "make a lonely friend smile" : "set things right";
   return p.plot === "lonely"
@@ -1754,8 +1881,8 @@ function openStoryMaker() {
 }
 
 // ---- free play: no story, just the theatre and everything in it ------------------------
-const PLAYER_SKINS = { knight: knightSkin, dragon: dragonSkin, wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin, clank: clankSkin, princess: princessSkin, king: kingSkin };
-const PLAYER_NAMES = { knight: "Sir Pip", dragon: "Marlo", wizard: "Bramble", pirate: "Captain Pegg", troll: "Grumble", clank: "Clank", princess: "Juniper", king: "The King" };
+const PLAYER_SKINS = { knight: knightSkin, dragon: dragonSkin, wizard: wizardSkin, pirate: pirateSkin, troll: trollSkin, clank: clankSkin, princess: princessSkin, king: kingSkin, twig: twigSkin };
+const PLAYER_NAMES = { knight: "Sir Pip", dragon: "Marlo", wizard: "Bramble", pirate: "Captain Pegg", troll: "Grumble", clank: "Clank", princess: "Juniper", king: "The King", twig: "Twig" };
 const players = { knight: pip };
 let playerId = "knight";
 const playerName = () => PLAYER_NAMES[playerId];
@@ -1821,6 +1948,17 @@ const playground = new Playground(stageRoot, (section, id) => {
         setFlight(!flying); break;
       case "free": if (!unbound.busy && marlo.group.visible && !ai.suspended) unbound.free(); break;
       case "talk": startTalking(); break;
+      case "fib": case "truth": {
+        // Twig on stage (as you, or as your co-star) tells a whopper, or owns up
+        const asGuest = guestId === "twig" && marlo.group.visible, asYou = playerId === "twig";
+        if (!asGuest && !asYou) { toast("Choose Twig first: in You play, or as your co-star"); break; }
+        const T = GUESTS.twig;
+        const pool = id === "fib" ? [...TWIG_FIBS] : [T.task.thanks, T.talk.sorry, T.task.caught];
+        const line = pool[Math.floor(Math.random() * pool.length)];
+        marloSay(line, "Twig", true);
+        if (asGuest) ai.react(id === "fib" ? "cheer" : "bow", { force: true });
+        break;
+      }
     }
   }
 });
@@ -1901,10 +2039,8 @@ function fitTheatre() {
 addEventListener("resize", fitTheatre);
 function renderStartMenu(midGame = false) {
   if (!loadingEl) return;
-  const n = CHAPTER_LIST.findIndex((c) => c.id === chapter.id);
   const at = storyMap.current();
-  const atN = CHAPTER_LIST.findIndex((c) => c.id === at.id);
-  const where = at.id === "theatre" ? "The Grand Theatre" : `Chapter ${atN + 1}: ${at.title}`;
+  const where = at.id === "theatre" ? "The Grand Theatre" : at.side ? at.title : `Chapter ${chapterNumber(at)}: ${at.title}`;
   const resume = storyMap.hasProgress();
   // the start menu, as a little theatre: marquee bulbs, curtains, a swinging marionette,
   // and hand-gesture icons that act out what each option means
@@ -2151,6 +2287,7 @@ function setXRQuality(xr) {
     for (const [o, m] of swapped) o.material = m;
     swapped.length = 0;
   }
+  if (hand.under) robotClip(true); // (the swapped materials need the floor clip too)
 }
 
 // ---- XR session ------------------------------------------------------------------
@@ -2548,6 +2685,7 @@ renderer.setAnimationLoop((time, frame) => {
   soundscape.update(dt, narrator.speaking || marloLines.length > 0 || book.open);
 
   let [lg, rg] = unbound.busy ? unbound.frozenGrips : ai.grips();
+  if (hand.under) [lg, rg] = handGrips(); // (his arms are up through the floor, inside the socks)
 
   // the arms ease between targets (no snapping when he starts or stops gesturing)
   if (!gripInit) { gripL.copy(lg); gripR.copy(rg); gripInit = true; }
@@ -2555,9 +2693,11 @@ renderer.setAnimationLoop((time, frame) => {
   gripR.lerp(rg, Math.min(1, dt * (intro.on ? 5 : 12)));
   // the robot watches the knight, and looks out at you while it narrates
   const viewCam = xrMode ? renderer.xr.getCamera() : camera;
-  const lookAt = robot.talk > 0
-    ? stageRoot.worldToLocal(new THREE.Vector3().setFromMatrixPosition(viewCam.matrixWorld))
-    : pip.get("head").clone();
+  const lookAt = hand.under ? handLook()
+    : robot.talk > 0
+      ? stageRoot.worldToLocal(new THREE.Vector3().setFromMatrixPosition(viewCam.matrixWorld))
+      : pip.get("head").clone();
+  updateHands(dt);
   robot.update(dt, gripL, gripR, lookAt);
   robotBatch?.update();
 
@@ -2638,4 +2778,4 @@ addEventListener("resize", () => {
 applyQuality(qTier);
 
 // exposed for debugging / automated checks
-window.strings = { intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };
+window.strings = { socks, hand, sock, handMode, __sockHead: () => socks.noodle?.headPos().toArray(), __talkSock: () => socks.noodle?.talk(3), intro, sparkles, camTween, unbound, extra, get flying() { return flying; }, setFlight, showCredits, get quality() { return QUALITY[qTier].name; }, applyQuality, book, get princess() { return princess; }, princessDrv, get currentTask() { return currentTask; }, movePipTo, storyMap, sets, setGuest, applySet, changeScene, openMap, guests, get guestId() { return guestId; }, get chapter() { return chapter; }, ghostDetector, get mode() { return mode; }, mind, emotes, confetti, cord, cycleMode, applyMode, MODES, startPreshow, get preshow() { return preshow; }, show, props, hints, curtains, talk, sfx, raiseCurtain, robot, scene, camera, renderer, stageRoot, xrHands, grabs, get pip() { return pip; }, get marlo() { return marlo; }, ghost, ai, detector, narrator, sim, recorder, player, encodePerformance, decodePerformance, startReplay, toggleRecord, anchorStage, followAnchor, get stageAnchor() { return stageAnchor; }, openGameMenu, gameBoard, storyCards, openStoryCards, picker, showPoster, poster, playStory, openStoryMaker, setRealDesk, saveTheScene, setOneHand, get rescueCool() { return rescueCool; }, playground, setPlayer, startFreePlay, get playerId() { return playerId; }, phrases, warmup, get showStarted() { return showStarted; } };

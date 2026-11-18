@@ -281,7 +281,7 @@ export class StoryBook {
 
     // right page: the words
     const tx = mid + 64, tw = pw - 112, cx = mid + 6 + pw / 2;
-    const head = n === 0 ? (ch.id === "prologue" ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.id === "custom" ? "Your Story" : "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six", "Seven"][this._index()]) : "";
+    const head = n === 0 ? (ch.id === "prologue" ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.id === "custom" ? "Your Story" : ch.side ? "Along the Way" : "Chapter " + ["One", "Two", "Three", "Four", "Five", "Six", "Seven"][this._index()]) : "";
     g.textAlign = "center";
     if (head) { g.fillStyle = "#8a1c22"; g.font = "600 22px Georgia, serif"; try { g.letterSpacing = "5px"; } catch { /* older browsers */ } g.fillText(head.toUpperCase(), cx + 2, 104); try { g.letterSpacing = "0px"; } catch { /* older browsers */ } }
     // a flourish under the heading (or alone, on later pages)

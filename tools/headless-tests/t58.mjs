@@ -43,7 +43,7 @@ const res = await page.evaluate(async () => {
 });
 console.log(JSON.stringify(res, null, 1));
 console.log("errors:", errors.length ? errors.slice(0, 6) : "none");
-const ok = !errors.length && res.hooks.cage && res.hooks.sky && res.driftMoved && res.chapters.length === 7 && res.chapters.every((c) => !c.includes(":"));
+const ok = !errors.length && res.hooks.cage && res.hooks.sky && res.driftMoved && res.chapters.length === 9 && res.chapters.every((c) => !c.includes(":"));
 console.log(ok ? "PASS" : "FAIL");
 await browser.close();
 process.exit(ok ? 0 : 1);

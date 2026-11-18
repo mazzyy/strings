@@ -264,7 +264,7 @@ export class Show {
       this.onChange?.(this);
       return;
     }
-    const e = ENDINGS[type];
+    const e = this.scene.endings?.[type] || ENDINGS[type]; // (a side tale can end its own way)
     this.state = "ending";
     this.wait = 9;
     this.hints.hide();
@@ -288,7 +288,7 @@ export class Show {
     this.narrator.coach(SHOW_LINES.finale);
     this.narrator.coach(SHOW_LINES.tomorrow);
     this.played.add(this.scene.id);
-    const e = ENDINGS[this.endingType || "grace"];
+    const e = this.scene.endings?.[this.endingType || "grace"] || ENDINGS[this.endingType || "grace"];
     const before = playbills.list().length;
     const entry = {
       id: this.scene.id, title: this.scene.title, date: today(), stars: this.stars, total: this.scene.acts.length,
