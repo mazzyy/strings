@@ -93,7 +93,7 @@ Everything runs from `public/` (a static site; three.js 0.170 via importmap). Th
 | `backdrops.js` / `figures.js` | the painted backdrops (layered: sky, drift, foreground) and the storybook characters; shared by the stage sets, the book and the story cards |
 | `sets.js` | the stage sets: backdrop layers, 3D pieces, and what moves (clouds, waves, lightning, gears, crystals) |
 | `wood.js` | real-grain wood materials (tinted from the walnut photo), grain-aligned UVs, log ends; Twig the wooden boy |
-| `handpuppet.js` | sock puppets (Noodle, Doodle) worked by the robot from under the stage; trapdoor holes; socks for the washing line |
+| `handpuppet.js` | sock puppets (Noodle, Doodle): the robot, standing behind the stage, works them up through trapdoors; holes; socks for the washing line |
 
 `public/index.html` holds the start-menu, picker and panel styles. The full table is in `DEVELOPMENT_JOURNAL.md` §5.
 

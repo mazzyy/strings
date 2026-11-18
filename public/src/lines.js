@@ -697,12 +697,12 @@ export const LAUNDRY = {
   pages: [
     "The pirate ship landed in a harbour town where the washing never stops flapping. And from a laundry basket, somebody was sniffling.",
     "It was Noodle: a sock with wild yarn hair, wobbly eyes, and a very big mouth. Noodle had lost its twin in the wash. And a sock without its pair is only half a sock.",
-    "Now, a sock can't dance on strings. So the robot puppeteer ducked under the stage, slipped Noodle onto his hand, and up it popped!",
+    "Now, a sock can't dance on strings. So the robot puppeteer reached down under the stage, slipped Noodle onto his hand, and up it popped!",
   ],
   art: [
     { set: "laundry", cast: [["noodle", 0.52]] },
     { set: "laundry", cast: [["noodle", 0.36], ["doodle", 0.72, true]] },
-    { set: "laundry", cast: [["pip", 0.28], ["robotpeek", 0.62], ["noodle", 0.8, true]] },
+    { set: "laundry", cast: [["pip", 0.3], ["noodle", 0.7, true]] },
   ],
   acts: [
     { goal: "Act one. Noodle wants to play peekaboo! When Noodle pops up, walk Sir Pip over, and boop that nose. Three boops!", task: { type: "peekaboo", count: 3 }, hint: "peek" },

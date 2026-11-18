@@ -1,6 +1,5 @@
 // The Harbour Laundry: Noodle the sock puppet's tale between chapters three and four. The
-// robot ducks under the stage (only his face shows, up through a trapdoor) and works Noodle
-// from below: peekaboo through three holes, finding the twin sock on the washing line (and
+// robot stays standing behind the stage (face in view) and reaches down under it to work Noodle: peekaboo through three holes, finding the twin sock on the washing line (and
 // Doodle popping up on his other hand), the bow. Then: the curtain call has Twig and both
 // socks, the story maker stages a sock-puppet story, and the robot comes back up afterwards.
 //   node t60.mjs <out-dir> [port]
@@ -79,7 +78,7 @@ R.story = await S(async () => {
 });
 console.log(JSON.stringify(R, null, 1));
 console.log("errors:", errors.length ? errors.slice(0, 8) : "none");
-const ok = !errors.length && R.order.includes("forest2 workshop* ship3 laundry* bridge4") && R.book && R.staged.guest === "noodle" && R.staged.under && R.staged.robotY < 0 && R.staged.holes === 3 && R.staged.noodle &&
+const ok = !errors.length && R.order.includes("forest2 workshop* ship3 laundry* bridge4") && R.book && R.staged.guest === "noodle" && R.staged.under && R.staged.robotY >= 0 && R.staged.holes === 3 && R.staged.noodle &&
   R.act1 && R.act2 && R.found && R.act3 && R.finale && R.done && !R.robotBack.under && R.robotBack.scale > 1 && R.curtainCall.twig && R.curtainCall.noodle && R.curtainCall.doodle &&
   R.story.guest === "noodle" && R.story.under;
 console.log(ok ? "PASS" : "FAIL");

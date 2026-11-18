@@ -148,21 +148,16 @@ saved += robotBatch?.drawCallsSaved || 0;
 saved += (pip.batch?.drawCallsSaved || 0) + (marlo.batch?.drawCallsSaved || 0) + (ghost.batch?.drawCallsSaved || 0);
 console.info(`[perf] merged away ${saved} draw calls`);
 
-// hand puppets: the robot ducks under the stage (only his face peeks up through a trapdoor)
-// and works the socks with his arms up through the floor. Anything below the stage floor is
-// clipped away by this plane, so they all rise out of real holes.
+// hand puppets: the robot stays standing behind the stage, his face in view, and reaches
+// down behind the backdrop and under the boards; the socks come up through trapdoors on his
+// hands. Anything of a sock below the stage floor is clipped away by this plane, so they
+// rise out of real holes.
 // (the headset mode: declared up here because the stage can be set up, robot and all, before the XR section below runs)
 let xrMode = null;
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 renderer.localClippingEnabled = true;
-const hand = { on: false, under: false, guest: false, rise: 1, head: new THREE.Vector3(0, 0, -0.128), holes: [], meshes: [], headHole: null, idle: 8, speaker: null };
+const hand = { on: false, under: false, guest: false, holes: [], meshes: [], idle: 8, speaker: null };
 function layoutRobot(xr) {
-  if (hand.under) {
-    const s = 0.7, k = 1 - Math.pow(1 - hand.rise, 3);
-    robot.group.scale.setScalar(s);
-    robot.group.position.set(hand.head.x, -0.468 * s - (1 - k) * 0.17, hand.head.z);
-    return;
-  }
   if (xr) { robot.group.position.set(0.17, 0.17, -0.38); robot.group.scale.setScalar(1.0); }
   else { robot.group.position.set(0.17, 0.0, -0.6); robot.group.scale.setScalar(1.6); }
 }
@@ -1061,19 +1056,8 @@ function setHoles(list) {
   hand.meshes = list.map(([x, z]) => { const h = makeHole(0.03); h.position.set(x, 0, z); stageRoot.add(h); return h; });
   hand.holes = list;
 }
-// the robot's own materials are clipped at the floor while he's under it
-function robotClip(on) {
-  robot.group.traverse((o) => { if (o.material) for (const m of [].concat(o.material)) { m.clippingPlanes = on ? [floorPlane] : null; m.needsUpdate = true; } });
-}
-function robotUnder(on) {
-  if (hand.under === on) return;
-  hand.under = on; hand.rise = on ? 0 : 1;
-  robotClip(on);
-  robotGlow.visible = !on;
-  if (on) { hand.headHole = makeHole(0.062); hand.headHole.position.set(hand.head.x, 0, hand.head.z + 0.004); hand.headHole.children[2].visible = false; stageRoot.add(hand.headHole); }
-  else { hand.headHole?.removeFromParent(); hand.headHole = null; }
-  layoutRobot(!!xrMode);
-}
+// he stays where he stands; only his arms change: down behind the backdrop, under the boards
+function robotUnder(on) { hand.under = on; }
 function handMode(on, { under = true, holes = HAND_HOLES } = {}) {
   hand.on = on;
   setHoles(on ? holes : []);
@@ -1097,8 +1081,9 @@ function handReact(reaction) {
   else if (reaction === "bow" || reaction === "grandbow") S.bowFor(1.2);
   if (reaction === "jump") { S.popUp(true); setTimeout(() => S.upTo > 0 && S.popUp(false), 1400); }
 }
+// his hands reach down just behind the backdrop, in line with the sock each one is working
 function handGrips() {
-  const g = (id, k) => { const S = socks[id]; const [x, z] = S?.group.visible ? [S.group.position.x, S.group.position.z] : hand.holes[k] || [0, 0]; return new THREE.Vector3(x, -0.13, z); };
+  const g = (id, k) => { const S = socks[id]; const x = S?.group.visible ? S.group.position.x : (hand.holes[k] || [0])[0]; return new THREE.Vector3(THREE.MathUtils.clamp(x, -0.3, 0.3) * 0.7 + 0.05, -0.02, -0.225); };
   return [g("doodle", 1), g("noodle", 2)];
 }
 function handLook() {
@@ -1109,7 +1094,6 @@ function handLook() {
 }
 function updateHands(dt) {
   floorPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0).transformDirection(stageRoot.matrixWorld), stageRoot.localToWorld(new THREE.Vector3(0, 0.0004, 0)));
-  if (hand.under && hand.rise < 1) { hand.rise = Math.min(1, hand.rise + dt / 1.2); layoutRobot(!!xrMode); }
   hand.speakT = Math.max(0, (hand.speakT || 0) - dt);
   for (const S of Object.values(socks)) { if (S.group.visible) S.lookAt = pip.get("head"); S.update(dt); }
   // free play: Noodle can't sit still, and now and then pops up somewhere else
@@ -2289,7 +2273,6 @@ function setXRQuality(xr) {
     for (const [o, m] of swapped) o.material = m;
     swapped.length = 0;
   }
-  if (hand.under) robotClip(true); // (the swapped materials need the floor clip too)
 }
 
 // ---- XR session ------------------------------------------------------------------
