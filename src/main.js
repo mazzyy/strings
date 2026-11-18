@@ -422,6 +422,19 @@ function twigVoice(text) {
     if (fibbing && !twigNoseTold) { twigNoseTold = true; narrator.coach(TWIG_LINES.nose); }
   }, fibbing ? 900 : 500);
 }
+// The story comes first. While a chapter opens, between acts, while an act's goal is being
+// given (its first seconds) and while a task runs, the narrator makes no remarks on Sir Pip's
+// moves: a player who keeps moving him would otherwise keep the narrator talking, and the
+// story waits for a gap before it gives the next goal. Free play, and simple acts once their
+// goal has been given, still get the running commentary.
+function storyTalking() {
+  const st = show.state;
+  if (st === "idle" || st === "done") return false;
+  if (st !== "act") return true;
+  if (currentTask) return true;
+  return show.actT < 7 || narrator.queue.length > 0;
+}
+narrator.quietFor = storyTalking;
 // the narrator holds its next line while a guest is waiting to speak
 narrator.holdFor = () => marloLines.length > 0;
 const mind = new MarloMind({
@@ -737,6 +750,9 @@ let rescueCool = 0, awaitRise = 0;
 const pickOne = (xs) => xs[Math.floor(Math.random() * xs.length)];
 function saveTheScene(kind) {
   if (elapsed < rescueCool || storyLock() || !crowdWatching() || unbound.busy) return false;
+  // a tumble while the story is setting up an act isn't saved with a speech (it would hold the story up)
+  if (kind === "fall" && ["intro", "between"].includes(show.state)) return false;
+  if (kind === "fall" && show.state === "act" && show.actT < 7) return false;
   const free = !mind.taskBusy && marlo.group.visible && !ai.suspended && !flying;
   if (kind === "fall" && Math.random() < 0.35) return false; // not every time: then it's a routine
   rescueCool = elapsed + 14;
