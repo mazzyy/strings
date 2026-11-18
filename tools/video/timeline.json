@@ -16,14 +16,14 @@
    "id": "menu",
    "clip": "menu",
    "in": 0.4,
-   "dur": 5.0,
+   "dur": 5.13,
    "x": 0.5
   },
   {
    "id": "prologue",
    "clip": "prologue",
    "in": 0.2,
-   "dur": 14.4,
+   "dur": 14.62,
    "x": 0.6
   },
   {
@@ -55,7 +55,7 @@
    "id": "stumble",
    "clip": "stumble",
    "in": 3.0,
-   "dur": 7.8,
+   "dur": 7.93,
    "x": 0.3,
    "vol": 1.1
   },
@@ -63,7 +63,7 @@
    "id": "cast",
    "clip": "court",
    "in": 2.4,
-   "dur": 4.6,
+   "dur": 6.78,
    "x": 0.3
   },
   {
@@ -112,7 +112,7 @@
    "id": "forest",
    "clip": "forest",
    "in": 2.0,
-   "dur": 4.4,
+   "dur": 4.58,
    "label": "The Whispering Forest",
    "x": 0.3
   },
@@ -126,13 +126,6 @@
    "x": 0.3
   },
   {
-   "id": "ship",
-   "clip": "ship",
-   "in": 4.6,
-   "dur": 3.8,
-   "label": "The Pirate Ship"
-  },
-  {
    "id": "laundryA",
    "clip": "laundry",
    "in": 0.0,
@@ -144,68 +137,53 @@
   {
    "id": "laundryB",
    "clip": "laundry",
-   "in": 20.3,
-   "dur": 3.0,
+   "in": 22.3,
+   "dur": 3.4,
    "vol": 1.25
-  },
-  {
-   "id": "bridge",
-   "clip": "bridge",
-   "in": 4.3,
-   "dur": 4.2,
-   "label": "The Troll Bridge"
   },
   {
    "id": "tower",
    "clip": "tower",
    "in": 1.6,
-   "dur": 4.7,
+   "dur": 4.88,
    "label": "The Clockwork Tower"
   },
   {
    "id": "cave",
    "clip": "cave",
    "in": 1.6,
-   "dur": 4.6,
+   "dur": 4.73,
    "label": "The Dragon's Cave"
   },
   {
    "id": "sky",
    "clip": "sky",
    "in": 3.0,
-   "dur": 6.0,
+   "dur": 6.28,
    "label": "The Night Sky",
    "x": 0.3
   },
   {
    "id": "kind",
    "clip": "finale",
-   "in": 0.0,
-   "dur": 10.0,
+   "in": 1.5,
+   "dur": 11.8,
    "vol": 1.2,
    "x": 0.35
   },
   {
    "id": "knight",
    "clip": "finale",
-   "in": 27.4,
-   "dur": 6.2,
+   "in": 27.6,
+   "dur": 10.9,
    "vol": 1.4,
    "x": 0.35
-  },
-  {
-   "id": "call",
-   "clip": "finale",
-   "in": 49.2,
-   "dur": 3.2,
-   "vol": 1.35,
-   "x": 0.3
   },
   {
    "id": "after",
    "clip": "epilogue",
    "in": 0.2,
-   "dur": 5.8,
+   "dur": 6.02,
    "x": 0.6
   },
   {
@@ -233,13 +211,13 @@
    "id": "play",
    "clip": "freeplay",
    "in": 2.1,
-   "dur": 4.6,
+   "dur": 4.77,
    "label": "Free play: be anyone"
   },
   {
    "id": "end",
    "clip": "menu",
-   "in": 2.6,
+   "in": 1.9,
    "dur": 9.4,
    "x": 0.5,
    "vol": 0,
@@ -303,8 +281,8 @@
   },
   {
    "key": "talk",
-   "seg": "talk",
-   "off": 0.2
+   "seg": "shyB",
+   "off": 2.9
   },
   {
    "key": "notes",
@@ -327,19 +305,9 @@
    "off": 2.85
   },
   {
-   "key": "ship",
-   "seg": "ship",
-   "off": 0.3
-  },
-  {
    "key": "laundry",
    "seg": "laundryA",
    "off": 0.2
-  },
-  {
-   "key": "bridge",
-   "seg": "bridge",
-   "off": 0.3
   },
   {
    "key": "tower",
@@ -406,29 +374,24 @@
   {
    "seg": "laundryB",
    "off": 0.1,
-   "secs": 2.9
+   "secs": 3.2
   },
   {
    "seg": "kind",
-   "off": 8.6,
-   "secs": 1.4
+   "off": 9.6,
+   "secs": 2.2
   },
   {
    "seg": "knight",
    "off": 0.0,
-   "secs": 6.2
-  },
-  {
-   "seg": "call",
-   "off": 0.0,
-   "secs": 3.2
+   "secs": 10.9
   }
  ],
  "music": [
   {
    "file": "music_story",
    "at": 0,
-   "end": 118.1,
+   "end": 113.65,
    "vol": 0.6,
    "fadeIn": 0.8,
    "fadeOut": 3.5,
@@ -436,8 +399,8 @@
   },
   {
    "file": "music_finale",
-   "at": 114.7,
-   "end": 175.3,
+   "at": 110.25,
+   "end": 174.82,
    "vol": 0.46,
    "fadeIn": 2.5,
    "fadeOut": 2.2,

@@ -7,14 +7,15 @@ import { execFileSync } from "node:child_process";
 const out = process.argv[2], want = (process.argv[3] || "").split(",").filter(Boolean);
 fs.mkdirSync(`${out}/th`, { recursive: true });
 const FF = `${process.env.HOME}/Library/Caches/ms-playwright/ffmpeg-1013/ffmpeg-mac`;
+const BASE = process.env.BASE || "http://localhost:8080"; // (the server to record from)
 const browser = await launch();
 
-async function vr({ narrator = false, mode = "#go-vr" } = {}) {
+async function vr({ narrator = false, mode = "#begin" } = {}) {
   const page = await browser.newPage({ viewport: { width: W, height: H } });
   page.on("pageerror", (e) => console.log("  pageerror", e.message));
   await page.route("**/audio/music_*.mp3", (r) => r.abort()); // (the edit lays its own music)
   await page.addInitScript(() => localStorage.clear());
-  await page.goto("http://localhost:8080/?emulate&quality=high");
+  await page.goto(`${BASE}/?emulate&quality=high`);
   await page.waitForSelector("#go-vr:not([hidden])", { timeout: 90000 });
   await armRecorder(page);
   await page.click(mode);
@@ -69,7 +70,7 @@ const takes = {
   async menu() {
     const page = await browser.newPage({ viewport: { width: W, height: H } });
     await page.addInitScript(() => localStorage.clear());
-    await page.goto("http://localhost:8080/?emulate&quality=high");
+    await page.goto(`${BASE}/?emulate&quality=high`);
     await page.waitForSelector("#go-vr:not([hidden])", { timeout: 90000 });
     await E(page, () => { const ac = new AudioContext(); window.AUDIO_TAP = ac.createGain(); window.strings.renderer.setAnimationLoop(null); });
     await armRecorder(page);
@@ -491,13 +492,12 @@ takes.finale = async () => {
     // and on into the curtain call: the whole cast (Twig and the two socks too) cheering for Sir Pip
     await G.until(() => s.show.state === "ending", 15000); G.mark("call");
     V.cam([0, 0.47, 0.86], [0, 0.22, -0.06], 0.95, 2.2);
-    // the cheers come one after another; when Twig's turn comes, a gentle push in on the
-    // left of the stage (Twig, Noodle, Sir Pip, Doodle), and on through Noodle's cheer
+    // the whole company cheers at once (the chorus): the wide shot first, then a gentle push in
+    // on the left of the stage (Twig, Noodle, Sir Pip, Doodle)
     const cap = (re) => re.test(document.getElementById("caption")?.textContent || "");
-    await G.until(() => cap(/Clank:/), 30000); G.mark("clank cheer");
-    await G.until(() => cap(/Twig:/), 12000); G.mark("twig cheer");
+    await G.until(() => cap(/whole company/), 30000); G.mark("chorus");
+    await w(3000); G.mark("push in");
     V.cam([-0.12, 0.36, 0.5], [-0.1, 0.2, -0.04], 0.88, 1.8);
-    await G.until(() => cap(/Noodle:/), 12000); G.mark("noodle cheer");
     await w(5000); G.mark("call end");
   });
   await finish(page, "finale");
@@ -574,7 +574,7 @@ takes.picker = async () => {
   page.on("pageerror", (e) => console.log("  pageerror", e.message));
   await page.route("**/audio/music_*.mp3", (r) => r.abort());
   await page.addInitScript(() => localStorage.clear());
-  await page.goto("http://localhost:8080/?quality=high");
+  await page.goto(`${BASE}/?quality=high`);
   await page.waitForSelector("#mystory", { timeout: 90000 });
   await sleep(5000); // (the menu's entrance)
   await armRecorder(page);
