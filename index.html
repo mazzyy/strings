@@ -259,6 +259,17 @@
     #phrases button:hover { background: #fff3d6; }
     #phrases button.x { position: absolute; top: 6px; right: 8px; border: 0; background: none; padding: 2px 6px; font-size: 18px; }
     #riddlecard.on { opacity: 1; transform: translate(0, -50%); }
+    #spellcard { position: fixed; left: 16px; top: 50%; transform: translate(-20px, -50%); width: min(280px, 30vw); padding: 16px 18px; border-radius: 14px; background: #efe0bc; color: #2a1a10; border: 5px double #5a3a8a; box-shadow: 0 16px 40px rgba(0,0,0,0.5); opacity: 0; transition: opacity .4s, transform .4s; pointer-events: none; z-index: 4; }
+    #spellcard.on { opacity: 1; transform: translate(0, -50%); }
+    #spellcard .t { font: 600 18px Georgia, serif; color: #4a2a7a; margin-bottom: 8px; }
+    #spellcard ol { margin: 0; padding: 0 0 0 22px; font: 20px/1.25 Georgia, serif; }
+    #spellcard li { margin: 6px 0; transition: color .3s; }
+    #spellcard li b { font-weight: 600; margin-right: 8px; }
+    #spellcard li kbd { font: 600 12px ui-monospace, Menlo, monospace; padding: 2px 7px; border-radius: 6px; background: #fff7e6; color: #3a2a20; box-shadow: 0 2px 0 #b9a27a; white-space: nowrap; }
+    #spellcard li.hidden { color: #a89880; } #spellcard li.hidden kbd { visibility: hidden; }
+    #spellcard li.now { color: #7a1d22; } #spellcard li.now b::after { content: " ◂"; }
+    #spellcard li.done { color: #3a7a3a; } #spellcard li.done b::before { content: "✓ "; }
+    #spellcard .h { margin-top: 10px; font: italic 14px Georgia, serif; color: #6a5040; }
     #riddlecard .t { font: 600 18px Georgia, serif; color: #7a1d22; margin-bottom: 8px; }
     #riddlecard .q { font: 24px/1.3 Georgia, serif; }
     #riddlecard .h { margin-top: 10px; font: italic 14px Georgia, serif; color: #6a5040; }
@@ -378,6 +389,7 @@
   <div id="billpanel"></div>
   <div id="caption"></div>
   <div id="tip"></div>
+  <div id="spellcard"><div class="t">The spell</div><ol></ol><div class="h"></div></div>
   <div id="riddlecard"><div class="t">Grumble's riddle</div><div class="q"></div><div class="h">Walk Sir Pip onto the stone with the right answer</div></div>
   <div id="credits"><div class="roll">
     <h1>The End</h1>

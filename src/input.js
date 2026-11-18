@@ -192,6 +192,8 @@ export class DesktopHands {
     dom.addEventListener("pointerdown", (e) => {
       if (e.button === 0) this.lmb = true;
       if (e.button === 2) this.rmb = true;
+      // keep following the mouse while a button is held, even over a button or outside the window
+      try { dom.setPointerCapture(e.pointerId); } catch {}
     });
     window.addEventListener("pointerup", (e) => {
       if (e.button === 0) this.lmb = false;
