@@ -1,168 +1,246 @@
 # Strings
 
-A marionette theatre on your desk, with an AI co-performer. You pinch a glowing control bar and Sir Pip, a small armoured knight, walks, bows, waves and jumps. A robot puppeteer across the stage works Marlo, a young dragon: it watches what your knight does, improvises back, and narrates the story out loud, one line at a time, in a natural voice.
+**A marionette theatre for your hands.** Created by Abdul Musawar Soomro.
 
-In passthrough AR you set the stage down on your real desk.
+You pinch a little wooden control bar and Sir Pip, a knight on strings, walks, bows, waves and jumps. A robot puppeteer works everyone else, and together you put on a show: a nine-chapter fairy tale, a story you make up yourself, or just playing around.
 
-**What you can do**
-- **The Tale of Sir Pip (story mode):** six chapters on a storybook map, each on its own stage set, with its own guest and its own gameplay.
-  - **The quest:** a six-page prologue opens the game. Clank the clockwork robot has stolen Princess Juniper and hidden the three jewels of the kingdom's golden music box, so the kingdom has fallen silent. Only one very small knight answers the king's call.
-  - **Before every chapter,** an illustrated storybook opens and the narrator reads three pages that carry the tale on: the wizard who knows the way, the only ship that sails to the tower, the troll's bridge, the rescue, and the jewels in Marlo's cave.
-  - **The map** shows the whole kingdom at once, and leans in to follow the token while it travels.
-  - **The chapters:**
-    1. **The Castle Courtyard** (Marlo the dragon): the tutorial. Walk, bow, wave.
-    2. **The Whispering Forest** (Old Bramble the wizard): catch five escaped fireflies with the lantern, then learn his spell by repeating his moves in order.
-    3. **The Pirate Ship** (Captain Pegg): a sword fight. Duck his high swings, jump his low ones, then lunge to strike. Three hits wins.
-    4. **The Troll Bridge** (Grumble): answer his riddle by walking onto the right stone, then win him over with a flower.
-    5. **The Clockwork Tower** (Clank the evil robot, and Princess Juniper in a cage): sneak past the sweeping searchlight to the key, unlock her cage, then jump Clank's zaps until he overheats.
-    6. **The Dragon's Cave** (Marlo): find his three lost gems in the dark, then take the final bow.
-  - **Characters:** every character has their own recorded voice, lines and personality.
-  - **Travelling:** finishing a chapter unlocks the next. On the map, a shield token walks the road while the view pans, then the curtain falls and the set changes.
-  - **The Grand Theatre** has a new show every night.
-  - **On Quest:** the map and the storybook float beside the stage, and you poke them.
-- **Easy prop picking:** props have generous invisible hit areas. Hovering lifts the prop, shows a pointer, and a tooltip says what a click will do.
-- **A curtain you raise yourself:** the stage starts dark with a glowing gold cord. Pinch it and pull down, and the curtain opens. Your first action teaches the pinch-and-pull you'll use all show.
-- **Marlo has a mind of his own** (fully offline, so it works on the hosted link): his mood (joy, trust, energy) shifts with what you do, and he remembers it. A third fall earns a giggle instead of help. A sword he doesn't trust yet makes him back away. Leave him alone too long and he sulks until you come over. When the stage goes quiet he acts on his own: he challenges you to copy his moves, fetches a prop for the knight, or dozes off. If you're stuck in a scene, he shows you what to do. Emote bubbles (♥ ! ? ★ z) make his mood readable at a glance.
-- **Three endings:** how you perform decides how the show ends. Graceful (bows, waves, gifts) gives The Grand Ceremony, clumsy (falls, flops) gives The Slapstick Finale, and wild (spins, sword-waving, running off) gives The Tragic Encore. The playbill shows the ending, Grace, Slapstick and Drama scores, and a critic's quote.
-- **Fun modes you unlock** by collecting playbills: Moon Gravity, Fragile Strings (yank too hard and a string snaps) and Party.
-- **Duet with your shadow:** your recording performs beside Sir Pip, and matching its moves pops an "In sync!" bubble.
-- **Built for seated play:** you can pinch a bar from below, so your arms can rest low. Hand motion is amplified a little, so small wrist moves give big stage moves. A glowing tether shows which bar your hand is holding. Hand tracking is smoothed with a One-Euro filter, the bar follows your knuckle (not your fingertips, so closing your fingers never jerks the puppet), and a brief tracking dropout doesn't drop him.
-- **Strings that glow when taut,** and pluck when they snap tight.
-- **Tonight's Show:** every visit is a short three-act scene with goals: meet the dragon, win a dance-off, give Marlo a birthday flower, patrol the stage by lantern light. Each act earns a star and applause, and the curtain call earns a playbill for your collection. There's a new show every day, plus a streak.
-- **Props:** pinch the sword, lantern or flower from the rack, put it in Sir Pip's hand, or give it to Marlo.
-- **Talk to Marlo:** say something and he answers in his own voice and acts it out. Uses Qwen or Claude locally, and simple keyword understanding on the hosted build.
-- **Never stuck:** if you're unsure what to do next, a glowing arrow points at what to use, an animated cue shows the motion, and a label (keys on desktop, the gesture in a headset) and the narrator tell you how.
-- **Sound design:** curtain swish, a music box, wooden footsteps, armour clinks, dragon chirps and applause, all synthesised in code.
+**Play it:** [strings.musawar.tech](https://strings.musawar.tech) (open it in the Quest Browser for VR; it also runs in any desktop browser)
 
-Runs in the browser with WebXR. On a Quest you use your real hands. Without a headset there's a mouse/keyboard hand simulator, plus an optional Quest 3 emulator.
+![Marlo flies out of the theatre and lands in your hand](docs/media/marlo-lands.gif)
 
-## Run it
+---
+
+## What it looks like
+
+| | |
+|---|---|
+| ![The stage on the desktop](docs/media/stage.jpg) | ![Inside the headset](docs/media/vr-view.jpg) |
+| The stage, played with a mouse | The same stage in VR, sitting in front of you |
+| ![The pop-up storybook](docs/media/storybook.jpg) | ![The story map](docs/media/map.jpg) |
+| Every chapter opens with a pop-up storybook | The map of the kingdom, one road, nine stops |
+| ![Twig and his growing nose](docs/media/twig.jpg) | ![Noodle and Doodle](docs/media/noodle.jpg) |
+| Twig's nose grows when he fibs | The robot works Noodle from under the stage |
+| ![The story picker](docs/media/make-your-own.jpg) | ![The whole company on the bookshelf](docs/media/showcase.jpg) |
+| Make your own story | The whole company, each in their own pose |
+| ![The start menu](docs/media/menu.jpg) | ![The curtain call](docs/media/curtain-call.jpg) |
+| The start menu: the title hangs on real strings | The curtain call, everyone on stage at once |
+
+![The whole company cheering at the curtain call](docs/media/whole-company.gif)
+
+---
+
+## The idea
+
+Most VR games give you a controller and a gun. I wanted something you could do sitting at a desk, with nothing in your hands, that felt like a craft instead of a reflex. Marionettes were perfect for that. A real marionette is all about small wrist movements and patience, and when you get it right the puppet looks alive.
+
+So the whole game is built around one feeling: you are holding the strings. You don't press a button to make Sir Pip bow. You tip your wrist, the strings pull, and he bows because of physics. If you let go, he falls in a heap, and Marlo the dragon falls over too, just to make you feel better about it.
+
+---
+
+## How I built it
+
+### Custom physics engineering
+
+There's no physics library in Strings. Every puppet is my own Verlet ragdoll: 16 particles joined by rigid sticks, with a soft waist so the body can bend. The strings are rope constraints that run back up to two control bars, one for the body and one for the arms. When you hold a bar, its strings go taut. When you let go, the strings pay out and the puppet slumps, the same way a real one does.
+
+Getting a puppet to *walk* well was the hardest part. With pure physics he just slid around. So when the bar moves sideways I shorten the knee strings one after the other, which turns a slide into steps. A couple of other small helpers keep it playable without making it feel fake:
+
+- On the desktop, the held bar has a soft floor a little below its rest height, so if you hold the mouse low he stays on his feet instead of folding up.
+- Hand movement is amplified a little in the headset, so small wrist moves give big stage moves (good for seated play).
+- Strings glow when they're taut and make a little pluck when they snap tight.
+- In "Fragile strings" mode, yank too hard and a string actually snaps.
+
+The physics runs every frame for every puppet on stage, and I kept it allocation-free so the garbage collector never causes a hitch in the headset.
+
+### WebXR development
+
+Strings runs in the browser with WebXR, so there's nothing to install. In the Quest Browser you use your real hands: the game reads all 25 joints of each hand, and a pinch is the gap between your thumb and index finger (with a bit of hysteresis so it doesn't flicker). You pinch the bars to hold them and poke buttons, the map and speech bubbles with your fingertip.
+
+A few things I'm happy with:
+
+- **VR first.** On a headset the gold "Begin" button goes straight into VR. "Play on this screen" is there if you'd rather stay flat.
+- **Mixed reality.** In passthrough you look at your real desk and pinch to put the stage down on it. A WebXR anchor keeps it there, and the puppets can even step off the stage onto your desk.
+- **The stage comes to you.** It's placed from your actual head position when you enter, low and close like a theatre on a desk. Pinch with both hands for a second and a half to bring it back in front of you.
+- **The same code on the desktop.** Without a headset, a mouse and keyboard "hand simulator" produces the same hand pose and pinch as real hands, so all the grab logic is shared. I also wired in Meta's IWER emulator (`?emulate`) so I could test the real hand-tracking path without putting the headset on every five minutes.
+- **Frame rate.** Puppets are GPU-skinned (each one's 60 or so moving parts become bones of a single mesh), static scenery is merged into a few draw calls, shadows update every other frame in the headset, and fixed foveated rendering is on. On the desktop the game watches its own frame rate and steps quality down if it needs to.
+
+### Game design
+
+The main mode is *The Tale of Sir Pip*: a princess has been taken by Clank, a lonely clockwork robot, and Sir Pip has to cross the whole kingdom to bring the music back. Each of the nine chapters has its own painted set, its own guest and its own game, and every one of them teaches a different way to use the strings:
+
+| Chapter | Guest | What you do |
+|---|---|---|
+| The Castle Courtyard | Marlo the dragon | Learn to walk, bow and wave |
+| The Whispering Forest | Old Bramble | Catch fireflies with a lantern, then copy his spell |
+| The Toymaker's Workshop | Twig | Watch his nose and walk onto True or Fib |
+| The Pirate Ship | Captain Pegg | A sword fight: duck high swings, jump low ones |
+| The Harbour Laundry | Noodle the sock | Boop him as he pops up, then find his twin |
+| The Troll Bridge | Grumble | Answer a riddle by standing on the right stone |
+| The Clockwork Tower | Clank | Sneak past the searchlight, dodge his zaps |
+| The Dragon's Cave | Marlo | Find the lost gems in the dark |
+| The Night Sky | Everyone | Fly on Marlo's back and catch Clank |
+
+The ending was important to me. You don't beat Clank. He's not wicked, he's lonely, and the bravest thing Sir Pip can do is bow to him. Then the King knights you, the whole company comes out for a curtain call and cheers at once, and if you clap, Marlo breaks his strings and flies out of the theatre to land in your open hand.
+
+Around the story there's a lot to play with:
+
+- **How you perform changes the ending.** Graceful play (bows, waves, gifts) earns a different finale from slapstick (falling over a lot) or drama. A critic reviews every show on a playbill you can collect.
+- **Mistakes become theatre.** If you fail, your co-star turns it into a bit: a matching pratfall, a "ta-da, all part of the show!", and the audience laughs instead of groaning.
+- **Make your own story.** Pick a problem, someone to rescue, a villain, a place and a twist, and the theatre stages it, fully voiced.
+- **Free play.** Be any character on any stage, with any co-star.
+- **Unlockable modes.** Moon gravity, fragile strings and a party mode, earned by collecting playbills.
+
+### AI character development
+
+I wanted the cast to feel like they're paying attention to you, and I wanted it to work offline, since the hosted game has no server. So each guest has a small "mind" of its own: a mood made of joy, trust and energy that shifts with what you do, a memory of how you've treated them, and some initiative. Marlo will challenge you to copy him, fetch you things, sulk if you ignore him and nap if you're slow.
+
+Underneath, an action detector reads Sir Pip's body every frame (walk, bow, fall, jump, wave, turn, slump, rise, approach) and the mind picks a reaction. Rush at Marlo and he hides. Come back gently and he becomes your friend. The robot puppeteer then performs that reaction with his own arms on the guest's control bar, so what you see is one puppeteer working another puppet, not an animation playing.
+
+Marlo also keeps "Backstage Notes" on you, which you can read after a show.
+
+The headset browser has no speech recognition, so talking works by poking speech bubbles, and Marlo answers in his own voice and acts it out. If you run the optional local server, the lines can come from a live language model instead (Qwen 2.5 through Ollama, or a cloud model through Anthropic's API), which returns a line plus a reaction for the puppet to perform.
+
+### Audio production
+
+Every word in the game is a real recorded voice, never the browser's robotic speech, and all of it is pre-recorded so the hosted version works with no server. That's around 900 lines.
+
+- **The narrator and most of the cast** use Kokoro, an open neural voice model, with a different voice and pace for each character.
+- **The voices with feeling.** Marlo, Princess Juniper, the King, Noodle, Doodle, Bramble and Grumble are recorded with Qwen3-TTS. Instead of picking a voice from a list, you describe it ("a very old wizard, breathy and mysterious, with a soft chuckle") and give each line its own feeling ("thrilled and excited", "sleepy and drowsy, yawning"). I wrote a feeling for every one of their 184 lines.
+- **Clank sounds like a machine.** His lines play through a robot filter I built in Web Audio: a ring modulator for the buzz, a short comb filter for the metal, and a brighter top end.
+- **The curtain call** plays all eight cheers at once, each from where that character is standing, instead of one after another.
+- **Spatial sound.** Voices come from the character speaking, and the robot's voice comes from his head.
+- **Music and ambience** change with each chapter (CC0 music, forest birds, the sea, a dungeon drip), and the music ducks under speech.
+
+### 3D content creation
+
+I drew everything in code. There are no downloaded models: every puppet, prop, set and the room itself is built from three.js geometry and textures painted on canvases at load time.
+
+- **The puppets** share one rig, and each character gets a procedural "skin": Sir Pip's armour, Marlo's scales and wings, Twig's real-grain wood, a robe for Bramble, socks for Noodle and Doodle.
+- **The theatre.** The velvet curtains are two panels that really gather as they open, with a shader that makes the pile catch the light at grazing angles, gold bullion fringe and tassels. My first curtain looked fake, so I rebuilt it from scratch.
+- **The sets** are painted backdrops in layers (sky, drifting clouds, foreground) with 3D pieces in front, and things that move: waves, lightning, turning gears, glowing crystals.
+- **The storybook and the map** are drawn on canvases, with pop-up pages and a road that winds through the whole kingdom.
+- **Lighting.** A warm key spot, a front fill like footlights, glowing brass footlights, fairy lights strung around the room, and soft contact shadows under every puppet so they stand on the stage instead of floating over it.
+- **The showcase.** The whole company stands on the bookshelf behind the stage, each in their own pose (I pose them with their own strings, then freeze them).
+
+### Accessibility engineering
+
+I designed for one situation: someone sitting down, with just their hands, in a small space.
+
+- **Seated, hands only.** Everything is reachable within about two feet, and you can pinch a bar from below so your arms can rest low.
+- **One hand is enough.** "One Hand" mode makes the arm bar follow the body bar, so you can still wave by rolling your wrist.
+- **Pinch Lock.** You don't have to hold a pinch: pinch once to pick up, once to put down. Good for tired hands.
+- **Subtitles everywhere.** Every spoken line is captioned, on the page and in the headset (a strip under the stage), and the current goal and stars sit in a corner of your view.
+- **Never stuck.** If you're unsure what to do, a glowing arrow points at what to use, a little animation shows the motion, and a label shows the key or gesture. Spells are written out on a card with the key for each move, and they replay if you missed them.
+- **Forgiving.** Leftover wobble after a move doesn't count as a mistake, and you can play the whole thing on a laptop with a mouse if you don't have a headset.
+
+---
+
+## Install and run it yourself
+
+You need [Node.js](https://nodejs.org) 22 or newer. That's it for the basic game.
 
 ```bash
+git clone https://github.com/mazzyy/strings.git
 cd strings
 npm install
-npm start            # http://localhost:8080
+npm start
 ```
 
-### Who narrates
+Then open [http://localhost:8080](http://localhost:8080). To use another port: `PORT=8095 npm start`.
 
-The server picks the first narrator it can use:
+**Useful address options**
 
-1. **Claude**, if `ANTHROPIC_API_KEY` is set (in your shell or in `strings/.env`). Defaults to `claude-opus-5-5` at low effort; override with `STRINGS_MODEL`.
-2. **A local model through Ollama**, by default `qwen2.5:7b`. Override with `OLLAMA_MODEL` and `OLLAMA_URL`. Start Ollama before `npm start` (set `OLLAMA_MODELS` if your models live on another drive):
+| Add to the address | What it does |
+|---|---|
+| `?emulate` | Loads Meta's Quest 3 emulator, so you can try the VR version on a computer |
+| `?autostart` | Skips the menu |
+| `?quality=low` | Forces a quality level (`low`, `medium`, `high`) |
+| `?voices=kokoro` | Plays the older voices instead of the Qwen ones |
 
-   ```bash
-   ollama serve
-   ```
-
-3. **The built-in storyteller.** No setup, works offline.
-
-The narrator and the model (`qwen2.5:7b (local)`, for example) show up as "narrator" in the status panel. Ollama is checked again every 15 s, so you can start it after the server.
-
-## Three ways to play
-
-| | How | What it exercises |
-|---|---|---|
-| Desktop simulator | open `http://localhost:8080` | mouse = your hand, keys = your wrist |
-| Emulated Quest 3 | open `http://localhost:8080/?emulate`, then **Enter VR / AR** | the real WebXR hand-tracking path (Meta's IWER emulator); the simulator steers the emulated hands |
-| Real Quest | see below | hand tracking + passthrough AR |
-
-**Simulator controls**
+**Desktop controls**
 
 | Input | Does |
 |---|---|
-| hold left click (G = sticky) | pinch the bar |
-| move mouse / wheel | move your hand / nearer–further |
-| Q / E | rock the wrist (legs lift, Pip walks) |
-| W / S | tip forward / back (bow) |
-| A / D | twist (turn) |
-| Space | flick up (jump) |
-| Shift + mouse (H = sticky) | your other hand, on the arm bar (wave) |
-| let go | open hand (Pip slumps) |
-| R · P · L | record · replay your shadow · copy share link |
-| click a prop / click Marlo | hand it to Sir Pip / give it to Marlo |
-| hold V | talk to Marlo (browsers with speech recognition) |
-| T · M · C · Backspace | demo autopilot · voice · captions · reset |
+| Hold left click | Pinch the bar (G makes it sticky) |
+| Move the mouse, scroll wheel | Move your hand, nearer or further |
+| Q / E | Rock the wrist (he walks) |
+| W / S | Tip forward or back (bow) |
+| A / D | Twist (turn) |
+| Space | Flick up (jump) |
+| Shift + mouse | Your other hand, on the arm bar (wave) |
+| Click a prop | Hand it to Sir Pip |
+| R · P · L | Record, replay your performance, copy a share link |
 
-**On a Quest:** in AR, look at your desk and pinch to set the stage there. Pinch a bar to hold it, and pinch a prop to carry it. Poke the red knob on the apron to record, green to replay, and blue to talk to Marlo (only if the browser supports speech input). Pinch with both hands in the air for 1.5 s to move the stage.
+### On a Quest
 
-### Getting it onto a Quest
+The easiest way is the hosted version: open [strings.musawar.tech](https://strings.musawar.tech) in the Quest Browser and press "Begin the Story".
 
-WebXR needs a secure origin, and `localhost` counts as one. The simplest route is USB:
+To test your own copy on the headset, WebXR needs a secure address, and `localhost` counts as one. With the Quest plugged in by USB (developer mode on):
 
 ```bash
 adb reverse tcp:8080 tcp:8080
 ```
 
-Then open `http://localhost:8080` in the Quest Browser and tap **Enter AR (passthrough)**. Any HTTPS tunnel to port 8080 works too.
+Then open `http://localhost:8080` in the Quest Browser. Any HTTPS tunnel to port 8080 works too.
 
-## Voice
+### Optional: re-recording the voices
 
-The narrator speaks with Kokoro, a natural neural voice (see [CREDITS.md](CREDITS.md)), as spatial audio from the robot's head.
+You only need this if you change the words in `public/src/lines.js`.
 
-- **Built-in lines** are pre-recorded into `public/voice/`, so the hosted build needs no server. After you change `public/src/lines.js`, re-record them:
+```bash
+# Kokoro (the narrator and most of the cast)
+python3 -m venv tts/.venv
+tts/.venv/bin/pip install kokoro-onnx soundfile lameenc
+# put kokoro-v1.0.int8.onnx and voices-v1.0.bin (from the kokoro-onnx releases) in tts/
+tts/.venv/bin/python tts/build_voice.py af_heart am_puck
 
-  ```bash
-  tts/.venv/bin/python tts/build_voice.py            # default voice: af_heart
-  tts/.venv/bin/python tts/build_voice.py bm_george  # or any other Kokoro voice
-  ```
+# Qwen3-TTS (the voices with feeling), in its own environment next to the repo
+python3 -m venv ../qwen-tts/.venv
+../qwen-tts/.venv/bin/pip install qwen-tts lameenc
+../qwen-tts/.venv/bin/python tts/build_qwen.py
+```
 
-- **Live LLM lines** (from Claude or Qwen) are voiced by the local server through `tts/worker.py`. Choose the voice with `STRINGS_VOICE=bm_george npm start`.
-- **One-time setup:** `python3 -m venv tts/.venv && tts/.venv/bin/pip install kokoro-onnx soundfile lameenc`, then download `kokoro-v1.0.int8.onnx` and `voices-v1.0.bin` from the kokoro-onnx releases into `tts/`.
+Both only record lines that are new or changed. `public/voice-qwen/compare.html` and `cast.html` let you hear the old and new voices side by side.
 
-## Hosting for judges
+### Optional: live dialogue
 
-`public/` is a static site. Push it to GitHub Pages (or any static host) and share the link. On a static host there's no LLM, so the built-in storyteller narrates, still with the pre-recorded natural voice.
+`npm start` also runs a small local server. If it finds a language model, the narrator and Marlo's replies come from it, voiced live:
 
-## How it works
+- a local model through [Ollama](https://ollama.com) (default `qwen2.5:7b`; start `ollama serve` first), or
+- Anthropic's API, if `ANTHROPIC_API_KEY` is set in your shell or in a `.env` file.
 
-- **`public/src/skins.js`, `robot.js`, `stage.js`**: everything visual, built procedurally. Physically based materials are lit by a CC0 HDRI. Static parts are merged into a few draw calls (`perf.js`) to hold Quest frame rates.
-- **`public/src/puppet.js`**: Pip is a Verlet ragdoll (16 particles, rigid sticks, a soft waist). The strings are rope constraints back to two control bars. Letting go pays the strings out, so Pip slumps. Two small "assists" make crude input read well: moving the bar sideways alternately shortens the knee strings (a gait), and tipping the bar forward lets out the head strings (a bow).
-- **`public/src/input.js`**: Quest hand tracking (pinch = thumb–index gap, with hysteresis; controllers work as a fallback) and the desktop simulator. Both produce the same hand pose + pinch, so the grab logic is shared.
-- **`public/src/tasks.js`**: the playable acts (collect, simon, duel, riddle, sneak, unlock, dodge). Each reads Sir Pip's body and directs the guest's moves, and the show awards the star when the task is won.
-- **`public/src/storybook.js`**: the illustrated, narrated pages before each chapter (the set paintings plus storybook versions of the cast), as an overlay on desktop and a pokeable book in the headset.
-- **`public/src/cast.js`, `sets.js`, `storymap.js`**: the guest characters (procedural skins on the shared rig), the five stage sets (painted backdrops plus merged set pieces, built on first use), and the storybook map (one canvas used as an HTML overlay on desktop and as a pokeable texture in the headset).
-- **`public/src/mind.js`**: Marlo's mood, memory and initiative (copy-me challenges, fetching, sulking, napping, demonstrating). It decides his reaction to every action, and works with or without a language model.
-- **`public/src/batch.js`**: each puppet's ~60 moving parts become bones of one skinned mesh per material, so the GPU poses them in a handful of draw calls.
-- **`public/src/director.js`**: `ActionDetector` reads Pip's body and emits walk, bow, fall, jump, wave, turn, slump, rise, approach and idle. `AIPerformer` plays Marlo with short clips (bow back, wave, help, retreat, mirror, dance, and so on) through the same bars-and-strings physics.
-- **`public/src/narrator.js` + `server.mjs`**: each batch of actions turns into one spoken line (a natural Kokoro voice, never the browser's robotic speech). Claude returns `{line, reaction}` as structured output, and the reaction queues Marlo's next move. If Claude is unavailable, slow, or declines, the built-in narrator fills in.
-- **`public/src/recorder.js`**: a performance is just the two bars' poses at 30 Hz. Replay drives a translucent ghost Pip, your shadow. Share links are quantised, delta-encoded and gzipped into the URL hash, about 4 KB for 25 s.
+Without either, the built-in storyteller narrates, which is exactly what the hosted version does.
 
-## Performance
+### Tests
 
-**Adaptive quality (desktop):** the game measures its real frame rate. Below about 50 fps it steps down, in order: resolution, then the glow (bloom), then shadow detail and shadow update rate, until it runs smoothly. You can pin a level with `?quality=high`, `?quality=medium` or `?quality=low`.
+The `tools/headless-tests/` folder has the Playwright scripts I used to check things as I went (run them with the server on port 8095):
 
-Other changes:
-- The HUD panels no longer use a CSS backdrop blur, which cost a full-screen pass every frame.
-- Hidden guests, sets and the princess skip the per-frame matrix updates.
-- Merged static meshes compute their matrices once.
-- Task objects are disposed when a task ends.
-- The open map redraws at 15 fps, or 30 fps while travelling.
+```bash
+cd tools/headless-tests && npm install
+node menustrings.mjs /tmp/shots 8095
+```
 
-Earlier measurements:
+---
 
-Measured in a desktop browser, before and after the optimisation pass:
+## Where things are
 
-| | Before | After |
-|---|---|---|
-| Assets downloaded at start (textures + lighting) | 6.7 MB | 1.0 MB |
-| Draw calls per frame, desktop | 398 | 178 |
-| Draw calls per frame, headset (both eyes) | 388 | 168 |
-| JavaScript per frame (physics, AI, UI) | 0.29 ms | 0.28 ms |
+Everything that runs is in `public/`, a static site using three.js. The main pieces in `public/src/`:
 
-Changes:
-- **Puppets:** GPU-skinned batching (`batch.js`).
-- **Static props:** merged into one mesh per material.
-- **Shadows:**
-  - Tiny parts don't cast shadows.
-  - In the headset, shadows update every other frame.
-  - In the headset, only the puppets and props cast shadows.
-- **Headset materials:** the expensive materials (velvet sheen, clearcoat) switch to standard ones.
-- **Headset rendering:** fixed foveated rendering.
-- **Desktop rendering:** pixel ratio is capped at 1.5.
-- **Shaders:** precompiled behind the loading screen.
-- **Garbage collection:** per-frame allocations removed from the physics and AI.
-- **Assets:**
-  - Textures resized: 1K colour, 512 px normal maps, 256 px roughness.
-  - The lighting HDRI is downsampled to 256×128.
-  - Voice clips load only when spoken.
+| File | What it does |
+|---|---|
+| `main.js` | Ties everything together: the scene, input, menus, the story flow, VR and AR |
+| `puppet.js` | The marionette physics |
+| `input.js` | Hand tracking and the desktop hand simulator |
+| `director.js`, `mind.js` | Reading Sir Pip's moves, and the guests' minds |
+| `tasks.js`, `show.js` | The chapter games, stars and endings |
+| `lines.js`, `narrator.js` | Every word, and who says it when |
+| `robot.js`, `skins.js`, `cast.js`, `wood.js` | The robot and the characters |
+| `stage.js`, `drapes.js`, `sets.js`, `backdrops.js` | The theatre, curtains and stage sets |
+| `storybook.js`, `storymap.js`, `storymaker.js` | The storybook, the map, and your own stories |
+| `audio.js` | Music, ambience and sound effects |
+
+`DEVELOPMENT_JOURNAL.md` has the whole history, phase by phase, and `CREDITS.md` lists every third-party asset and its licence (all CC0, Apache-2.0, MIT or OFL).
+
+---
+
+Made by **Abdul Musawar Soomro**, for the Meta VR Start Developer Competition 2026.
