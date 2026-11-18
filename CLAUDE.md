@@ -9,7 +9,7 @@ pinch a glowing control bar to work **Sir Pip** (a knight marionette) with real 
 a storyteller **robot puppeteer** works the other puppets (Marlo the dragon, Bramble the wizard,
 Captain Pegg, Grumble the troll, Clank the robot, Princess Juniper, the King).
 
-- **Live:** https://mazzyy.github.io/strings/ (works with no server)
+- **Live:** https://strings.musawar.tech/ (the developer's custom domain, HTTPS enforced; https://mazzyy.github.io/strings/ redirects there; works with no server)
 - **Code:** https://github.com/mazzyy/strings (public)
 - **Purpose:** the developer's entry to the **Meta VR Start Developer Competition 2026** (Devpost).
   **Deadline: 18 Nov 2026, 12:00 PT.** Judging until about 9 Dec; winners about 11 Dec.
@@ -65,10 +65,13 @@ npm start                        # serves public/ at http://localhost:8080 (PORT
 - **Publish** (GitHub Actions is unavailable on this account, so Pages deploys from a branch):
   ```bash
   git push origin main
-  git branch -D gh-pages; git subtree split --prefix public -b gh-pages; git push -f origin gh-pages
+  # gh-pages gets main's public/ as a new commit on top of what's published (a plain push, no force:
+  # the branch holds the developer's own commits too, e.g. the custom domain's)
+  NEW=$(git commit-tree main:public -p origin/gh-pages -m "Publish main ($(git rev-parse --short main))")
+  git push origin "$NEW":gh-pages
   gh api -X POST repos/mazzyy/strings/pages/builds
   ```
-  Then check https://mazzyy.github.io/strings/. The only expected 404 is `api/status` (no server on Pages).
+  Then check https://strings.musawar.tech/. The only expected 404 is `api/status` (no server on Pages). `public/CNAME` keeps the custom domain: never delete it. VR needs HTTPS: keep "Enforce HTTPS" on.
 
 ## Where things are
 Everything runs from `public/` (a static site; three.js 0.170 via importmap). The main files in `public/src/`:
